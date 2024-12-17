@@ -34,10 +34,10 @@ enum NvScalingListTypeH264 {
 
 struct NvScalingListH264
 {
-    int32_t scaling_matrix_present_flag:1;
-    uint8_t scaling_list_type[8]; // scaling_list_type_e
-    uint8_t ScalingList4x4[6][16];
-    uint8_t ScalingList8x8[2][64];
+    uint32_t scaling_matrix_present_flag:1;
+    uint8_t  scaling_list_type[8]; // scaling_list_type_e
+    uint8_t  ScalingList4x4[6][16];
+    uint8_t  ScalingList8x8[2][64];
 };
 
 NVPARSER_EXPORT
