@@ -20,7 +20,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::AVX512>(const uint8_t *pdat
         const __m512i v1 = _mm512_set1_epi8(1);
         const __m512i v254 = _mm512_set1_epi8(-2);
         __m512i vdata = _mm512_loadu_si512((const void*)pdatain);
-        __m512i vBfr = _mm512_set1_epi16(((m_BitBfr << 8) & 0xFF00) | ((m_BitBfr >> 8) & 0xFF));
+        __m512i vBfr = _mm512_set1_epi16((int16_t)(((m_BitBfr << 8) & 0xFF00) | ((m_BitBfr >> 8) & 0xFF)));
         __m512i vdata_alignr48b_init = _mm512_alignr_epi32(vdata, vBfr, 12);
         __m512i vdata_prev1 = _mm512_alignr_epi8(vdata, vdata_alignr48b_init, 15);
         __m512i vdata_prev2 = _mm512_alignr_epi8(vdata, vdata_alignr48b_init, 14);
@@ -41,10 +41,10 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::AVX512>(const uint8_t *pdat
                     const int offset = count_trailing_zeros(resmask);
                     found_start_code = true;
                     m_BitBfr =  1;
-                    return offset + i + c + 1;
+                    return (size_t)(offset + c + 1) + i;
                 }
                 // hotspot begin
-                __m512i vdata_next = _mm512_loadu_si512((const void*)(&pdatain[i + c + 64])); // 7-8 clocks
+                __m512i vdata_next = _mm512_loadu_si512((const void*)(&pdatain[i + (size_t)(c + 64)])); // 7-8 clocks
                 __m512i vdata_alignr48b_next = _mm512_alignr_epi32(vdata_next, vdata, 12);
                 vdata_prev1 = _mm512_alignr_epi8(vdata_next, vdata_alignr48b_next, 15);
                 vdata_prev2 = _mm512_alignr_epi8(vdata_next, vdata_alignr48b_next, 14);
@@ -52,7 +52,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::AVX512>(const uint8_t *pdat
                 // hotspot end
             }
         } // main processing loop end
-        m_BitBfr = (pdatain[i-2] << 8) | pdatain[i-1];
+        m_BitBfr = (uint32_t)((pdatain[i-2] << 8) | pdatain[i-1]);
     }
     // process a tail (rest):
     uint32_t bfr = m_BitBfr;

@@ -214,10 +214,10 @@ bool VulkanH264Decoder::BeginPicture(VkParserPictureData *pnvpd)
         const pic_parameter_set_s * const pps = m_pps;
         VkParserH264PictureData * const h264 = &pnvpd->CodecSpecific.h264;
 
-        pnvpd->PicWidthInMbs = sps->pic_width_in_mbs_minus1 + 1;
-        pnvpd->FrameHeightInMbs = (2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1);
+        pnvpd->PicWidthInMbs = (int32_t)(sps->pic_width_in_mbs_minus1 + 1);
+        pnvpd->FrameHeightInMbs = (int32_t)((2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1));
         pnvpd->pCurrPic = dpb[iCur].pPicBuf;
-        pnvpd->current_dpb_id = iCur;
+        pnvpd->current_dpb_id = (int8_t)iCur;
         pnvpd->field_pic_flag = slh->field_pic_flag;
         pnvpd->bottom_field_flag = slh->bottom_field_flag;
         pnvpd->second_field = (slh->field_pic_flag) && (dpb[iCur].complementary_field_pair);
@@ -337,7 +337,7 @@ bool VulkanH264Decoder::BeginPicture(VkParserPictureData *pnvpd)
             assert((dpb[i].state & 1) || (dpb[i].top_field_marking == 0));
             assert((dpb[i].state & 2) || (dpb[i].bottom_field_marking == 0));
             assert((dpb[i].state != 3) || (dpb[i].top_field_marking == 0) || (dpb[i].bottom_field_marking == 0) || (dpb[i].top_field_marking == dpb[i].bottom_field_marking));
-            if (dpb[i].top_field_marking != 0 || dpb[i].bottom_field_marking != 0 || 
+            if (dpb[i].top_field_marking != 0 || dpb[i].bottom_field_marking != 0 ||
                 (dpb[i].inter_view_flag && dpb[i].view_id != m_nhe.mvc.view_id))
             {
                 h264->dpb[i].pPicBuf = dpb[i].pPicBuf;
@@ -351,7 +351,7 @@ bool VulkanH264Decoder::BeginPicture(VkParserPictureData *pnvpd)
                 h264->dpb[i].FieldOrderCnt[1] = dpb[i].BottomFieldOrderCnt;
             }
         }
-        m_idr_found_flag |= (slh->nal_unit_type == 5) || (slh->nal_unit_type == 20 && !(slh->nhe.mvc.non_idr_flag));
+        m_idr_found_flag |= (uint32_t)((slh->nal_unit_type == 5) || (slh->nal_unit_type == 20 && !(slh->nhe.mvc.non_idr_flag))) & 0x1;
 
         if ((pps->flags.weighted_pred_flag) && (slh->weights_out_of_range > 0) && (slh->slice_type != I) && (m_lErrorThreshold < 30))
         {
@@ -387,8 +387,8 @@ bool VulkanH264Decoder::init_sequence_svc(const seq_parameter_set_s* sps)
     VkParserSequenceInfo nvsi;
     int PicWidthInMbs, FrameHeightInMbs;
 
-    PicWidthInMbs    = sps->pic_width_in_mbs_minus1 + 1;
-    FrameHeightInMbs = (2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1);
+    PicWidthInMbs    = (int)(sps->pic_width_in_mbs_minus1 + 1);
+    FrameHeightInMbs = (int)((2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1));
     memset(&nvsi, 0, sizeof(nvsi));
     nvsi.eCodec = VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR;
     nvsi.frameRate = NV_FRAME_RATE_UNKNOWN;
@@ -399,8 +399,8 @@ bool VulkanH264Decoder::init_sequence_svc(const seq_parameter_set_s* sps)
     nvsi.nDisplayHeight = nvsi.nCodedHeight;
     if (sps->flags.frame_cropping_flag)
     {
-        int crop_right = sps->frame_crop_right_offset*2;
-        int crop_bottom = sps->frame_crop_bottom_offset * 2 * ( 2 - sps->flags.frame_mbs_only_flag);
+        int crop_right = (int)(sps->frame_crop_right_offset*2);
+        int crop_bottom = (int)(sps->frame_crop_bottom_offset * 2 * ( 2 - sps->flags.frame_mbs_only_flag));
         if ((crop_right >= 0) && (crop_right < nvsi.nCodedWidth/2)
          && (crop_bottom >= 0) && (crop_bottom < nvsi.nCodedHeight/2))
         {
@@ -436,15 +436,15 @@ bool VulkanH264Decoder::init_sequence_svc(const seq_parameter_set_s* sps)
         }
         if (sps->vui.timing_info_present_flag)
         {
-            uint32_t lNum = sps->vui.time_scale;   // lNum/lDenom = field rate in Hz
-            uint32_t lDenom = sps->vui.num_units_in_tick;
+            uint32_t lNum = (uint32_t)sps->vui.time_scale;   // lNum/lDenom = field rate in Hz
+            uint32_t lDenom = (uint32_t)sps->vui.num_units_in_tick;
 
             if ((lDenom > 0) && (lNum > lDenom)) // > 1Hz
             {
                 nvsi.frameRate = PackFrameRate((lNum + 1) >> 1, lDenom);
             }
         }
-        nvsi.lBitrate = sps->vui.nal_hrd.bit_rate;
+        nvsi.lBitrate = (int32_t)sps->vui.nal_hrd.bit_rate;
     }
     SimplifyAspectRatio(&nvsi.lDARWidth, &nvsi.lDARHeight);
 
@@ -478,7 +478,7 @@ bool VulkanH264Decoder::BeginPicture_SVC(VkParserPictureData *pnvpd)
         return false;
     }
 
-    m_iDQIdMax = DQIdMax;
+    m_iDQIdMax = (uint32_t)DQIdMax;
     int dependencyIdMax = DQIdMax >> 4; // dependency_id of target dependency representation
 
     if (!init_sequence_svc(m_layer_data[DQIdMax].sps))
@@ -548,13 +548,13 @@ bool VulkanH264Decoder::BeginPicture_SVC(VkParserPictureData *pnvpd)
             picture_order_count_SVC(m_dd, m_ds); // stores result in ds->dpb_entry[16]
             for (uint32_t qid = 0; qid < 16; qid++)
             {
-                uint32_t DQId = 16 * did + qid;
+                uint32_t DQId = 16 * (uint32_t)did + qid;
                 layer_data_s *ld = &m_layer_data[DQId];
                 if (!ld->used) { // used layers are always consecutive starting with qid=0 (i.e. no qid gaps)
                     break;
                 }
                 // frame buffer management
-                if (DQId == (m_iDQIdMax & ~15)) // target dependency layer
+                if (DQId == (m_iDQIdMax & ~15u)) // target dependency layer
                 {
                     if (m_ds->dpb_entry[16].pPicBuf)
                     {
@@ -598,17 +598,17 @@ bool VulkanH264Decoder::BeginPicture_SVC(VkParserPictureData *pnvpd)
     uint32_t PicLayer = 0;
     for(uint32_t layer = 0; layer < 128; layer++)
     {
-        TotalSliceCnt += m_layer_data[layer].slice_count;
+        TotalSliceCnt += (uint32_t)m_layer_data[layer].slice_count;
         int CurrentSliceCnt = m_layer_data[layer].slice_count;
         if (!m_layer_data[layer].used) {
             continue;
         }
         // slice calculation
-        uint32_t firstSlice = TotalSliceCnt - CurrentSliceCnt;
+        uint32_t firstSlice = TotalSliceCnt - (uint32_t)CurrentSliceCnt;
         uint32_t startoffset = pSliceOffsets[firstSlice];
         (pnvpd + PicLayer)->bitstreamData = m_pVkPictureData->bitstreamData;
         (pnvpd + PicLayer)->bitstreamDataOffset = startoffset;
-        (pnvpd + PicLayer)->numSlices = CurrentSliceCnt;
+        (pnvpd + PicLayer)->numSlices = (uint32_t)CurrentSliceCnt;
         (pnvpd + PicLayer)->bitstreamDataLen = ((TotalSliceCnt == nNumSlices) ? end_offset : pSliceOffsets[TotalSliceCnt]) - startoffset;
         // When processing layers, the decoder must consider the firstSliceIndex so that offsets
         // within a layer starts at 0
@@ -620,9 +620,9 @@ bool VulkanH264Decoder::BeginPicture_SVC(VkParserPictureData *pnvpd)
         h264 = &(pnvpd + PicLayer)->CodecSpecific.h264;
         svc_dpb_entry_s *dpb_entry = m_dependency_state[layer >> 4].dpb_entry;
 
-        (pnvpd + PicLayer)->PicWidthInMbs = sps->pic_width_in_mbs_minus1 + 1;
-        (pnvpd + PicLayer)->FrameHeightInMbs = (2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1);
-        (pnvpd + PicLayer)->pCurrPic = (slh->store_ref_base_pic_flag && (layer != m_iDQIdMax) && (layer == (m_iDQIdMax & ~15)))
+        (pnvpd + PicLayer)->PicWidthInMbs = (int32_t)(sps->pic_width_in_mbs_minus1 + 1);
+        (pnvpd + PicLayer)->FrameHeightInMbs = (int32_t)((2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1));
+        (pnvpd + PicLayer)->pCurrPic = (slh->store_ref_base_pic_flag && (layer != m_iDQIdMax) && (layer == (m_iDQIdMax & ~15u)))
                                      ? dpb_entry[16].pPicBufRefBase : dpb_entry[16].pPicBuf;
         (pnvpd + PicLayer)->field_pic_flag = slh->field_pic_flag;
         (pnvpd + PicLayer)->bottom_field_flag = slh->bottom_field_flag;
@@ -731,19 +731,19 @@ bool VulkanH264Decoder::BeginPicture_SVC(VkParserPictureData *pnvpd)
         h264->svcext.DQIdMax = (unsigned char) m_iDQIdMax;
         h264->svcext.disable_inter_layer_deblocking_filter_idc = (unsigned char) slh->disable_inter_layer_deblocking_filter_idc;
         h264->svcext.ref_layer_chroma_phase_y_plus1 = (unsigned char) slh->ref_layer_chroma_phase_y_plus1;
-        h264->svcext.inter_layer_slice_alpha_c0_offset_div2 = (unsigned char) slh->inter_layer_slice_alpha_c0_offset_div2;
-        h264->svcext.inter_layer_slice_beta_offset_div2 = (unsigned char) slh->inter_layer_slice_beta_offset_div2;
+        h264->svcext.inter_layer_slice_alpha_c0_offset_div2 = (int8_t) slh->inter_layer_slice_alpha_c0_offset_div2;
+        h264->svcext.inter_layer_slice_beta_offset_div2 = (int8_t) slh->inter_layer_slice_beta_offset_div2;
 
-        h264->svcext.f.inter_layer_deblocking_filter_control_present_flag = sps->svc.inter_layer_deblocking_filter_control_present_flag;
-        h264->svcext.f.extended_spatial_scalability_idc = sps->svc.extended_spatial_scalability_idc;
-        h264->svcext.f.adaptive_tcoeff_level_prediction_flag = sps->svc.adaptive_tcoeff_level_prediction_flag;
-        h264->svcext.f.slice_header_restriction_flag = sps->svc.slice_header_restriction_flag;
-        h264->svcext.f.chroma_phase_x_plus1_flag = sps->svc.chroma_phase_x_plus1_flag;
-        h264->svcext.f.chroma_phase_y_plus1 = sps->svc.chroma_phase_y_plus1;
-        h264->svcext.f.tcoeff_level_prediction_flag = slh->tcoeff_level_prediction_flag;
-        h264->svcext.f.constrained_intra_resampling_flag = slh->constrained_intra_resampling_flag;
-        h264->svcext.f.ref_layer_chroma_phase_x_plus1_flag = slh->ref_layer_chroma_phase_x_plus1_flag;
-        h264->svcext.f.store_ref_base_pic_flag = slh->store_ref_base_pic_flag;
+        h264->svcext.f.inter_layer_deblocking_filter_control_present_flag = sps->svc.inter_layer_deblocking_filter_control_present_flag & 0x1;
+        h264->svcext.f.extended_spatial_scalability_idc = sps->svc.extended_spatial_scalability_idc & 0x3;
+        h264->svcext.f.adaptive_tcoeff_level_prediction_flag = sps->svc.adaptive_tcoeff_level_prediction_flag & 0x1;
+        h264->svcext.f.slice_header_restriction_flag = sps->svc.slice_header_restriction_flag & 0x1;
+        h264->svcext.f.chroma_phase_x_plus1_flag = sps->svc.chroma_phase_x_plus1_flag & 0x1;
+        h264->svcext.f.chroma_phase_y_plus1 = sps->svc.chroma_phase_y_plus1 & 0x3;
+        h264->svcext.f.tcoeff_level_prediction_flag = slh->tcoeff_level_prediction_flag & 0x1;
+        h264->svcext.f.constrained_intra_resampling_flag = slh->constrained_intra_resampling_flag & 0x1;
+        h264->svcext.f.ref_layer_chroma_phase_x_plus1_flag = slh->ref_layer_chroma_phase_x_plus1_flag & 0x1;
+        h264->svcext.f.store_ref_base_pic_flag = slh->store_ref_base_pic_flag & 0x1;
 
         h264->svcext.scaled_ref_layer_left_offset   = (short) slh->scaled_ref_layer_left_offset;
         h264->svcext.scaled_ref_layer_top_offset    = (short) slh->scaled_ref_layer_top_offset;
@@ -757,7 +757,7 @@ bool VulkanH264Decoder::BeginPicture_SVC(VkParserPictureData *pnvpd)
         PicLayer++;
     }
     assert(nNumSlices == TotalSliceCnt);
-    m_iTargetLayer = PicLayer-1;
+    m_iTargetLayer = (int32_t)(PicLayer-1);
 
     return true;
 }
@@ -970,8 +970,8 @@ uint8_t VulkanH264Decoder::derive_MaxDpbFrames(const seq_parameter_set_s *sps)
         {STD_VIDEO_H264_LEVEL_IDC_6_2, 696320}
     };
 
-    int PicWidthInMbs        =  sps->pic_width_in_mbs_minus1 + 1;
-    int FrameHeightInMbs     = (sps->pic_height_in_map_units_minus1 + 1) << (sps->flags.frame_mbs_only_flag ? 0 : 1);
+    int PicWidthInMbs        =  (int)(sps->pic_width_in_mbs_minus1 + 1);
+    int FrameHeightInMbs     = (int)((sps->pic_height_in_map_units_minus1 + 1) << (sps->flags.frame_mbs_only_flag ? 0 : 1));
     int constraint_set3_flag = sps->constraint_set_flags >> 4 & 1;
 
     // The following logic maps the H264 level to level 1b based on certain conditions.
@@ -994,7 +994,7 @@ uint8_t VulkanH264Decoder::derive_MaxDpbFrames(const seq_parameter_set_s *sps)
     {
         if (level == mbs_level_limits[i].level)
         {
-            MaxDpbFrames = Min(mbs_level_limits[i].MaxDPBMbs / (PicWidthInMbs * FrameHeightInMbs), 16);
+            MaxDpbFrames = (uint8_t)Min(mbs_level_limits[i].MaxDPBMbs / (PicWidthInMbs * FrameHeightInMbs), 16);
             break;
         }
     }
@@ -1018,8 +1018,8 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
     if (rbsp_size < 2)
         return false;
     f(1, 0); // forbidden_zero_bit
-    nal_ref_idc = u(2);
-    nal_unit_type = u(5);
+    nal_ref_idc = (int)u(2);
+    nal_unit_type = (int)u(5);
     if (m_bUseMVC || m_bUseSVC)
     {
         if (nal_unit_type == 14 || nal_unit_type == 20)
@@ -1031,8 +1031,8 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
                 idr_flag = !!u(1);   // idr_flag
                 u(6);   // priority_id
                 u(1);   // no_inter_layer_pred_flag
-                dependency_id = u(3);   // dependency_id
-                quality_id = u(4);   // quality_id
+                dependency_id = (int)u(3);   // dependency_id
+                quality_id = (int)u(4);   // quality_id
 
                 if (m_slh_prev.nhe.svc.dependency_id > dependency_id)
                     return true;
@@ -1052,7 +1052,7 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
             {
                 non_idr_flag = !!u(1); // non_idr_flag
                 u(6); // priority_id
-                view_id = u(10);
+                view_id = (int)u(10);
                 if (slhold->nhe.mvc.view_id != view_id)
                     return true;
                 u(3); // temporal_id
@@ -1060,7 +1060,7 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
                 u(1); // inter_view_flag
                 f(1, 1); // reserved_one_bit
             }
-        }    
+        }
         if ((nal_unit_type != 1) && (nal_unit_type != 5) && (nal_unit_type != 20) && (nal_unit_type != 21))
             return (nal_unit_type == 9);    // access_unit_delimiter
     }
@@ -1076,9 +1076,9 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
     if (slhold->nal_unit_type != nal_unit_type &&
         (slhold->nal_unit_type == 5 || nal_unit_type == 5))
         return true;
-    first_mb_in_slice = ue();   // first_mb_in_slice
+    first_mb_in_slice = (int)ue();   // first_mb_in_slice
     ue();   // slice_type_raw
-    pps_id = ue();
+    pps_id = (int)ue();
 
     if (svc_extension_flag)
     {
@@ -1089,21 +1089,21 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
     }
     sps_id = m_ppss[pps_id]->seq_parameter_set_id;
     spss = base_layer ? &m_spss[0] : &m_spssvcs[0];
-    
+
     if ((slhold->pic_parameter_set_id != pps_id) || (!spss[sps_id]))
         return true;
     if (spss[sps_id]->flags.separate_colour_plane_flag)
-        colour_plane_id = u(2);
-    frame_num = u(spss[sps_id]->log2_max_frame_num_minus4 + 4);
+        colour_plane_id = (int)u(2);
+    frame_num = (int)u(spss[sps_id]->log2_max_frame_num_minus4 + 4);
     if (slhold->frame_num != frame_num)
         return true;
     field_pic_flag = 0;
     bottom_field_flag = 0;
     if (!spss[sps_id]->flags.frame_mbs_only_flag)
     {
-        field_pic_flag = u(1);
+        field_pic_flag = (int)u(1);
         if (field_pic_flag)
-            bottom_field_flag = u(1);
+            bottom_field_flag = (int)u(1);
     }
     if ((slhold->field_pic_flag != field_pic_flag)
      || (slhold->bottom_field_flag != bottom_field_flag))
@@ -1114,7 +1114,7 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
         if (svc_extension_flag)
         {
             IdrPicFlag = idr_flag;
-        } 
+        }
         else
         {
             // MVC
@@ -1127,11 +1127,11 @@ bool VulkanH264Decoder::IsPictureBoundary(int32_t rbsp_size)
 
     if (IdrPicFlag)
     {
-        idr_pic_id = ue();
+        idr_pic_id = (int)ue();
     }
     if (spss[sps_id]->pic_order_cnt_type == 0)
     {
-        int pic_order_cnt_lsb = u(spss[sps_id]->log2_max_pic_order_cnt_lsb_minus4 + 4);
+        int pic_order_cnt_lsb = (int)u(spss[sps_id]->log2_max_pic_order_cnt_lsb_minus4 + 4);
         int delta_pic_order_cnt_bottom = 0;
         if (m_ppss[pps_id]->flags.bottom_field_pic_order_in_frame_present_flag && !field_pic_flag) {
             delta_pic_order_cnt_bottom = se();
@@ -1179,8 +1179,8 @@ int32_t VulkanH264Decoder::ParseNalUnit()
 
     picture_boundary = (m_nalu.start_offset == 0);
     f(1, 0);    // forbidden_zero_bit
-    nal_ref_idc = u(2);
-    nal_unit_type = u(5);
+    nal_ref_idc = (int)u(2);
+    nal_unit_type = (int)u(5);
     if (nal_unit_type == NAL_UNIT_CODED_SLICE_PREFIX || nal_unit_type == NAL_UNIT_CODED_SLICE_SCALABLE)
     {
         if(m_bUseMVC || m_bUseSVC)
@@ -1292,7 +1292,7 @@ int32_t VulkanH264Decoder::ParseNalUnit()
             // Skip over unknown payloads (NOTE: assumes that emulation prevention bytes are not present)
             skip = payloadSize * 8 - (consumed_bits() - bitsUsed);
             if (skip > 0) {
-                skip_bits(skip);
+                skip_bits((uint32_t)skip);
             }
         }
         break;
@@ -1314,12 +1314,12 @@ int32_t VulkanH264Decoder::ParseNalUnit()
         pic_parameter_set_rbsp();
         break;
     case NAL_UNIT_ACCESS_UNIT_DELIMITER:
-        m_last_primary_pic_type = u(3);
+        m_last_primary_pic_type = (int)u(3);
         break;
     case NAL_UNIT_CODED_SLICE_PREFIX:
         if (m_bUseSVC)
         {
-            if (m_nhe.svc_extension_flag) 
+            if (m_nhe.svc_extension_flag)
             {
                 m_prefix_nalu_valid = true;
                 prefix_nal_unit_svc(nal_ref_idc); // prefix NAL unit
@@ -1358,23 +1358,23 @@ bool VulkanH264Decoder::prefix_nal_unit_svc(int nal_ref_idc)
     int additional_prefix_nal_unit_extension_flag, additional_prefix_nal_unit_extension_data_flag = false;
     memset(&m_prefix_nal_unit_svc, 0, sizeof(m_prefix_nal_unit_svc));
 
-    m_prefix_nal_unit_svc.nalu = m_nhe; 
+    m_prefix_nal_unit_svc.nalu = m_nhe;
     if (nal_ref_idc != 0)
     {
-        m_prefix_nal_unit_svc.store_ref_base_pic_flag = u(1);
+        m_prefix_nal_unit_svc.store_ref_base_pic_flag = (int)u(1);
         if ((m_nhe.svc.use_ref_base_pic_flag || m_prefix_nal_unit_svc.store_ref_base_pic_flag) && !m_nhe.svc.idr_flag)
             m_prefix_nal_unit_svc.adaptive_ref_base_pic_marking_mode_flag = (unsigned char)dec_ref_base_pic_marking(m_prefix_nal_unit_svc.mmbco);
 
-        additional_prefix_nal_unit_extension_flag = u(1);
+        additional_prefix_nal_unit_extension_flag = (int)u(1);
         if (additional_prefix_nal_unit_extension_flag == 1)
             while (more_rbsp_data())
-                additional_prefix_nal_unit_extension_data_flag = u(1);
+                additional_prefix_nal_unit_extension_data_flag = (int)u(1);
         rbsp_trailing_bits();
     }
     else if (more_rbsp_data())
     {
         while (more_rbsp_data())
-            additional_prefix_nal_unit_extension_data_flag = u(1);
+            additional_prefix_nal_unit_extension_data_flag = (int)u(1);
         rbsp_trailing_bits();
     }
 
@@ -1384,22 +1384,22 @@ bool VulkanH264Decoder::prefix_nal_unit_svc(int nal_ref_idc)
 // G.7.3.3.5
 int VulkanH264Decoder::dec_ref_base_pic_marking(memory_management_base_control_operation_s mmbco[MAX_MMCOS])
 {
-    int adaptive_ref_base_pic_marking_mode_flag = u(1);
+    int adaptive_ref_base_pic_marking_mode_flag = (int)u(1);
     if (adaptive_ref_base_pic_marking_mode_flag)
     {
         int i = 0;
         do
         {
-            if (i >= MAX_MMCOS) 
+            if (i >= MAX_MMCOS)
             {
                 nvParserLog("Too many memory_management_base_control_operation\n");
                 break;
             }
-            mmbco[i].memory_management_base_control_operation = ue();
+            mmbco[i].memory_management_base_control_operation = (int)ue();
             if (mmbco[i].memory_management_base_control_operation == 1)
-                mmbco[i].difference_of_base_pic_nums_minus1 = ue();
+                mmbco[i].difference_of_base_pic_nums_minus1 = (int)ue();
             if (mmbco[i].memory_management_base_control_operation == 2)
-                mmbco[i].long_term_base_pic_num = ue();
+                mmbco[i].long_term_base_pic_num = (int)ue();
         }
         while (mmbco[i++].memory_management_base_control_operation != 0);
     }
@@ -1426,7 +1426,7 @@ void VulkanH264Decoder::output_picture_SVC(VkPicIf *pPicBuf, int)
     //assert(m_ds == &dependency_state[m_iDQIdMax >> 4]);
     //if (m_ds != &dependency_state[m_iDQIdMax >> 4])
     //    nvParserLog("output of picture that is not in target dependency representation\n");
-    display_picture(pPicBuf);    
+    display_picture(pPicBuf);
 }
 
 static StdVideoH264LevelIdc levelIdcToVulkanLevelIdcEnum(uint8_t level_idc, bool constraint_set3_flag)
@@ -1491,10 +1491,10 @@ static StdVideoH264LevelIdc levelIdcToVulkanLevelIdcEnum(uint8_t level_idc, bool
 int32_t VulkanH264Decoder::seq_parameter_set_rbsp(SpsNalUnitTarget spsNalUnitTarget,
                                                   seq_parameter_set_s *spssvc)
 {
-    uint8_t profile_idc = u(8);
-    uint8_t constraint_set_flags = u(8);
-    uint8_t level_idc = u(8);
-    int sps_id = ue();
+    uint8_t profile_idc = (uint8_t)u(8);
+    uint8_t constraint_set_flags = (uint8_t)u(8);
+    uint8_t level_idc = (uint8_t)u(8);
+    int sps_id = (int)ue();
     if ((sps_id < 0) || (sps_id >= MAX_NUM_SPS))
     {
         nvParserLog("Invalid SPS id (%d)\n", sps_id);
@@ -1512,7 +1512,7 @@ int32_t VulkanH264Decoder::seq_parameter_set_rbsp(SpsNalUnitTarget spsNalUnitTar
     }
 
     // non-zero defaults
-    sps->seq_parameter_set_id = sps_id;
+    sps->seq_parameter_set_id = (uint8_t)sps_id;
     sps->chroma_format_idc = (StdVideoH264ChromaFormatIdc)1;
     sps->svc.slice_header_restriction_flag = 1;
 
@@ -1540,12 +1540,12 @@ int32_t VulkanH264Decoder::seq_parameter_set_rbsp(SpsNalUnitTarget spsNalUnitTar
             return -1;
         }
         if (sps->chroma_format_idc == 3) {
-            sps->flags.separate_colour_plane_flag = u(1);
+            sps->flags.separate_colour_plane_flag = flag();
         }
-        sps->bit_depth_luma_minus8 = ue();
-        sps->bit_depth_chroma_minus8 = ue();
-        sps->flags.qpprime_y_zero_transform_bypass_flag = u(1);
-        sps->seqScalingList.scaling_matrix_present_flag = u(1);
+        sps->bit_depth_luma_minus8 = (uint8_t)ue();
+        sps->bit_depth_chroma_minus8 = (uint8_t)ue();
+        sps->flags.qpprime_y_zero_transform_bypass_flag = flag();
+        sps->seqScalingList.scaling_matrix_present_flag = flag();
         if (sps->seqScalingList.scaling_matrix_present_flag) {
             for (int i = 0; i < 8; i++) {
                 int scaling_list_type;
@@ -1558,7 +1558,7 @@ int32_t VulkanH264Decoder::seq_parameter_set_rbsp(SpsNalUnitTarget spsNalUnitTar
             }
         }
     }
-    sps->log2_max_frame_num_minus4 = ue();
+    sps->log2_max_frame_num_minus4 = (uint8_t)ue();
     if ((uint32_t)sps->log2_max_frame_num_minus4 > 12) {
         nvParserLog("Invalid log2_max_frame_num_minus4 value in SPS (%d)\n", sps->log2_max_frame_num_minus4);
         return -1;
@@ -1569,14 +1569,14 @@ int32_t VulkanH264Decoder::seq_parameter_set_rbsp(SpsNalUnitTarget spsNalUnitTar
         return -1;
     }
     if (sps->pic_order_cnt_type == 0) {
-        sps->log2_max_pic_order_cnt_lsb_minus4 = ue();
+        sps->log2_max_pic_order_cnt_lsb_minus4 = (uint8_t)ue();
         if ((uint32_t)sps->log2_max_pic_order_cnt_lsb_minus4 > 12) {
             nvParserLog("Invalid log2_max_pic_order_cnt_lsb_minus4 value in SPS (%d)\n", sps->log2_max_pic_order_cnt_lsb_minus4);
             return -1;
         }
     }
     else if (sps->pic_order_cnt_type == 1) {
-        sps->flags.delta_pic_order_always_zero_flag = u(1);
+        sps->flags.delta_pic_order_always_zero_flag = flag();
         sps->offset_for_non_ref_pic = se();
         sps->offset_for_top_to_bottom_field = se();
         uint32_t num_ref_frames_in_pic_order_cnt_cycle = ue();
@@ -1590,13 +1590,13 @@ int32_t VulkanH264Decoder::seq_parameter_set_rbsp(SpsNalUnitTarget spsNalUnitTar
             sps->offset_for_ref_frame[i] = se();
         }
     }
-    sps->max_num_ref_frames = ue();
+    sps->max_num_ref_frames = (uint8_t)ue();
     if (sps->max_num_ref_frames > 16) {
         nvParserLog("SPS: Invalid num_ref_frames value (%d)", sps->max_num_ref_frames);
         sps->max_num_ref_frames = 2;
         return -1;
     }
-    sps->flags.gaps_in_frame_num_value_allowed_flag = u(1);
+    sps->flags.gaps_in_frame_num_value_allowed_flag = flag();
     sps->pic_width_in_mbs_minus1 = ue();
     sps->pic_height_in_map_units_minus1 = ue();
     if ((sps->pic_width_in_mbs_minus1 > 511) || (sps->pic_height_in_map_units_minus1 > 511)) { // enable upto 8192x8192
@@ -1604,19 +1604,19 @@ int32_t VulkanH264Decoder::seq_parameter_set_rbsp(SpsNalUnitTarget spsNalUnitTar
             (sps->pic_width_in_mbs_minus1 + 1) * 16, (sps->pic_height_in_map_units_minus1 + 1) * 16);
         return -1;
     }
-    sps->flags.frame_mbs_only_flag = u(1);
+    sps->flags.frame_mbs_only_flag = flag();
     if (!sps->flags.frame_mbs_only_flag) {
-        sps->flags.mb_adaptive_frame_field_flag = u(1);
+        sps->flags.mb_adaptive_frame_field_flag = flag();
     }
-    sps->flags.direct_8x8_inference_flag = u(1);
-    sps->flags.frame_cropping_flag = u(1);
+    sps->flags.direct_8x8_inference_flag = flag();
+    sps->flags.frame_cropping_flag = flag();
     if (sps->flags.frame_cropping_flag) {
         sps->frame_crop_left_offset = ue();
         sps->frame_crop_right_offset = ue();
         sps->frame_crop_top_offset = ue();
         sps->frame_crop_bottom_offset = ue();
     }
-    sps->flags.vui_parameters_present_flag = u(1);
+    sps->flags.vui_parameters_present_flag = flag();
     sps->vui.initial_cpb_removal_delay_length = 24;
 
     if (sps->flags.vui_parameters_present_flag) {
@@ -1714,10 +1714,10 @@ bool VulkanH264Decoder::seq_parameter_set_svc_extension_rbsp()
                 spssvc->svc.seq_ref_layer_chroma_phase_x_plus1_flag = u(1);
                 spssvc->svc.seq_ref_layer_chroma_phase_y_plus1      = u(2);
             }
-            spssvc->svc.seq_scaled_ref_layer_left_offset   = se();
-            spssvc->svc.seq_scaled_ref_layer_top_offset    = se();
-            spssvc->svc.seq_scaled_ref_layer_right_offset  = se();
-            spssvc->svc.seq_scaled_ref_layer_bottom_offset = se();
+            spssvc->svc.seq_scaled_ref_layer_left_offset   = (uint32_t)se();
+            spssvc->svc.seq_scaled_ref_layer_top_offset    = (uint32_t)se();
+            spssvc->svc.seq_scaled_ref_layer_right_offset  = (uint32_t)se();
+            spssvc->svc.seq_scaled_ref_layer_bottom_offset = (uint32_t)se();
         }
         spssvc->svc.seq_tcoeff_level_prediction_flag = u(1);
         if (spssvc->svc.seq_tcoeff_level_prediction_flag)
@@ -1748,79 +1748,79 @@ bool VulkanH264Decoder::seq_parameter_set_mvc_extension_rbsp(int32_t sps_id)
 
     u(1); // bit_equal_to_one, should always be 1;
 
-    spstmp.num_views_minus1 = ue();
-    spstmp.view_id = new int[spstmp.num_views_minus1 + 1];
+    spstmp.num_views_minus1 = (int)ue();
+    spstmp.view_id = new int[(size_t)(spstmp.num_views_minus1 + 1)];
     for(int i = 0; i <= spstmp.num_views_minus1; i++)
     {
-        spstmp.view_id[i] = ue();
+        spstmp.view_id[i] = (int)ue();
     }
-    spstmp.num_anchor_refs_l0 = new int[spstmp.num_views_minus1 + 1];
-    spstmp.num_anchor_refs_l1 = new int[spstmp.num_views_minus1 + 1];
-    spstmp.anchor_ref_l0 = new int *[spstmp.num_views_minus1 + 1];
-    spstmp.anchor_ref_l1 = new int *[spstmp.num_views_minus1 + 1];
+    spstmp.num_anchor_refs_l0 = new int[(size_t)(spstmp.num_views_minus1 + 1)];
+    spstmp.num_anchor_refs_l1 = new int[(size_t)(spstmp.num_views_minus1 + 1)];
+    spstmp.anchor_ref_l0 = new int *[(size_t)(spstmp.num_views_minus1 + 1)];
+    spstmp.anchor_ref_l1 = new int *[(size_t)(spstmp.num_views_minus1 + 1)];
     for(int i = 1; i <= spstmp.num_views_minus1; i++)
     {
-        spstmp.num_anchor_refs_l0[i] = ue();
-        spstmp.anchor_ref_l0[i] = new int[spstmp.num_anchor_refs_l0[i]];
+        spstmp.num_anchor_refs_l0[i] = (int)ue();
+        spstmp.anchor_ref_l0[i] = new int[(size_t)spstmp.num_anchor_refs_l0[i]];
         for(int j = 0; j < spstmp.num_anchor_refs_l0[i]; j++)
         {
-            spstmp.anchor_ref_l0[i][j] = ue();
+            spstmp.anchor_ref_l0[i][j] = (int)ue();
         }
-        spstmp.num_anchor_refs_l1[i] = ue();
-        spstmp.anchor_ref_l1[i] = new int[spstmp.num_anchor_refs_l1[i]];
+        spstmp.num_anchor_refs_l1[i] = (int)ue();
+        spstmp.anchor_ref_l1[i] = new int[(size_t)spstmp.num_anchor_refs_l1[i]];
         for(int j = 0; j < spstmp.num_anchor_refs_l1[i]; j++)
         {
-            spstmp.anchor_ref_l1[i][j] = ue();
+            spstmp.anchor_ref_l1[i][j] = (int)ue();
         }
     }
-    spstmp.num_non_anchor_refs_l0 = new int[spstmp.num_views_minus1 + 1];
-    spstmp.num_non_anchor_refs_l1 = new int[spstmp.num_views_minus1 + 1];
-    spstmp.non_anchor_ref_l0 = new int *[spstmp.num_views_minus1 + 1];
-    spstmp.non_anchor_ref_l1 = new int *[spstmp.num_views_minus1 + 1];
+    spstmp.num_non_anchor_refs_l0 = new int[(size_t)(spstmp.num_views_minus1 + 1)];
+    spstmp.num_non_anchor_refs_l1 = new int[(size_t)(spstmp.num_views_minus1 + 1)];
+    spstmp.non_anchor_ref_l0 = new int *[(size_t)(spstmp.num_views_minus1 + 1)];
+    spstmp.non_anchor_ref_l1 = new int *[(size_t)(spstmp.num_views_minus1 + 1)];
     for(int i = 1; i <= spstmp.num_views_minus1; i++)
     {
-        spstmp.num_non_anchor_refs_l0[i] = ue();
-        spstmp.non_anchor_ref_l0[i] = new int[spstmp.num_non_anchor_refs_l0[i]];
+        spstmp.num_non_anchor_refs_l0[i] = (int)ue();
+        spstmp.non_anchor_ref_l0[i] = new int[(size_t)spstmp.num_non_anchor_refs_l0[i]];
         for(int j = 0; j < spstmp.num_non_anchor_refs_l0[i]; j++)
         {
-            spstmp.non_anchor_ref_l0[i][j] = ue();
+            spstmp.non_anchor_ref_l0[i][j] = (int)ue();
         }
-        spstmp.num_non_anchor_refs_l1[i] = ue();
-        spstmp.non_anchor_ref_l1[i] = new int[spstmp.num_non_anchor_refs_l1[i]];
+        spstmp.num_non_anchor_refs_l1[i] = (int)ue();
+        spstmp.non_anchor_ref_l1[i] = new int[(size_t)spstmp.num_non_anchor_refs_l1[i]];
         for(int j = 0; j < spstmp.num_non_anchor_refs_l1[i]; j++)
         {
-            spstmp.non_anchor_ref_l1[i][j] = ue();
+            spstmp.non_anchor_ref_l1[i][j] = (int)ue();
         }
     }
 
-    spstmp.num_level_values_signalled_minus1 = ue();
-    spstmp.level_idc = new int[spstmp.num_level_values_signalled_minus1+1];
-    spstmp.num_applicable_ops_minus1 = new int[spstmp.num_level_values_signalled_minus1+1];
-    spstmp.applicable_op_temporal_id = new int *[spstmp.num_level_values_signalled_minus1+1];
-    spstmp.applicable_op_num_target_views_minus1 = new int *[spstmp.num_level_values_signalled_minus1+1];
-    spstmp.applicable_op_target_view_id = new int **[spstmp.num_level_values_signalled_minus1+1];
-    spstmp.applicable_op_num_views_minus1 = new int *[spstmp.num_level_values_signalled_minus1+1];
+    spstmp.num_level_values_signalled_minus1 = (int)ue();
+    spstmp.level_idc = new int[(size_t)(spstmp.num_level_values_signalled_minus1+1)];
+    spstmp.num_applicable_ops_minus1 = new int[(size_t)(spstmp.num_level_values_signalled_minus1+1)];
+    spstmp.applicable_op_temporal_id = new int *[(size_t)(spstmp.num_level_values_signalled_minus1+1)];
+    spstmp.applicable_op_num_target_views_minus1 = new int *[(size_t)(spstmp.num_level_values_signalled_minus1+1)];
+    spstmp.applicable_op_target_view_id = new int **[(size_t)(spstmp.num_level_values_signalled_minus1+1)];
+    spstmp.applicable_op_num_views_minus1 = new int *[(size_t)(spstmp.num_level_values_signalled_minus1+1)];
 
     for(int i = 0; i <= spstmp.num_level_values_signalled_minus1; i++)
     {
-        spstmp.level_idc[i] = u(8);
-        spstmp.num_applicable_ops_minus1[i] = ue();
+        spstmp.level_idc[i] = (int)u(8);
+        spstmp.num_applicable_ops_minus1[i] = (int)ue();
 
-        spstmp.applicable_op_temporal_id[i] = new int [spstmp.num_applicable_ops_minus1[i]+1];
-        spstmp.applicable_op_num_target_views_minus1[i] = new int [spstmp.num_applicable_ops_minus1[i]+1];
-        spstmp.applicable_op_target_view_id[i] = new int *[spstmp.num_applicable_ops_minus1[i]+1];
-        spstmp.applicable_op_num_views_minus1[i] = new int [spstmp.num_applicable_ops_minus1[i]+1];
+        spstmp.applicable_op_temporal_id[i] = new int [(size_t)(spstmp.num_applicable_ops_minus1[i]+1)];
+        spstmp.applicable_op_num_target_views_minus1[i] = new int [(size_t)(spstmp.num_applicable_ops_minus1[i]+1)];
+        spstmp.applicable_op_target_view_id[i] = new int *[(size_t)(spstmp.num_applicable_ops_minus1[i]+1)];
+        spstmp.applicable_op_num_views_minus1[i] = new int [(size_t)(spstmp.num_applicable_ops_minus1[i]+1)];
 
         for(int j = 0; j <= spstmp.num_applicable_ops_minus1[i]; j++)
         {
-            spstmp.applicable_op_temporal_id[i][j] = u(3);
-            spstmp.applicable_op_num_target_views_minus1[i][j] = ue();
-            spstmp.applicable_op_target_view_id[i][j] = new int[spstmp.applicable_op_num_target_views_minus1[i][j]+1];
+            spstmp.applicable_op_temporal_id[i][j] = (int)u(3);
+            spstmp.applicable_op_num_target_views_minus1[i][j] = (int)ue();
+            spstmp.applicable_op_target_view_id[i][j] = new int[(size_t)(spstmp.applicable_op_num_target_views_minus1[i][j]+1)];
             for(int k = 0; k <= spstmp.applicable_op_num_target_views_minus1[i][j]; k++)
             {
-                spstmp.applicable_op_target_view_id[i][j][k] = ue();
+                spstmp.applicable_op_target_view_id[i][j][k] = (int)ue();
             }
-            spstmp.applicable_op_num_views_minus1[i][j] = ue();
+            spstmp.applicable_op_num_views_minus1[i][j] = (int)ue();
         }
     }
 
@@ -1851,27 +1851,27 @@ bool VulkanH264Decoder::seq_parameter_set_mvc_extension_rbsp(int32_t sps_id)
 void VulkanH264Decoder::nal_unit_header_extension()
 {
     memset(&m_nhe, 0, sizeof(nalu_header_extension_u));
-    m_nhe.svc_extension_flag = u(1);
+    m_nhe.svc_extension_flag = (int)u(1);
     if (m_nhe.svc_extension_flag)
     {
         // SVC
-        m_nhe.svc.idr_flag = u(1);
-        m_nhe.svc.priority_id = u(6);
-        m_nhe.svc.no_inter_layer_pred_flag = u(1);
-        m_nhe.svc.dependency_id = u(3);
-        m_nhe.svc.quality_id = u(4);
-        m_nhe.svc.temporal_id = u(3);
-        m_nhe.svc.use_ref_base_pic_flag = u(1);
-        m_nhe.svc.discardable_flag = u(1);
-        m_nhe.svc.output_flag = u(1);
+        m_nhe.svc.idr_flag = (int)u(1);
+        m_nhe.svc.priority_id = (int)u(6);
+        m_nhe.svc.no_inter_layer_pred_flag = (int)u(1);
+        m_nhe.svc.dependency_id = (int)u(3);
+        m_nhe.svc.quality_id = (int)u(4);
+        m_nhe.svc.temporal_id = (int)u(3);
+        m_nhe.svc.use_ref_base_pic_flag = (int)u(1);
+        m_nhe.svc.discardable_flag = (int)u(1);
+        m_nhe.svc.output_flag = (int)u(1);
         f(2, 3); // reserved_three_2bits
     } else
     {
         // MVC
         m_nhe.mvc.non_idr_flag = (unsigned char) u(1);
-        m_nhe.mvc.priority_id = u(6);
-        m_nhe.mvc.view_id = u(10);
-        m_nhe.mvc.temporal_id = u(3);
+        m_nhe.mvc.priority_id = (int)u(6);
+        m_nhe.mvc.view_id = (int)u(10);
+        m_nhe.mvc.temporal_id = (int)u(3);
         m_nhe.mvc.anchor_pic_flag = (unsigned char) u(1);
         m_nhe.mvc.inter_view_flag = (unsigned char) u(1);
         f(1, 1); // reserved_one_bit
@@ -1881,9 +1881,9 @@ void VulkanH264Decoder::nal_unit_header_extension()
 // VUI parameters (Annex E.1)
 void VulkanH264Decoder::vui_parameters(vui_parameters_s *vui)
 {
-    vui->aspect_ratio_info_present_flag = u(1);
+    vui->aspect_ratio_info_present_flag = flag();
     if (vui->aspect_ratio_info_present_flag) { // aspect_ratio_info_present_flag
-        vui->aspect_ratio_idc = u(8);
+        vui->aspect_ratio_idc = (uint8_t)u(8);
     } else {
         vui->aspect_ratio_idc = 0;
     }
@@ -1907,59 +1907,59 @@ void VulkanH264Decoder::vui_parameters(vui_parameters_s *vui)
     case 15:       vui->sar_width = 3; vui->sar_height = 2; break;
     case 16:       vui->sar_width = 2; vui->sar_height = 1; break;
     case 255: // Extended_SAR
-        vui->sar_width = u(16);
-        vui->sar_height = u(16);
+        vui->sar_width = (int)u(16);
+        vui->sar_height = (int)u(16);
         break;
     default:    // Default to square pixels for everything else
         vui->sar_width = 1;
         vui->sar_height = 1;
         break;
     }
-    vui->overscan_info_present_flag = u(1);
+    vui->overscan_info_present_flag = flag();
     if (vui->overscan_info_present_flag)   // overscan_info_present_flag
     {
-        vui->overscan_appropriate_flag = u(1);   // overscan_appropriate_flag
+        vui->overscan_appropriate_flag = flag();   // overscan_appropriate_flag
     }
     // Default values
-    vui->video_signal_type_present_flag = u(1);
+    vui->video_signal_type_present_flag = flag();
     if (vui->video_signal_type_present_flag)
     {
-        vui->video_format = u(3);
-        vui->video_full_range_flag = u(1);
-        vui->color_description_present_flag = u(1);
+        vui->video_format = (int)u(3);
+        vui->video_full_range_flag = flag();
+        vui->color_description_present_flag = flag();
         if (vui->color_description_present_flag)   // colour_description_present_flag
         {
-            vui->colour_primaries = u(8);
-            vui->transfer_characteristics = u(8);
-            vui->matrix_coefficients = u(8);
+            vui->colour_primaries = (int)u(8);
+            vui->transfer_characteristics = (int)u(8);
+            vui->matrix_coefficients = (int)u(8);
         }
     }
 
-    vui->chroma_loc_info_present_flag = u(1);
+    vui->chroma_loc_info_present_flag = flag();
     if (vui->chroma_loc_info_present_flag) // chroma_loc_info_present_flag
     {
         ue();   // chroma_sample_loc_type_top_field
         ue();   // chroma_sample_loc_type_bottom_field
     }
-    vui->timing_info_present_flag = u(1);
+    vui->timing_info_present_flag = flag();
     if (vui->timing_info_present_flag)
     {
-        vui->num_units_in_tick = u(32);
-        vui->time_scale = u(32);
-        vui->fixed_frame_rate_flag = u(1);
+        vui->num_units_in_tick = (int)u(32);
+        vui->time_scale = (int)u(32);
+        vui->fixed_frame_rate_flag = flag();
     }
-    vui->nal_hrd_parameters_present_flag = u(1);
+    vui->nal_hrd_parameters_present_flag = flag();
     if (vui->nal_hrd_parameters_present_flag)
         hrd_parameters(vui, &vui->nal_hrd);
-    vui->vcl_hrd_parameters_present_flag = u(1);
+    vui->vcl_hrd_parameters_present_flag = flag();
     if (vui->vcl_hrd_parameters_present_flag)
         hrd_parameters(vui, &vui->vcl_hrd);
     if (vui->nal_hrd_parameters_present_flag || vui->vcl_hrd_parameters_present_flag)
     {
         u(1); // low_delay_hrd_flag;
     }
-    vui->pic_struct_present_flag = u(1);
-    vui->bitstream_restriction_flag = u(1);
+    vui->pic_struct_present_flag = flag();
+    vui->bitstream_restriction_flag = flag();
     if (vui->bitstream_restriction_flag) // bitstream_restriction_flag
     {
         u(1);   // motion_vectors_over_pic_boundaries_flag
@@ -1967,8 +1967,8 @@ void VulkanH264Decoder::vui_parameters(vui_parameters_s *vui)
         ue();   // max_bits_per_mb_denom
         ue();   // log2_max_mv_length_horizontal
         ue();   // log2_max_mv_length_vertical
-        vui->max_num_reorder_frames = ue();
-        vui->max_dec_frame_buffering = ue();
+        vui->max_num_reorder_frames = (int)ue();
+        vui->max_dec_frame_buffering = (int)ue();
     }
 }
 
@@ -1976,9 +1976,9 @@ void VulkanH264Decoder::vui_parameters(vui_parameters_s *vui)
 // HRD parameters (E.1.2)
 void VulkanH264Decoder::hrd_parameters(vui_parameters_s *vui, hrd_parameters_s *hrd)
 {
-    uint8_t cpb_cnt_minus1 = ue();   // cpb_cnt_minus1
-    hrd->bit_rate_scale = u(4) + 6; // bit_rate_scale
-    hrd->cpb_size_scale = u(4) + 4; // cpb_size_scale
+    uint8_t cpb_cnt_minus1 = (uint8_t)ue();   // cpb_cnt_minus1
+    hrd->bit_rate_scale = (uint8_t)u(4) + 6; // bit_rate_scale
+    hrd->cpb_size_scale = (uint8_t)u(4) + 4; // cpb_size_scale
     hrd->cpb_cnt_minus1 = cpb_cnt_minus1;
     for (int SchedSelIdx = 0; SchedSelIdx <= cpb_cnt_minus1; SchedSelIdx++)
     {
@@ -1989,9 +1989,9 @@ void VulkanH264Decoder::hrd_parameters(vui_parameters_s *vui, hrd_parameters_s *
             break;
         }
     }
-    vui->initial_cpb_removal_delay_length = u(5)+1;
-    vui->cpb_removal_delay_length_minus1 = u(5);
-    vui->dpb_output_delay_length_minus1 = u(5);
+    vui->initial_cpb_removal_delay_length = (int)u(5)+1;
+    vui->cpb_removal_delay_length_minus1 = (int)u(5);
+    vui->dpb_output_delay_length_minus1 = (int)u(5);
     hrd->time_offset_length = u(5);   // time_offset_length
 }
 
@@ -2008,7 +2008,7 @@ int VulkanH264Decoder::scaling_list(unsigned char scalingList[], int sizeOfScali
         for (j = 0; j < sizeOfScalingList; j++)
         {
             if (nextScale != 0 )
-            {       
+            {
                 delta_scale = se();
                 nextScale = (lastScale + delta_scale) & 0xff;
                 scaling_list_type = ((j == 0) && (nextScale == 0)) ? SCALING_LIST_USE_DEFAULT : SCALING_LIST_PRESENT;
@@ -2023,8 +2023,8 @@ int VulkanH264Decoder::scaling_list(unsigned char scalingList[], int sizeOfScali
 
 bool VulkanH264Decoder::pic_parameter_set_rbsp()
 {
-    int pps_id = ue();
-    int sps_id = ue();
+    int pps_id = (int)ue();
+    int sps_id = (int)ue();
     if ((pps_id < 0) || (pps_id >= MAX_NUM_PPS) || (sps_id < 0) || (sps_id >= MAX_NUM_SPS))
     {
         nvParserLog("Invalid PPS: pps_id=%d, sps_id=%d\n", pps_id, sps_id);
@@ -2041,8 +2041,8 @@ bool VulkanH264Decoder::pic_parameter_set_rbsp()
 
     pps->pic_parameter_set_id = (uint8_t)pps_id;
     pps->seq_parameter_set_id = (uint8_t)sps_id;
-    pps->flags.entropy_coding_mode_flag = u(1);
-    pps->flags.bottom_field_pic_order_in_frame_present_flag = u(1);
+    pps->flags.entropy_coding_mode_flag = flag();
+    pps->flags.bottom_field_pic_order_in_frame_present_flag = flag();
     // FMO
     uint8_t num_slice_groups_minus1 = (uint8_t)ue();
     if (pps->num_slice_groups_minus1 > 7)
@@ -2062,7 +2062,7 @@ bool VulkanH264Decoder::pic_parameter_set_rbsp()
         }
 
         slice_group_map_s *slcgrp = &m_slice_group_map[pps_id];
-        slcgrp->slice_group_map_type = ue();
+        slcgrp->slice_group_map_type = (uint16_t)ue();
         if (slcgrp->slice_group_map_type > 6)
         {
             nvParserLog("Invalid slice_group_map_type value in PPS (%d)\n", slcgrp->slice_group_map_type);
@@ -2085,7 +2085,7 @@ bool VulkanH264Decoder::pic_parameter_set_rbsp()
         else if ((slcgrp->slice_group_map_type >= 3) && (slcgrp->slice_group_map_type < 6))
         {
             /* slcgrp->slice_group_change_direction_flag = */ u(1);
-            slcgrp->slice_group_change_rate_minus1 = ue();
+            slcgrp->slice_group_change_rate_minus1 = (int16_t)ue();
         }
         else if (slcgrp->slice_group_map_type == 6)
         {
@@ -2114,7 +2114,7 @@ bool VulkanH264Decoder::pic_parameter_set_rbsp()
     }
     pps->num_ref_idx_l0_default_active_minus1 = (unsigned char)num_ref_idx_l0_active_minus1;
     pps->num_ref_idx_l1_default_active_minus1 = (unsigned char)num_ref_idx_l1_active_minus1;
-    pps->flags.weighted_pred_flag = u(1);
+    pps->flags.weighted_pred_flag = flag();
     pps->weighted_bipred_idc = (StdVideoH264WeightedBipredIdc)u(2);
     if (pps->weighted_bipred_idc > 2)
     {
@@ -2124,13 +2124,13 @@ bool VulkanH264Decoder::pic_parameter_set_rbsp()
     pps->pic_init_qp_minus26 = (signed char)se();
     pps->pic_init_qs_minus26 = (signed char)se();
     pps->second_chroma_qp_index_offset = pps->chroma_qp_index_offset = (signed char)se();
-    pps->flags.deblocking_filter_control_present_flag = u(1);
-    pps->flags.constrained_intra_pred_flag = u(1);
-    pps->flags.redundant_pic_cnt_present_flag = u(1);
+    pps->flags.deblocking_filter_control_present_flag = flag();
+    pps->flags.constrained_intra_pred_flag = flag();
+    pps->flags.redundant_pic_cnt_present_flag = flag();
     if ((next_bits(8) & 0x7f) != 0) // if (more_rbsp_data())
     {
-        pps->flags.transform_8x8_mode_flag = u(1);
-        pps->picScalinList.scaling_matrix_present_flag = u(1);
+        pps->flags.transform_8x8_mode_flag = flag();
+        pps->picScalinList.scaling_matrix_present_flag = flag();
         if (pps->picScalinList.scaling_matrix_present_flag) {
             for (uint32_t i = 0; i < (uint32_t)(6 + 2 * pps->flags.transform_8x8_mode_flag); i++) {
                 int scaling_list_type;
@@ -2187,7 +2187,7 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
     else
     {
         if (m_bUseMVC && !m_prefix_nalu_valid &&
-            (nal_unit_type == NAL_UNIT_CODED_SLICE || 
+            (nal_unit_type == NAL_UNIT_CODED_SLICE ||
              nal_unit_type == NAL_UNIT_CODED_SLICE_IDR))
         {
             // H.7.4.1.1: Defaults for base-view when no prefix:
@@ -2200,7 +2200,7 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
     }
     slh->nal_ref_idc = (unsigned char)nal_ref_idc;
     slh->nal_unit_type = (unsigned char)nal_unit_type;
-    
+
     if (slh->nhe.svc_extension_flag)
     {
         no_inter_layer_pred_flag = slh->nhe.svc.no_inter_layer_pred_flag;
@@ -2220,13 +2220,13 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
         base_layer = true;
     }
 
-    slh->first_mb_in_slice = ue();
-    slh->slice_type_raw = ue();
+    slh->first_mb_in_slice = (int)ue();
+    slh->slice_type_raw = (int)ue();
     //if ((uint32_t)slh->slice_type_raw > 9)
     //    return false;
     slh->slice_type = slh->slice_type_raw % 5;
-    slh->pic_parameter_set_id = ue();
-    if ((slh->pic_parameter_set_id < 0) || (slh->pic_parameter_set_id >= MAX_NUM_PPS)
+    slh->pic_parameter_set_id = (uint8_t)ue();
+    if (((uint32_t)slh->pic_parameter_set_id >= MAX_NUM_PPS)
      || (!m_ppss[slh->pic_parameter_set_id]))
     {
         nvParserLog("Invalid PPS id in slice header (%d)\n", slh->pic_parameter_set_id);
@@ -2248,14 +2248,14 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
     }
     m_pps = pps;
     m_sps = sps;
- 
+
     if ((!sps->max_num_ref_frames) && (slh->slice_type != I) && (slh->slice_type != SI))
         return false;
     if (slh->nal_unit_type == 20)
     {
         if (slh->nhe.svc_extension_flag)
         {
-            slh->IdrPicFlag = m_nhe.svc.idr_flag;
+            slh->IdrPicFlag = (uint32_t)m_nhe.svc.idr_flag & 0x1;
         } else
         {
             slh->IdrPicFlag = !m_nhe.mvc.non_idr_flag;
@@ -2267,12 +2267,12 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
     }
     if (sps->flags.separate_colour_plane_flag)
     {
-        slh->colour_plane_id = u(2);
+        slh->colour_plane_id = (int)u(2);
         if ((slh->colour_plane_id < 0) || (slh->colour_plane_id > 2))
             return false;
     }
-    slh->frame_num = u(sps->log2_max_frame_num_minus4 + 4);
-    PicSizeInMbs = (sps->pic_width_in_mbs_minus1 + 1) * (sps->pic_height_in_map_units_minus1 + 1);
+    slh->frame_num = (int)u(sps->log2_max_frame_num_minus4 + 4);
+    PicSizeInMbs = (int)((sps->pic_width_in_mbs_minus1 + 1) * (sps->pic_height_in_map_units_minus1 + 1));
     if (!sps->flags.frame_mbs_only_flag)
     {
         slh->field_pic_flag = flag();
@@ -2287,12 +2287,12 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
     MbaffFrameFlag = sps->flags.mb_adaptive_frame_field_flag && !slh->field_pic_flag;
     if ((uint32_t)slh->first_mb_in_slice >= (uint32_t)(PicSizeInMbs >> MbaffFrameFlag))
         return false;
-    
+
     if (slh->IdrPicFlag)
-        slh->idr_pic_id = ue();
+        slh->idr_pic_id = (int)ue();
     if (sps->pic_order_cnt_type == 0)
     {
-        slh->pic_order_cnt_lsb = u(sps->log2_max_pic_order_cnt_lsb_minus4 + 4);
+        slh->pic_order_cnt_lsb = (int)u(sps->log2_max_pic_order_cnt_lsb_minus4 + 4);
         if (pps->flags.bottom_field_pic_order_in_frame_present_flag && !slh->field_pic_flag)
             slh->delta_pic_order_cnt_bottom = se();
     }
@@ -2304,12 +2304,12 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
     }
     if (pps->flags.redundant_pic_cnt_present_flag)
     {
-        slh->redundant_pic_cnt = ue();
+        slh->redundant_pic_cnt = (int)ue();
         if (slh->redundant_pic_cnt != 0) {
             return false;   // ignore redundant slices
         }
     }
-    
+
     if (quality_id == 0)
     {
         if (slh->slice_type == B) {
@@ -2319,9 +2319,9 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
         {
             if (u(1)) // num_ref_idx_active_override_flag
             {
-                slh->num_ref_idx_l0_active_minus1 = ue();
+                slh->num_ref_idx_l0_active_minus1 = (int)ue();
                 if (slh->slice_type == B)
-                    slh->num_ref_idx_l1_active_minus1 = ue();
+                    slh->num_ref_idx_l1_active_minus1 = (int)ue();
                 if (((uint32_t)slh->num_ref_idx_l0_active_minus1 > 31) || ((uint32_t)slh->num_ref_idx_l1_active_minus1 > 31)) {
                     return false;
                 }
@@ -2338,7 +2338,7 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
         if ((pps->flags.weighted_pred_flag && (slh->slice_type == P || slh->slice_type == SP)) || (pps->weighted_bipred_idc == 1 && slh->slice_type == B))
         {
             if (!no_inter_layer_pred_flag)
-                slh->base_pred_weight_table_flag = u(1);
+                slh->base_pred_weight_table_flag = (int)u(1);
             if (no_inter_layer_pred_flag || !slh->base_pred_weight_table_flag)
             {
                 if (!pred_weight_table(slh, sps->flags.separate_colour_plane_flag ? 0 : sps->chroma_format_idc)) {
@@ -2351,9 +2351,9 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
             dec_ref_pic_marking(slh);
             if (!base_layer && !sps->svc.slice_header_restriction_flag)
             {
-                slh->store_ref_base_pic_flag = u(1);
+                slh->store_ref_base_pic_flag = (int)u(1);
                 if ((slh->nhe.svc.use_ref_base_pic_flag || slh->store_ref_base_pic_flag) && !slh->IdrPicFlag)
-                    slh->adaptive_ref_pic_marking_mode_flag = (unsigned char)dec_ref_base_pic_marking(slh->mmbco);
+                    slh->adaptive_ref_pic_marking_mode_flag = (uint32_t)dec_ref_base_pic_marking(slh->mmbco) & 0x1;
             }
         }
     }
@@ -2375,7 +2375,7 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
         if(ue() != 1) // disable_deblocking_filter_idc
         {
             se(); // slice_alpha_c0_offset_div2
-            se(); // slice_beta_offset_div2                
+            se(); // slice_beta_offset_div2
         }
     }
     if (pps->num_slice_groups_minus1 > 0)
@@ -2388,7 +2388,7 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
             if ((b <= 0) || ((uint32_t)b > a)) {
                 return false;
             }
-            int32_t c = (a + b - 1) / b; // Ceil(PicSizeInMapUnits / SliceGroupChangeRate)
+            int32_t c = (int32_t)((a + (uint32_t)b - 1) / (uint32_t)b); // Ceil(PicSizeInMapUnits / SliceGroupChangeRate)
             uint32_t v = 0;
             for (v = 0; c >= (1 << v); v++);
             slh->slice_group_change_cycle = u(v);
@@ -2400,61 +2400,61 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
     {
         if (!no_inter_layer_pred_flag && quality_id == 0)
         {
-            slh->ref_layer_dq_id = ue();
+            slh->ref_layer_dq_id = (int)ue();
             if (sps->svc.inter_layer_deblocking_filter_control_present_flag)
             {
-                slh->disable_inter_layer_deblocking_filter_idc = ue();
+                slh->disable_inter_layer_deblocking_filter_idc = (int)ue();
                 if (slh->disable_inter_layer_deblocking_filter_idc != 1)
                 {
                     slh->inter_layer_slice_alpha_c0_offset_div2 = se();
                     slh->inter_layer_slice_beta_offset_div2 = se();
                 }
             }
-            slh->constrained_intra_resampling_flag = u(1);
+            slh->constrained_intra_resampling_flag = (int)u(1);
             // defaults
-            slh->ref_layer_chroma_phase_x_plus1_flag = sps->svc.seq_ref_layer_chroma_phase_x_plus1_flag;
-            slh->ref_layer_chroma_phase_y_plus1      = sps->svc.seq_ref_layer_chroma_phase_y_plus1;
-            slh->scaled_ref_layer_left_offset        = sps->svc.seq_scaled_ref_layer_left_offset;
-            slh->scaled_ref_layer_top_offset         = sps->svc.seq_scaled_ref_layer_top_offset;
-            slh->scaled_ref_layer_right_offset       = sps->svc.seq_scaled_ref_layer_right_offset;
-            slh->scaled_ref_layer_bottom_offset      = sps->svc.seq_scaled_ref_layer_bottom_offset;
+            slh->ref_layer_chroma_phase_x_plus1_flag = (int)sps->svc.seq_ref_layer_chroma_phase_x_plus1_flag;
+            slh->ref_layer_chroma_phase_y_plus1      = (int)sps->svc.seq_ref_layer_chroma_phase_y_plus1;
+            slh->scaled_ref_layer_left_offset        = (int)sps->svc.seq_scaled_ref_layer_left_offset;
+            slh->scaled_ref_layer_top_offset         = (int)sps->svc.seq_scaled_ref_layer_top_offset;
+            slh->scaled_ref_layer_right_offset       = (int)sps->svc.seq_scaled_ref_layer_right_offset;
+            slh->scaled_ref_layer_bottom_offset      = (int)sps->svc.seq_scaled_ref_layer_bottom_offset;
             if (sps->svc.extended_spatial_scalability_idc == 2)
             {
                 if (sps->chroma_format_idc > 0) // ChromaArrayType > 0
                 {
-                    slh->ref_layer_chroma_phase_x_plus1_flag = u(1);
-                    slh->ref_layer_chroma_phase_y_plus1      = u(2);
+                    slh->ref_layer_chroma_phase_x_plus1_flag = (int)u(1);
+                    slh->ref_layer_chroma_phase_y_plus1      = (int)u(2);
                 }
                 slh->scaled_ref_layer_left_offset   = se();
                 slh->scaled_ref_layer_top_offset    = se();
                 slh->scaled_ref_layer_right_offset  = se();
                 slh->scaled_ref_layer_bottom_offset = se();
             }
-        }        
+        }
         if (!no_inter_layer_pred_flag)
         {
-            slh->slice_skip_flag = u(1);
+            slh->slice_skip_flag = (int)u(1);
             if (slh->slice_skip_flag)
-                slh->num_mbs_in_slice_minus1 = ue();
+                slh->num_mbs_in_slice_minus1 = (int)ue();
             else
             {
-                slh->adaptive_base_mode_flag = u(1);
+                slh->adaptive_base_mode_flag = (int)u(1);
                 if (!slh->adaptive_base_mode_flag)
-                    slh->default_base_mode_flag = u(1);
+                    slh->default_base_mode_flag = (int)u(1);
                 if (!slh->default_base_mode_flag)
                 {
-                    slh->adaptive_motion_prediction_flag = u(1);
+                    slh->adaptive_motion_prediction_flag = (int)u(1);
                     if (!slh->adaptive_motion_prediction_flag)
-                        slh->default_motion_prediction_flag = u(1);
+                        slh->default_motion_prediction_flag = (int)u(1);
                 }
-                slh->adaptive_residual_prediction_flag = u(1);
+                slh->adaptive_residual_prediction_flag = (int)u(1);
                 if (!slh->adaptive_residual_prediction_flag)
-                    slh->default_residual_prediction_flag = u(1);
+                    slh->default_residual_prediction_flag = (int)u(1);
             }
             // defaults
-            slh->tcoeff_level_prediction_flag = sps->svc.seq_tcoeff_level_prediction_flag;
+            slh->tcoeff_level_prediction_flag = (int)sps->svc.seq_tcoeff_level_prediction_flag;
             if (sps->svc.adaptive_tcoeff_level_prediction_flag == 1)
-                slh->tcoeff_level_prediction_flag = u(1);
+                slh->tcoeff_level_prediction_flag = (int)u(1);
         }
         m_slh_prev = *slh;
     }
@@ -2467,7 +2467,7 @@ bool VulkanH264Decoder::slice_header(slice_header_s *slh, int nal_ref_idc, int n
 }
 
 void VulkanH264Decoder::update_layer_info(seq_parameter_set_s *sps, pic_parameter_set_s *pps, slice_header_s *slh)
-{  
+{
     int dqid = (slh->nhe.svc.dependency_id << 4) + slh->nhe.svc.quality_id;
     if (!m_layer_data[dqid].available) // first slice of layer
     {
@@ -2486,7 +2486,7 @@ void VulkanH264Decoder::update_layer_info(seq_parameter_set_s *sps, pic_paramete
     }
 
     m_layer_data[dqid].slice_count++;
-    
+
     m_slh_prev = *slh;
     m_bLayerFirstSlice = 0;
     return ;
@@ -2511,10 +2511,10 @@ bool VulkanH264Decoder::ref_pic_list_reordering(slice_header_s *slh)
                 }
                 if (i >= MAX_REFS)
                     break;
-                slh->ref_pic_list_reordering_l0[i].reordering_of_pic_nums_idc = reordering_of_pic_nums_idc;
+                slh->ref_pic_list_reordering_l0[i].reordering_of_pic_nums_idc = (int)reordering_of_pic_nums_idc;
                 if (reordering_of_pic_nums_idc == 3)
                     break;
-                slh->ref_pic_list_reordering_l0[i].PicNumIdx = ue();
+                slh->ref_pic_list_reordering_l0[i].PicNumIdx = (int)ue();
             }
         }
     }
@@ -2532,10 +2532,10 @@ bool VulkanH264Decoder::ref_pic_list_reordering(slice_header_s *slh)
                 }
                 if (i >= MAX_REFS)
                     break;
-                slh->ref_pic_list_reordering_l1[i].reordering_of_pic_nums_idc = reordering_of_pic_nums_idc;
+                slh->ref_pic_list_reordering_l1[i].reordering_of_pic_nums_idc = (int)reordering_of_pic_nums_idc;
                 if (reordering_of_pic_nums_idc == 3)
                     break;
-                slh->ref_pic_list_reordering_l1[i].PicNumIdx = ue();
+                slh->ref_pic_list_reordering_l1[i].PicNumIdx = (int)ue();
             }
         }
     }
@@ -2547,14 +2547,14 @@ bool VulkanH264Decoder::pred_weight_table(slice_header_s *slh, int chromaArrayTy
 {
     int i, j;
 
-    slh->luma_log2_weight_denom = ue();
+    slh->luma_log2_weight_denom = (int)ue();
     if (chromaArrayType != 0)
-        slh->chroma_log2_weight_denom = ue();
+        slh->chroma_log2_weight_denom = (int)ue();
     if ((uint32_t)(slh->luma_log2_weight_denom|slh->chroma_log2_weight_denom) > 7)
         return false;
     for (i = 0; i <= slh->num_ref_idx_l0_active_minus1; i++)
     {
-        int luma_weight_l0_flag = u(1);
+        int luma_weight_l0_flag = (int)u(1);
         if (luma_weight_l0_flag)
         {
             int weight = se();
@@ -2570,7 +2570,7 @@ bool VulkanH264Decoder::pred_weight_table(slice_header_s *slh, int chromaArrayTy
         }
         if (chromaArrayType != 0)
         {
-            int chroma_weight_l0_flag = u(1);
+            int chroma_weight_l0_flag = (int)u(1);
             if (chroma_weight_l0_flag)
             {
                 for (j = 0; j < 2; j++)
@@ -2596,7 +2596,7 @@ bool VulkanH264Decoder::pred_weight_table(slice_header_s *slh, int chromaArrayTy
     {
         for (i = 0; i <= slh->num_ref_idx_l1_active_minus1; i++)
         {
-            int luma_weight_l1_flag = u(1);
+            int luma_weight_l1_flag = (int)u(1);
             if (luma_weight_l1_flag)
             {
                 int weight = se();
@@ -2612,7 +2612,7 @@ bool VulkanH264Decoder::pred_weight_table(slice_header_s *slh, int chromaArrayTy
             }
             if (chromaArrayType != 0)
             {
-                int chroma_weight_l1_flag = u(1);
+                int chroma_weight_l1_flag = (int)u(1);
                 if (chroma_weight_l1_flag)
                 {
                     for (j = 0; j < 2; j++)
@@ -2653,14 +2653,14 @@ void VulkanH264Decoder::dec_ref_pic_marking(slice_header_s *slh)
         {
             for (int i=0; i<MAX_MMCOS; i++)
             {
-                slh->mmco[i].memory_management_control_operation = ue();
+                slh->mmco[i].memory_management_control_operation = (int)ue();
                 if (slh->mmco[i].memory_management_control_operation == 0)
                     break;
                 if (slh->mmco[i].memory_management_control_operation == 1 || slh->mmco[i].memory_management_control_operation == 3)
-                    slh->mmco[i].difference_of_pic_nums_minus1 = ue();
+                    slh->mmco[i].difference_of_pic_nums_minus1 = (int)ue();
                 if ((slh->mmco[i].memory_management_control_operation == 2) || (slh->mmco[i].memory_management_control_operation == 3)
                  || (slh->mmco[i].memory_management_control_operation == 4) || (slh->mmco[i].memory_management_control_operation == 6))
-                    slh->mmco[i].long_term_frame_idx = ue();
+                    slh->mmco[i].long_term_frame_idx = (int)ue();
                 if (slh->mmco[i].memory_management_control_operation == 5)
                     slh->mmco5 = 1;
             }
@@ -2679,10 +2679,10 @@ bool VulkanH264Decoder::dpb_sequence_start(slice_header_s *slh)
 {
     VkParserSequenceInfo nvsi;
     int PicWidthInMbs, FrameHeightInMbs, MaxDecFrameBuffering;
-    
+
     m_PrevViewId = 0;
     m_PrevRefFrameNum = 0;
-    
+
     m_slh = *slh;
     m_slh_prev = *slh;
     m_sps = m_spss[m_ppss[slh->pic_parameter_set_id]->seq_parameter_set_id];
@@ -2694,8 +2694,8 @@ bool VulkanH264Decoder::dpb_sequence_start(slice_header_s *slh)
     if (!slh->no_output_of_prior_pics_flag) {
         flush_decoded_picture_buffer();
     }
-    PicWidthInMbs    = sps->pic_width_in_mbs_minus1 + 1;
-    FrameHeightInMbs = (2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1);
+    PicWidthInMbs    = (int)(sps->pic_width_in_mbs_minus1 + 1);
+    FrameHeightInMbs = (int)((2 - sps->flags.frame_mbs_only_flag) * (sps->pic_height_in_map_units_minus1 + 1));
     MaxDecFrameBuffering = std::min<int32_t>(std::max<int32_t>(sps->vui.max_dec_frame_buffering, (int)sps->max_num_ref_frames), 16);
     if (m_bUseMVC)
     {
@@ -2716,8 +2716,8 @@ bool VulkanH264Decoder::dpb_sequence_start(slice_header_s *slh)
     nvsi.nDisplayHeight = nvsi.nCodedHeight;
     if (sps->flags.frame_cropping_flag)
     {
-        int crop_right = sps->frame_crop_right_offset * 2;
-        int crop_bottom = sps->frame_crop_bottom_offset * 2 * (2 - sps->flags.frame_mbs_only_flag);
+        int crop_right = (int)(sps->frame_crop_right_offset * 2);
+        int crop_bottom = (int)(sps->frame_crop_bottom_offset * 2 * (2 - sps->flags.frame_mbs_only_flag));
         if ((crop_right >= 0) && (crop_right < nvsi.nCodedWidth / 2)
          && (crop_bottom >= 0) && (crop_bottom < nvsi.nCodedHeight / 2))
         {
@@ -2755,15 +2755,15 @@ bool VulkanH264Decoder::dpb_sequence_start(slice_header_s *slh)
         }
         if (sps->vui.timing_info_present_flag)
         {
-            uint32_t lNum = sps->vui.time_scale;   // lNum/lDenom = field rate in Hz
-            uint32_t lDenom = sps->vui.num_units_in_tick;
-        
+            uint32_t lNum = (uint32_t)sps->vui.time_scale;   // lNum/lDenom = field rate in Hz
+            uint32_t lDenom = (uint32_t)sps->vui.num_units_in_tick;
+
             if ((lDenom > 0) && (lNum > lDenom)) // > 1Hz
             {
                 nvsi.frameRate = PackFrameRate((lNum + 1) >> 1, lDenom);
             }
         }
-        nvsi.lBitrate = sps->vui.nal_hrd.bit_rate;
+        nvsi.lBitrate = (int32_t)sps->vui.nal_hrd.bit_rate;
     }
     SimplifyAspectRatio(&nvsi.lDARWidth, &nvsi.lDARHeight);
 
@@ -2797,7 +2797,7 @@ bool VulkanH264Decoder::is_comp_field_pair(dpb_entry_s *dpb_local, slice_header_
     //
     // 3.30 complementary non-reference field pair:
     // Two non-reference fields that are in consecutive access units in decoding order as
-    // - two coded fields of opposite parity where 
+    // - two coded fields of opposite parity where
     // - the first field is not already a paired field.
     //
     // 3.31 complementary reference field pair:
@@ -2923,7 +2923,7 @@ void VulkanH264Decoder::dpb_picture_start(pic_parameter_set_s *pps, slice_header
 
     picture_order_count(m_sps, &m_slh);
     picture_numbers(&m_slh, 1 << (m_sps->log2_max_frame_num_minus4 + 4)); // (7-1)
-    
+
     picture_started = true;
 
     // WAR for SPS matrix changes at non-idr boundaries (use matrix from most recent SPS)
@@ -3157,7 +3157,7 @@ void VulkanH264Decoder::dpb_picture_end()
             }
         }
     }
-    
+
     // Limit decode->display latency according to max_num_reorder_frames (no optimizations for MVC/SVC to keep things simple)
     if (!m_bUseMVC && !m_bUseSVC && (m_sps->vui.max_num_reorder_frames < MAX_DPB_SIZE))
     {
@@ -3354,7 +3354,7 @@ void VulkanH264Decoder::picture_order_count_type_2(const seq_parameter_set_s *sp
         cur->BottomFieldOrderCnt = tempPicOrderCnt;
     else
         cur->TopFieldOrderCnt = tempPicOrderCnt;
-    
+
     if (slh->mmco5)
     {
         prevFrameNumOffset = 0;
@@ -3547,7 +3547,7 @@ void VulkanH264Decoder::picture_order_count_type_2_SVC(dependency_data_s *dd, de
         ds->dpb_entry[16].BottomFieldOrderCnt = tempPicOrderCnt;
     else
         ds->dpb_entry[16].TopFieldOrderCnt = tempPicOrderCnt;
-    
+
     if (dd->slh.mmco5)
     {
         ds->prevFrameNumOffset = 0;
@@ -3859,7 +3859,7 @@ void VulkanH264Decoder::decoded_reference_picture_marking(slice_header_s *slh, u
         if (slh->adaptive_ref_pic_marking_mode_flag == 0)
             sliding_window_decoded_reference_picture_marking(num_ref_frames);
         else // (slh->adaptive_ref_pic_marking_mode_flag == 1)
-            adaptive_memory_control_decoded_reference_picture_marking(slh, num_ref_frames);
+            adaptive_memory_control_decoded_reference_picture_marking(slh, (int)num_ref_frames);
 
         // mark current as short-term if not marked as long-term (8.2.5.1)
         if ((!slh->field_pic_flag || !slh->bottom_field_flag) && cur->top_field_marking == MARKING_UNUSED)
@@ -3975,7 +3975,7 @@ void VulkanH264Decoder::gaps_in_frame_num()
     const seq_parameter_set_s* sps = m_sps;
     int MaxFrameNum, UnusedShortTermFrameNum;
     int i;
-    
+
     MaxFrameNum = 1 << (sps->log2_max_frame_num_minus4 + 4); // (7-1)
 
     // 7.4.3
@@ -3992,7 +3992,7 @@ void VulkanH264Decoder::gaps_in_frame_num()
         while (UnusedShortTermFrameNum != m_slh.frame_num)
         {
             int bad_edit = false;
-        
+
             slh->frame_num = UnusedShortTermFrameNum;
             slh->field_pic_flag = 0;
             slh->bottom_field_flag = 0;
@@ -4143,7 +4143,7 @@ void VulkanH264Decoder::sliding_window_decoded_reference_picture_marking(uint32_
                     if ((dpb[i].top_field_marking == MARKING_SHORT || dpb[i].bottom_field_marking == MARKING_SHORT) &&
                         dpb[i].FrameNumWrap < minFrameNumWrap)
                     {
-                        if ((numShortTermExisting > 1) || (numShortTermExisting == numShortTerm) || 
+                        if ((numShortTermExisting > 1) || (numShortTermExisting == numShortTerm) ||
                             (dpb[i].not_existing) || (m_sps->flags.gaps_in_frame_num_value_allowed_flag))
                         {
                             imin = i;
@@ -4345,7 +4345,7 @@ void VulkanH264Decoder::adaptive_memory_control_decoded_reference_picture_markin
     {
         int numRefs = 0;
         int oldestIndex = -1, oldestIndexNE = -1;
-    
+
         for (int i = 0; i < MAX_DPB_SIZE; i++)
         {
             if (dpb[i].view_id != slh->view_id)
@@ -4353,7 +4353,7 @@ void VulkanH264Decoder::adaptive_memory_control_decoded_reference_picture_markin
 
             // Evict all short-term non-existing references, as the non-existing references may never be evicted if
             // adaptive_ref_pic_marking=1
-            if ((dpb[i].not_existing) && (dpb[i].top_field_marking == MARKING_SHORT) && (dpb[i].bottom_field_marking == MARKING_SHORT) && 
+            if ((dpb[i].not_existing) && (dpb[i].top_field_marking == MARKING_SHORT) && (dpb[i].bottom_field_marking == MARKING_SHORT) &&
                 (i != iCur) && (!m_sps->flags.gaps_in_frame_num_value_allowed_flag))
             {
                 dpb[i].top_field_marking = MARKING_UNUSED;
@@ -4512,7 +4512,7 @@ void VulkanH264Decoder::dpb_bumping(int MaxDpbSize)
 void VulkanH264Decoder::flush_decoded_picture_buffer()
 {
     int i;
-    
+
     // mark all reference pictures as "unused for reference"
     for (i=0; i<=MAX_DPB_SIZE; i++)
     {
@@ -4622,8 +4622,8 @@ void VulkanH264Decoder::sei_payload(int payloadType, int payloadSize)
                 {
                     for (int SchedSelIdx = 0; SchedSelIdx <= sps->vui.nal_hrd.cpb_cnt_minus1; SchedSelIdx++)
                     {
-                        u(sps->vui.initial_cpb_removal_delay_length);   // initial_cpb_removal_delay
-                        u(sps->vui.initial_cpb_removal_delay_length);   // initial_cpb_removal_delay_offset
+                        u((uint32_t)sps->vui.initial_cpb_removal_delay_length);   // initial_cpb_removal_delay
+                        u((uint32_t)sps->vui.initial_cpb_removal_delay_length);   // initial_cpb_removal_delay_offset
                         if (m_nalu.get_offset >= m_nalu.end_offset)     // bitstream error
                             break;
                     }
@@ -4632,13 +4632,13 @@ void VulkanH264Decoder::sei_payload(int payloadType, int payloadSize)
                 {
                     for (int SchedSelIdx = 0; SchedSelIdx <= sps->vui.nal_hrd.cpb_cnt_minus1; SchedSelIdx++)
                     {
-                        u(sps->vui.initial_cpb_removal_delay_length); // initial_cpb_removal_delay
-                        u(sps->vui.initial_cpb_removal_delay_length); // initial_cpb_removal_delay_offset
+                        u((uint32_t)sps->vui.initial_cpb_removal_delay_length); // initial_cpb_removal_delay
+                        u((uint32_t)sps->vui.initial_cpb_removal_delay_length); // initial_cpb_removal_delay_offset
                         if (m_nalu.get_offset >= m_nalu.end_offset)   // bitstream error
                             break;
                     }
                 }
-                m_last_sps_id = sps_id;
+                m_last_sps_id = (int)sps_id;
             }
         }
         break;
@@ -4648,12 +4648,12 @@ void VulkanH264Decoder::sei_payload(int payloadType, int payloadSize)
             const seq_parameter_set_s *sps = m_spss[m_last_sps_id];
             if (sps->vui.nal_hrd_parameters_present_flag || sps->vui.vcl_hrd_parameters_present_flag) // CpbDpbDelaysPresentFlag
             {
-                u(sps->vui.cpb_removal_delay_length_minus1+1);  // cpb_removal_delay
-                u(sps->vui.dpb_output_delay_length_minus1+1);   // dpb_output_delay
+                u((uint32_t)(sps->vui.cpb_removal_delay_length_minus1+1));  // cpb_removal_delay
+                u((uint32_t)(sps->vui.dpb_output_delay_length_minus1+1));   // dpb_output_delay
             }
             if (sps->vui.pic_struct_present_flag)
             {
-                m_last_sei_pic_struct = u(4);   // Primarily used to detect 3:2 pulldown
+                m_last_sei_pic_struct = (int)u(4);   // Primarily used to detect 3:2 pulldown
                 // ...
             }
         }
@@ -4662,7 +4662,7 @@ void VulkanH264Decoder::sei_payload(int payloadType, int payloadSize)
         {
             int frame_packing_arrangement_cancel_flag;
             ue();    // frame_packing_arrangement_id
-            frame_packing_arrangement_cancel_flag = u(1);
+            frame_packing_arrangement_cancel_flag = (int)u(1);
             if (!frame_packing_arrangement_cancel_flag)
             {
                 m_fpa.frame_packing_arrangement_type = u(7);

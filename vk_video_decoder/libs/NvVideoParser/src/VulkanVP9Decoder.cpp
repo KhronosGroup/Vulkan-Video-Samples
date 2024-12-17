@@ -125,7 +125,7 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
                 m_nalu.start_offset = 0;
                 m_nalu.end_offset = 0;
             }
-            if (((VkDeviceSize)dataSize > m_bitstreamDataLen) && !resizeBitstreamBuffer(dataSize - m_bitstreamDataLen)) {
+            if (((VkDeviceSize)dataSize > m_bitstreamDataLen) && !resizeBitstreamBuffer(narrow_cast<VkDeviceSize>(dataSize) - m_bitstreamDataLen)) {
                 return false;
             }
 
@@ -147,11 +147,11 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
             uint32_t frames_processed = 0;
             uint32_t sizeparsed = 0, framesdone = 0;
 
-            uint32_t frame_size = m_frameSize;
+            uint32_t frame_size = (uint32_t)m_frameSize;
 
             const uint8_t* data_start = m_bitstreamData.GetBitstreamPtr();
             const uint8_t* data_end = data_start + m_frameSize;
-            uint32_t data_size = m_frameSize;
+            uint32_t data_size = (uint32_t)m_frameSize;
             uint32_t frames_in_superframe, frame_sizes[8];
 
             ParseSuperFrameIndex(data_start, data_size, frame_sizes, &frames_in_superframe);
@@ -200,7 +200,7 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
                     data_start++;
                 }
 
-                data_size = (int)(data_end - data_start);
+                data_size = (uint32_t)(data_end - data_start);
                 frames_processed += 1;
             } while (data_start < data_end);
 
@@ -351,7 +351,7 @@ void VulkanVP9Decoder::AddBuffertoDispQueue(VkPicIf* pDispPic)
     m_DispInfo[lDisp].lNumFields = 2;
 
     // Find a PTS in the list
-    unsigned int ndx = m_lPTSPos;
+    unsigned int ndx = (unsigned int)m_lPTSPos;
     m_DispInfo[lDisp].llPTS = m_llExpectedPTS; // Will be updated later on
 
     for (int k = 0; k < MAX_QUEUED_PTS; k++) {
@@ -382,7 +382,10 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
     StdVideoVP9LoopFilter* pStdLoopFilter = &m_PicData.stdLoopFilter;
     m_frameSizeChanged = false;
 
-    VP9_CHECK_FRAME_MARKER;
+    if (u(2) != (uint32_t)VP9_FRAME_MARKER) {
+        VKVS_FAIL("Invalid frame marker");
+        return false;
+    }
 
     uint32_t profile = u(1);
     profile |= u(1) << 1;
@@ -396,10 +399,10 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
 
     pPicData->show_existing_frame = u(1);
     if (pPicData->show_existing_frame) {
-        pPicData->frame_to_show_map_idx = u(3);
+        pPicData->frame_to_show_map_idx = (uint8_t)u(3);
         //U32 frame_to_show = vp9parser->m_pBuffers[idx_to_show];
         //Handle direct show:   CHECK
-        pPicData->uncompressedHeaderOffset = (consumed_bits() + 7) >> 3;
+        pPicData->uncompressedHeaderOffset = (uint32_t)((consumed_bits() + 7) >> 3);
         pPicData->compressedHeaderSize = 0;
         pStdPicInfo->refresh_frame_flags = 0;
         pStdLoopFilter->loop_filter_level = 0;
@@ -407,8 +410,8 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
     }
 
     pStdPicInfo->frame_type = (StdVideoVP9FrameType)u(1);
-    pStdPicInfo->flags.show_frame = u(1);
-    pStdPicInfo->flags.error_resilient_mode = u(1);
+    pStdPicInfo->flags.show_frame = flag();
+    pStdPicInfo->flags.error_resilient_mode = flag();
 
     if (pStdPicInfo->frame_type == STD_VIDEO_VP9_FRAME_TYPE_KEY) {
         VP9_CHECK_FRAME_SYNC_CODE;
@@ -421,9 +424,9 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
             pPicData->ref_frame_idx[i] = 0;
         }
     } else { // non key frame
-        pStdPicInfo->flags.intra_only = pStdPicInfo->flags.show_frame ? 0 : u(1);
+        pStdPicInfo->flags.intra_only = pStdPicInfo->flags.show_frame ? 0 : flag();
         pPicData->FrameIsIntra = pStdPicInfo->flags.intra_only;
-        pStdPicInfo->reset_frame_context = pStdPicInfo->flags.error_resilient_mode ? 0 : u(2);
+        pStdPicInfo->reset_frame_context = pStdPicInfo->flags.error_resilient_mode ? 0 : (uint8_t)u(2);
 
         if (pStdPicInfo->flags.intra_only == 1) {
             VP9_CHECK_FRAME_SYNC_CODE;
@@ -436,21 +439,21 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
                 pStdColorConfig->BitDepth = 8;
             }
 
-            pStdPicInfo->refresh_frame_flags = u(STD_VIDEO_VP9_NUM_REF_FRAMES); //for non key frame refresh only some
+            pStdPicInfo->refresh_frame_flags = (uint8_t)u(STD_VIDEO_VP9_NUM_REF_FRAMES); //for non key frame refresh only some
 
             ParseFrameAndRenderSize();
         } else { // inter frame
-            pStdPicInfo->refresh_frame_flags = u(STD_VIDEO_VP9_NUM_REF_FRAMES);
+            pStdPicInfo->refresh_frame_flags = (uint8_t)u(STD_VIDEO_VP9_NUM_REF_FRAMES);
 
             pStdPicInfo->ref_frame_sign_bias_mask = 0;
             for (uint32_t i = 0; i < STD_VIDEO_VP9_REFS_PER_FRAME; i++) {
-                pPicData->ref_frame_idx[i] = u(3);
-                pStdPicInfo->ref_frame_sign_bias_mask |= (u(1) << (STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME + i));
+                pPicData->ref_frame_idx[i] = (uint8_t)u(3);
+                pStdPicInfo->ref_frame_sign_bias_mask |= (uint8_t)(u(1) << (STD_VIDEO_VP9_REFERENCE_NAME_LAST_FRAME + i));
             }
 
             ParseFrameAndRenderSizeWithRefs();
 
-            pStdPicInfo->flags.allow_high_precision_mv = u(1);
+            pStdPicInfo->flags.allow_high_precision_mv = flag();
 
             // interpolation filter
             bool is_filter_switchable = u(1); //mb_switchable_mcomp_filt
@@ -471,14 +474,14 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
          /* Refresh entropy probs,
          * 0 == this frame probs are used only for this frame decoding,
          * 1 == this frame probs will be stored for future reference */
-        pStdPicInfo->flags.refresh_frame_context = u(1);
-        pStdPicInfo->flags.frame_parallel_decoding_mode = u(1);
+        pStdPicInfo->flags.refresh_frame_context = flag();
+        pStdPicInfo->flags.frame_parallel_decoding_mode = flag();
     } else {
         pStdPicInfo->flags.refresh_frame_context = 0;
         pStdPicInfo->flags.frame_parallel_decoding_mode = 1;
     }
 
-    pStdPicInfo->frame_context_idx = u(2);
+    pStdPicInfo->frame_context_idx = (uint8_t)u(2);
 
     if ((pPicData->FrameIsIntra == 1) || (pStdPicInfo->flags.error_resilient_mode == 1)) {
         StdVideoVP9Segmentation* pStdSegment = &pPicData->stdSegmentation;
@@ -496,7 +499,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
     pPicData->compressedHeaderSize = u(16);
 
     pPicData->uncompressedHeaderOffset = 0;
-    pPicData->compressedHeaderOffset = (consumed_bits() + 7) >> 3;
+    pPicData->compressedHeaderOffset = (uint32_t)((consumed_bits() + 7) >> 3);
     pPicData->tilesOffset = pPicData->compressedHeaderOffset + pPicData->compressedHeaderSize;
 
     pPicData->ChromaFormat = (pStdColorConfig->subsampling_x == 1) && (pStdColorConfig->subsampling_y == 1) ? 1 : 0;
@@ -519,11 +522,11 @@ bool VulkanVP9Decoder::ParseColorConfig()
     pStdColorConfig->color_space = (StdVideoVP9ColorSpace)u(3);
 
     if (pStdColorConfig->color_space != STD_VIDEO_VP9_COLOR_SPACE_RGB) {
-        pStdColorConfig->flags.color_range = u(1);
+        pStdColorConfig->flags.color_range = flag();
         if ((pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_1) ||
             (pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_3)) {
-            pStdColorConfig->subsampling_x = u(1);
-            pStdColorConfig->subsampling_y = u(1);
+            pStdColorConfig->subsampling_x = (uint8_t)u(1);
+            pStdColorConfig->subsampling_y = (uint8_t)u(1);
             VP9_CHECK_ZERO_BIT
         } else {
             pStdColorConfig->subsampling_x = 1;
@@ -570,8 +573,8 @@ void VulkanVP9Decoder::ParseFrameAndRenderSizeWithRefs()
         if (found_ref) {
             VkPicIf* pRefPic = m_pBuffers[pPicData->ref_frame_idx[i]].buffer;
             if (pRefPic != nullptr) {
-                pPicData->FrameWidth = pRefPic->decodeWidth;
-                pPicData->FrameHeight = pRefPic->decodeHeight;
+                pPicData->FrameWidth = (uint32_t)pRefPic->decodeWidth;
+                pPicData->FrameHeight = (uint32_t)pRefPic->decodeHeight;
 
                 ComputeImageSize();
             }
@@ -612,8 +615,8 @@ void VulkanVP9Decoder::ComputeImageSize()
                                                          pPicData->stdPictureInfo.flags.error_resilient_mode == 0 && /* 2.d */
                                                          !intraOnly /* 2.e */;
     }
-    m_lastFrameHeight = pPicData->FrameHeight;
-    m_lastFrameWidth = pPicData->FrameWidth;
+    m_lastFrameHeight = (int)pPicData->FrameHeight;
+    m_lastFrameWidth = (int)pPicData->FrameWidth;
     m_lastShowFrame = pPicData->stdPictureInfo.flags.show_frame;
 
 }
@@ -634,21 +637,21 @@ void VulkanVP9Decoder::ParseLoopFilterParams()
         m_loopFilterRefDeltas[3] = -1;
     }
 
-    pStdLoopFilter->loop_filter_level =  u(6);
-    pStdLoopFilter->loop_filter_sharpness = u(3);
+    pStdLoopFilter->loop_filter_level =  (uint8_t)u(6);
+    pStdLoopFilter->loop_filter_sharpness = (uint8_t)u(3);
 
-    pStdLoopFilter->flags.loop_filter_delta_enabled = u(1);
+    pStdLoopFilter->flags.loop_filter_delta_enabled = flag();
     if (pStdLoopFilter->flags.loop_filter_delta_enabled) {
 
-        pStdLoopFilter->flags.loop_filter_delta_update = u(1);
+        pStdLoopFilter->flags.loop_filter_delta_update = flag();
 
         if (pStdLoopFilter->flags.loop_filter_delta_update) {
 
             for (uint32_t i = 0; i < STD_VIDEO_VP9_MAX_REF_FRAMES; i++) {
-                uint8_t update_ref_delta = u(1);
-                pStdLoopFilter->update_ref_delta |= update_ref_delta << i;
+                uint8_t update_ref_delta = (uint8_t)u(1);
+                pStdLoopFilter->update_ref_delta |= (uint8_t)(((uint32_t)update_ref_delta) << i);
                 if (update_ref_delta == 1) {
-                    m_loopFilterRefDeltas[i] = u(6);
+                    m_loopFilterRefDeltas[i] = (int8_t)u(6);
                     if (u(1)) { // sign
                         m_loopFilterRefDeltas[i] = -m_loopFilterRefDeltas[i];
                     }
@@ -656,10 +659,10 @@ void VulkanVP9Decoder::ParseLoopFilterParams()
             }
 
             for (uint32_t i = 0; i < STD_VIDEO_VP9_LOOP_FILTER_ADJUSTMENTS; i++) {
-                uint8_t update_mode_delta = u( 1);
-                pStdLoopFilter->update_mode_delta |= update_mode_delta << i;
+                uint8_t update_mode_delta = (uint8_t)u(1);
+                pStdLoopFilter->update_mode_delta |= (uint8_t)(((uint32_t)update_mode_delta) << i);
                 if (update_mode_delta) {
-                    m_loopFilterModeDeltas[i] = u(6);
+                    m_loopFilterModeDeltas[i] = (int8_t)u(6);
                     if(u(1)) { // sign
                         m_loopFilterModeDeltas[i] = -m_loopFilterRefDeltas[i];
                     }
@@ -677,17 +680,17 @@ void VulkanVP9Decoder::ParseQuantizationParams()
    VkParserVp9PictureData *pPicData = &m_PicData;
    StdVideoDecodeVP9PictureInfo* pStdPicInfo = &pPicData->stdPictureInfo;
 
-    pStdPicInfo->base_q_idx = u(8);
-    pStdPicInfo->delta_q_y_dc = ReadDeltaQ();
-    pStdPicInfo->delta_q_uv_dc = ReadDeltaQ();
-    pStdPicInfo->delta_q_uv_ac = ReadDeltaQ();
+    pStdPicInfo->base_q_idx = (uint8_t)u(8);
+    pStdPicInfo->delta_q_y_dc = (int8_t)ReadDeltaQ();
+    pStdPicInfo->delta_q_uv_dc = (int8_t)ReadDeltaQ();
+    pStdPicInfo->delta_q_uv_ac = (int8_t)ReadDeltaQ();
 }
 
 int32_t VulkanVP9Decoder::ReadDeltaQ()
 {
     int32_t delta;
     if (u(1)) {
-        delta = u(4);
+        delta = (int32_t)u(4);
         if (u(1)) {
             delta = -delta;
         }
@@ -708,34 +711,34 @@ void VulkanVP9Decoder::ParseSegmentationParams()
     pSegment->flags.segmentation_update_map = 0;
     pSegment->flags.segmentation_temporal_update = 0;
 
-    pStdPicInfo->flags.segmentation_enabled = u(1);
+    pStdPicInfo->flags.segmentation_enabled = flag();
     if (pStdPicInfo->flags.segmentation_enabled == 0) {
         return;
     }
 
-    pSegment->flags.segmentation_update_map = u(1);
+    pSegment->flags.segmentation_update_map = flag();
 
     if (pSegment->flags.segmentation_update_map == 1) {
 
         for (uint32_t i = 0; i < STD_VIDEO_VP9_MAX_SEGMENTATION_TREE_PROBS; i++) {
-            uint8_t prob_coded = u(1);
-            pSegment->segmentation_tree_probs[i] = (prob_coded == 1) ? u(8) : VP9_MAX_PRBABILITY;
+            uint8_t prob_coded = (uint8_t)u(1);
+            pSegment->segmentation_tree_probs[i] = (prob_coded == 1) ? (uint8_t)u(8) : VP9_MAX_PRBABILITY;
         }
 
-        pSegment->flags.segmentation_temporal_update = u(1);
+        pSegment->flags.segmentation_temporal_update = flag();
         for (uint32_t i = 0; i < STD_VIDEO_VP9_MAX_SEGMENTATION_PRED_PROB; i++) {
             if (pSegment->flags.segmentation_temporal_update) {
-                uint8_t prob_coded = u(1);
-                pSegment->segmentation_pred_prob[i] = (prob_coded == 1) ? u(8) : VP9_MAX_PRBABILITY;
+                uint8_t prob_coded = (uint8_t)u(1);
+                pSegment->segmentation_pred_prob[i] = (prob_coded == 1) ? (uint8_t)u(8) : VP9_MAX_PRBABILITY;
             } else {
                 pSegment->segmentation_pred_prob[i] = VP9_MAX_PRBABILITY;
             }
         }
     }
 
-    pSegment->flags.segmentation_update_data = u(1);
+    pSegment->flags.segmentation_update_data = flag();
     if (pSegment->flags.segmentation_update_data == 1) {
-        pSegment->flags.segmentation_abs_or_delta_update = u(1);
+        pSegment->flags.segmentation_abs_or_delta_update = flag();
 
         /* Clear all previous segment data */
         memset(pSegment->FeatureEnabled, 0, sizeof(pSegment->FeatureEnabled));
@@ -743,11 +746,11 @@ void VulkanVP9Decoder::ParseSegmentationParams()
 
         for (uint32_t i = 0; i < STD_VIDEO_VP9_MAX_SEGMENTS; i++) {
             for (uint32_t j = 0; j < STD_VIDEO_VP9_SEG_LVL_MAX; j++) {
-                uint8_t feature_enabled = u(1);
-                pSegment->FeatureEnabled[i] |= (feature_enabled << j);
+                uint8_t feature_enabled = (uint8_t)u(1);
+                pSegment->FeatureEnabled[i] |= (uint8_t)(((uint32_t)feature_enabled) << j);
 
                 if (feature_enabled == 1) {
-                    pSegment->FeatureData[i][j] = u(segmentation_feature_bits[j]);
+                    pSegment->FeatureData[i][j] = (int16_t)u((uint32_t)segmentation_feature_bits[j]);
 
                     if (segmentation_feature_signed[j] == 1) {
                         if (u(1) == 1) {
@@ -803,12 +806,12 @@ void VulkanVP9Decoder::ParseTileInfo()
         }
     }
 
-    pStdPicInfo->tile_rows_log2 = u(1);
+    pStdPicInfo->tile_rows_log2 = (uint8_t)u(1);
     if (pStdPicInfo->tile_rows_log2 == 1) {
-        pStdPicInfo->tile_rows_log2 += u(1);
+        pStdPicInfo->tile_rows_log2 += (uint8_t)u(1);
     }
 
-    pPicData->numTiles = (1 << pStdPicInfo->tile_rows_log2) * (1 << pStdPicInfo->tile_cols_log2);
+    pPicData->numTiles = ((uint32_t)1 << pStdPicInfo->tile_rows_log2) * ((uint32_t)1 << pStdPicInfo->tile_cols_log2);
 }
 
 void VulkanVP9Decoder::ParseSuperFrameIndex(const uint8_t* data, uint32_t data_sz, uint32_t frame_sizes[8], uint32_t* frame_count)
@@ -827,7 +830,7 @@ void VulkanVP9Decoder::ParseSuperFrameIndex(const uint8_t* data, uint32_t data_s
             for (uint32_t i = 0; i < frames; i++) {
                 uint32_t this_sz = 0;
                 for (uint32_t j = 0; j < mag; j++) {
-                    this_sz |= (*x++) << (j * 8);
+                    this_sz |= ((uint32_t)(*x++)) << (j * 8);
                 }
                 frame_sizes[i] = this_sz;
             }
@@ -848,19 +851,19 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     VkParserSequenceInfo nvsi = m_ExtSeqInfo;
     nvsi.eCodec = VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR;
     nvsi.nChromaFormat = pPicDataVP9->ChromaFormat;
-    nvsi.nMaxWidth = std::max(width, pPicDataVP9->renderWidth);
-    nvsi.nMaxHeight = std::max(height, pPicDataVP9->renderHeight);
-    nvsi.nCodedWidth = width;
-    nvsi.nCodedHeight = height;
-    nvsi.nDisplayWidth = pPicDataVP9->renderWidth;
-    nvsi.nDisplayHeight = pPicDataVP9->renderHeight;
-    nvsi.lDARWidth = pPicDataVP9->renderWidth;
-    nvsi.lDARHeight = pPicDataVP9->renderHeight;
+    nvsi.nMaxWidth = (int32_t)std::max(width, pPicDataVP9->renderWidth);
+    nvsi.nMaxHeight = (int32_t)std::max(height, pPicDataVP9->renderHeight);
+    nvsi.nCodedWidth = (int32_t)width;
+    nvsi.nCodedHeight = (int32_t)height;
+    nvsi.nDisplayWidth = (int32_t)pPicDataVP9->renderWidth;
+    nvsi.nDisplayHeight = (int32_t)pPicDataVP9->renderHeight;
+    nvsi.lDARWidth = (int32_t)pPicDataVP9->renderWidth;
+    nvsi.lDARHeight = (int32_t)pPicDataVP9->renderHeight;
     nvsi.bProgSeq = true; // VP9 doesn't have explicit interlaced coding.
     nvsi.nMinNumDecodeSurfaces = 9;
-    nvsi.uBitDepthLumaMinus8 = pStdColorConfig->BitDepth - 8;
-    nvsi.uBitDepthChromaMinus8 = pStdColorConfig->BitDepth - 8;
-    nvsi.codecProfile = pStdPicInfo->profile;
+    nvsi.uBitDepthLumaMinus8 = (uint8_t)(pStdColorConfig->BitDepth - 8);
+    nvsi.uBitDepthChromaMinus8 = (uint8_t)(pStdColorConfig->BitDepth - 8);
+    nvsi.codecProfile = (uint32_t)pStdPicInfo->profile;
 
     // Reset decoder only if decode RT orig width is less than required coded width
     if ((nvsi.nMaxWidth > m_rtOrigWidth) || (nvsi.nMaxHeight > m_rtOrigHeight)) {
@@ -889,8 +892,8 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
         m_pClient->AllocPictureBuffer(&m_pCurrPic);
         assert(m_pCurrPic);
 
-        m_pCurrPic->decodeWidth = width;
-        m_pCurrPic->decodeHeight = height;
+        m_pCurrPic->decodeWidth = (int32_t)width;
+        m_pCurrPic->decodeHeight = (int32_t)height;
     }
 
     pnvpd->PicWidthInMbs = nvsi.nCodedWidth >> 4;
@@ -904,7 +907,7 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     // Reference slots information
     for (uint32_t i = 0; i < STD_VIDEO_VP9_NUM_REF_FRAMES; i++) {
         vkPicBuffBase* pb = reinterpret_cast<vkPicBuffBase*>(m_pBuffers[i].buffer);
-        pPicDataVP9->pic_idx[i] = pb ? pb->m_picIdx : -1;
+        pPicDataVP9->pic_idx[i] = pb ? (int8_t)pb->m_picIdx : -1;
     }
 
     return true;

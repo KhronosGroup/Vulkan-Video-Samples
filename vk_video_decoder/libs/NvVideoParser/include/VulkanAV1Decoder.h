@@ -352,7 +352,7 @@ class VulkanAV1Decoder : public VulkanVideoDecoder {
         uint32_t val;
         const uint8_t* mem = (const uint8_t*)vmem;
 
-        val = mem[1] << 8;
+        val = ((uint32_t)mem[1]) << 8;
         val |= mem[0];
         return val;
     }
@@ -361,8 +361,8 @@ class VulkanAV1Decoder : public VulkanVideoDecoder {
         uint32_t val;
         const uint8_t* mem = (const uint8_t*)vmem;
 
-        val = mem[2] << 16;
-        val |= mem[1] << 8;
+        val = ((uint32_t)mem[2]) << 16;
+        val |= ((uint32_t)mem[1]) << 8;
         val |= mem[0];
         return val;
     }
@@ -372,8 +372,8 @@ class VulkanAV1Decoder : public VulkanVideoDecoder {
         const uint8_t* mem = (const uint8_t*)vmem;
 
         val = ((uint32_t)mem[3]) << 24;
-        val |= mem[2] << 16;
-        val |= mem[1] << 8;
+        val |= ((uint32_t)mem[2]) << 16;
+        val |= ((uint32_t)mem[1]) << 8;
         val |= mem[0];
         return val;
     }
@@ -381,8 +381,8 @@ class VulkanAV1Decoder : public VulkanVideoDecoder {
     size_t le(int n) {
         size_t t = 0;
         for (int i = 0; i < n; i++) {
-            uint8_t byte = u(8);
-            t += (byte << (i * 8));
+            uint8_t byte = (uint8_t)u(8);
+            t += ((size_t)byte << (i * 8));
         }
         return t;
     }

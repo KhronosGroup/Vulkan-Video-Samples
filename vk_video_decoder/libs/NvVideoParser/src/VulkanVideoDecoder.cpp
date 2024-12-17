@@ -96,7 +96,7 @@ VkResult VulkanVideoDecoder::Initialize(const VkParserInitDecodeParameters *pPar
     m_bufferOffsetAlignment = pParserPictureData->bufferOffsetAlignment;
     m_bufferSizeAlignment   = pParserPictureData->bufferSizeAlignment;
     m_outOfBandPictureParameters = pParserPictureData->outOfBandPictureParameters;
-    m_lClockRate = (pParserPictureData->referenceClockRate > 0) ? pParserPictureData->referenceClockRate : 10000000; // Use 10Mhz as default clock
+    m_lClockRate = (pParserPictureData->referenceClockRate > 0) ? (int64_t)pParserPictureData->referenceClockRate : (int64_t)10000000; // Use 10Mhz as default clock
     m_lErrorThreshold = pParserPictureData->errorThreshold;
     m_bDiscontinuityReported = false;
     m_lFrameDuration = 0;
@@ -171,7 +171,7 @@ void VulkanVideoDecoder::skip_bits(uint32_t n)
         m_nalu.get_bfr <<= 8;
         if (m_nalu.get_offset < m_nalu.end_offset)
         {
-            VkDeviceSize c = m_bitstreamData[m_nalu.get_offset++];
+            VkDeviceSize c = m_bitstreamData[narrow_cast<VkDeviceSize>(m_nalu.get_offset++)];
             if (m_bEmulBytesPresent)
             {
                 // detect / discard emulation_prevention_three_byte
@@ -180,7 +180,7 @@ void VulkanVideoDecoder::skip_bits(uint32_t n)
                     if (c == 3)
                     {
                         m_nalu.get_zerocnt = 0;
-                        c = (m_nalu.get_offset < m_nalu.end_offset) ? m_bitstreamData[m_nalu.get_offset] : 0;
+                        c = (m_nalu.get_offset < m_nalu.end_offset) ? m_bitstreamData[narrow_cast<VkDeviceSize>(m_nalu.get_offset)] : 0;
                         m_nalu.get_offset++;
                         m_nalu.get_emulcnt++;
                     }
@@ -190,7 +190,7 @@ void VulkanVideoDecoder::skip_bits(uint32_t n)
                 else
                     m_nalu.get_zerocnt += (m_nalu.get_zerocnt < 2);
             }
-            m_nalu.get_bfr |= c;
+            m_nalu.get_bfr |= (uint32_t)c;
         } else
         {
             m_nalu.get_offset++;
@@ -247,17 +247,17 @@ uint32_t VulkanVideoDecoder::ue()
 
     leadingZeroBits = -1;
     for (b = 0; (!b) && (leadingZeroBits<32); leadingZeroBits++)
-        b = u(1);
+        b = (int)u(1);
 
     codeNum = 0;
     if (leadingZeroBits < 32)
     {
-        codeNum = (1 << leadingZeroBits) - 1 + u(leadingZeroBits);
+        codeNum = (int)((1 << leadingZeroBits) - 1 + u((uint32_t)leadingZeroBits));
     } else
     {
-        codeNum = 0xffffffff + u(leadingZeroBits);
+        codeNum = (int)(0xffffffff + u((uint32_t)leadingZeroBits));
     }
-    return codeNum;
+    return (uint32_t)codeNum;
 }
 
 
@@ -350,7 +350,7 @@ bool VulkanVideoDecoder::ParseByteStream(const VkParserBitstreamPacket* pck, siz
 void VulkanVideoDecoder::nal_unit()
 {
     if (((m_nalu.end_offset - m_nalu.start_offset) > 3) &&
-         m_bitstreamData.HasSliceStartCodeAtOffset(m_nalu.start_offset))
+         m_bitstreamData.HasSliceStartCodeAtOffset(narrow_cast<VkDeviceSize>(m_nalu.start_offset)))
     {
         int nal_type;
         init_dbits();
@@ -361,7 +361,7 @@ void VulkanVideoDecoder::nal_unit()
                 end_of_picture();
 
                 // This swap will copy to the new buffer most of the time.
-                m_bitstreamDataLen = swapBitstreamBuffer(m_nalu.start_offset, m_nalu.end_offset - m_nalu.start_offset);
+                m_bitstreamDataLen = swapBitstreamBuffer(narrow_cast<VkDeviceSize>(m_nalu.start_offset), narrow_cast<VkDeviceSize>(m_nalu.end_offset - m_nalu.start_offset));
                 m_nalu.end_offset -= m_nalu.start_offset;
                 m_nalu.start_offset = 0;
                 m_bitstreamData.ResetStreamMarkers();
@@ -434,7 +434,7 @@ int VulkanVideoDecoder::init_sequence(VkParserSequenceInfo *pnvsi)
             // Determine frame duration
             if ((m_lClockRate > 0) && (lNumerator > 0) && (lDenominator > 0))
             {
-                m_lFrameDuration = (int32_t)((uint64_t)lDenominator * m_lClockRate / (uint32_t)lNumerator);
+                m_lFrameDuration = (int32_t)((uint64_t)lDenominator * (uint64_t)m_lClockRate / (uint32_t)lNumerator);
             }
             else if (m_lFrameDuration <= 0)
             {
@@ -491,7 +491,7 @@ void VulkanVideoDecoder::end_of_picture()
                  || (!m_DispInfo[lDisp].bPTSValid))
                 {
                     // Find a PTS in the list
-                    unsigned int ndx = m_lPTSPos;
+                    unsigned int ndx = (unsigned int)m_lPTSPos;
                     m_DispInfo[lDisp].bPTSValid = false;
                     m_DispInfo[lDisp].llPTS = m_llExpectedPTS; // Will be updated later on
                     for (int k = 0; k < MAX_QUEUED_PTS; k++)
