@@ -83,7 +83,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;
@@ -116,7 +116,7 @@ public:
                     if (m_availablePoolNodes & (1ULL << i)) {
                         m_nextNodeToUse = i + 1;
                         m_availablePoolNodes &= ~(1ULL << i);
-                        availablePoolNodeIndx = i;
+                        availablePoolNodeIndx = (int32_t)i;
                         break;
                     }
                 }
@@ -133,8 +133,8 @@ public:
             } while (retryFirstPoolPartition);
         }
         if (availablePoolNodeIndx != -1) {
-            m_poolNodes[availablePoolNodeIndx].SetParent(this, availablePoolNodeIndx);
-            poolNode = &m_poolNodes[availablePoolNodeIndx];
+            m_poolNodes[(size_t)availablePoolNodeIndx].SetParent(this, availablePoolNodeIndx);
+            poolNode = &m_poolNodes[(size_t)availablePoolNodeIndx];
             return true;
         }
         return false;

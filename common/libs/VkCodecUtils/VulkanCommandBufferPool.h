@@ -81,7 +81,7 @@ public:
                 assert(!"Invalid PoolNode state!");
                 return nullptr;
             }
-            return m_parent->m_commandBuffersSet.GetCommandBuffer(m_parentIndex);
+            return m_parent->m_commandBuffersSet.GetCommandBuffer((uint32_t)m_parentIndex);
         }
 
         VkCommandBuffer BeginCommandBufferRecording(const VkCommandBufferBeginInfo& beginInfo) {
@@ -94,7 +94,7 @@ public:
                 return VK_NULL_HANDLE;
             }
 
-            const VkCommandBuffer cmdBuf = *m_parent->m_commandBuffersSet.GetCommandBuffer(m_parentIndex);
+            const VkCommandBuffer cmdBuf = *m_parent->m_commandBuffersSet.GetCommandBuffer((uint32_t)m_parentIndex);
             m_vkDevCtx->BeginCommandBuffer(cmdBuf, &beginInfo);
             m_cmdBufState = CmdBufStateRecording;
             return cmdBuf;
@@ -110,7 +110,7 @@ public:
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
 
-            assert(cmdBuf == *m_parent->m_commandBuffersSet.GetCommandBuffer(m_parentIndex));
+            assert(cmdBuf == *m_parent->m_commandBuffersSet.GetCommandBuffer((uint32_t)m_parentIndex));
 
             VkResult result = m_vkDevCtx->EndCommandBuffer(cmdBuf);
             if (result == VK_SUCCESS) {
@@ -139,7 +139,7 @@ public:
                 assert(!"Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
-            return m_parent->m_fenceSet.GetFence(m_parentIndex);
+            return m_parent->m_fenceSet.GetFence((uint32_t)m_parentIndex);
         }
 
         VkResult SyncHostOnCmdBuffComplete(bool resetAfterWait = true,
@@ -189,7 +189,7 @@ public:
                 assert(!"Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
-            return m_parent->m_semaphoreSet.GetSemaphore(m_parentIndex);
+            return m_parent->m_semaphoreSet.GetSemaphore((size_t)m_parentIndex);
         }
 
         VkQueryPool GetQueryPool(uint32_t& queryIdx) const {
@@ -198,7 +198,7 @@ public:
                 queryIdx = (uint32_t)-1;
                 return VK_NULL_HANDLE;
             }
-            queryIdx = m_parentIndex;
+            queryIdx = (uint32_t)m_parentIndex;
             return m_parent->m_queryPoolSet.GetQueryPool(queryIdx);
         }
 
@@ -207,7 +207,7 @@ public:
                 assert(!"Invalid PoolNode state!");
                 return (uint32_t)-1;
             }
-            return m_parentIndex;
+            return (uint32_t)m_parentIndex;
         }
 
         const VulkanDeviceContext* GetDeviceContext() const { return m_vkDevCtx; }
@@ -251,7 +251,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;

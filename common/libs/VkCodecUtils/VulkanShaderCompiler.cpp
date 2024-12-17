@@ -116,7 +116,7 @@ VkShaderModule VulkanShaderCompiler::BuildShaderFromFile(const char *fileName,
         size_t size = static_cast<size_t>(fileSize);
         is.seekg(0, is.beg);
         char* shaderCode = new char[size];
-        is.read(shaderCode, size);
+        is.read(shaderCode, (std::streamsize)size);
         is.close();
 
         assert(size > 0);

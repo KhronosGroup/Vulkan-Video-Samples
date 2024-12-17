@@ -440,7 +440,7 @@ public:
     template <class colorType>
     void clampIntValues(colorType intColor[3]) const {
         for (int i = 0; i < 3; i++) {
-            intColor[i] = clamp<colorType>(intColor[i],  m_min[i], m_max[i]);
+            intColor[i] = clamp<colorType>(intColor[i],  (colorType)m_min[i], (colorType)m_max[i]);
         }
     }
 
@@ -449,7 +449,7 @@ public:
         for (int i = 0; i < 3; i++) {
             // Add .5 to round-up when converting to int.
             uint32_t intYuv = (uint32_t)(normColor[i] * m_deNormalizeScale[i] + m_deNormalizeShift[i]);
-            intYuv = clamp<uint32_t>(intYuv,  m_min[i], m_max[i]);
+            intYuv = clamp<uint32_t>(intYuv,  (uint32_t)m_min[i], (uint32_t)m_max[i]);
             intColor[i] = (colorType)(intYuv << m_bpp16BitShift); // TODO add this shift to the m_bppShift
         }
     }

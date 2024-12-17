@@ -21,9 +21,9 @@
 
 int32_t VulkanCommandBufferPool::PoolNode::Release()
 {
-    uint32_t ret = --m_refCount;
+    int32_t ret = --m_refCount;
     if (ret == 1) {
-        m_parent->ReleasePoolNodeToPool(m_parentIndex);
+        m_parent->ReleasePoolNodeToPool((uint32_t)m_parentIndex);
         m_parentIndex = -1;
         m_parent = nullptr;
     } else if (ret == 0) {
@@ -71,7 +71,7 @@ bool VulkanCommandBufferPool::GetAvailablePoolNode(VkSharedBaseObj<PoolNode>& po
                 if (m_availablePoolNodes & (1ULL << i)) {
                     m_nextNodeToUse = i + 1;
                     m_availablePoolNodes &= ~(1ULL << i);
-                    availablePoolNodeIndx = i;
+                    availablePoolNodeIndx = (int32_t)i;
                     break;
                 }
             }
@@ -88,8 +88,8 @@ bool VulkanCommandBufferPool::GetAvailablePoolNode(VkSharedBaseObj<PoolNode>& po
         } while (retryFirstPoolPartition);
     }
     if (availablePoolNodeIndx != -1) {
-        m_poolNodes[availablePoolNodeIndx].SetParent(this, availablePoolNodeIndx);
-        poolNode = &m_poolNodes[availablePoolNodeIndx];
+        m_poolNodes[(size_t)availablePoolNodeIndx].SetParent(this, availablePoolNodeIndx);
+        poolNode = &m_poolNodes[(size_t)availablePoolNodeIndx];
         return true;
     }
     return false;

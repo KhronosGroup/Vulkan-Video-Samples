@@ -227,7 +227,7 @@ VkResult ImageObject::FillImageWithPattern(int pattern)
         m_vkDevCtx->GetImageSubresourceLayout(*m_vkDevCtx, image, &subres, &layout);
 
         generateColorPatternRgba8888((ColorPattern)pattern, (uint8_t *)mappedHostPtr,
-                                 imageWidth, imageHeight,
+                                 (uint32_t)imageWidth, (uint32_t)imageHeight,
                                  (uint32_t)layout.rowPitch);
     }
 
@@ -701,7 +701,7 @@ VkResult VulkanPerDrawContext::RecordCommandBuffer(VkCommandBuffer cmdBuffer,
             setImageLayout(m_vkDevCtx, cmdBuffer, inputImageToDrawFrom->image,
                        VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                        VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                       (VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << planeIndx));
+                       (VkImageAspectFlags)(VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << planeIndx));
 
         }
     }
@@ -793,11 +793,11 @@ VkResult VulkanPerDrawContext::RecordCommandBuffer(VkCommandBuffer cmdBuffer,
     vk::TransformPushConstants constants;
     if (scaleInput) {
         if (displayWidth && (displayWidth != inputImageToDrawFrom->imageWidth)) {
-            constants.texMatrix[0] = vk::Vec2((float)displayWidth / inputImageToDrawFrom->imageWidth, 0.0f);
+            constants.texMatrix[0] = vk::Vec2((float)(double)displayWidth / (float)(double)inputImageToDrawFrom->imageWidth, 0.0f);
         }
 
         if (displayHeight && (displayHeight != inputImageToDrawFrom->imageHeight)) {
-            constants.texMatrix[1] = vk::Vec2(.0f, (float)displayHeight /inputImageToDrawFrom->imageHeight);
+            constants.texMatrix[1] = vk::Vec2(.0f, (float)(double)displayHeight / (float)(double)inputImageToDrawFrom->imageHeight);
         }
     }
 
@@ -830,7 +830,7 @@ VkResult VulkanPerDrawContext::RecordCommandBuffer(VkCommandBuffer cmdBuffer,
             setImageLayout(m_vkDevCtx, cmdBuffer, inputImageToDrawFrom->image,
                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR,
                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR,
-                       (VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << planeIndx));
+                       (VkImageAspectFlags)(VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << planeIndx));
 
         }
     }
@@ -897,22 +897,21 @@ VkResult VulkanRenderInfo::CreatePerDrawContexts(const VulkanDeviceContext* vkDe
 {
     std::vector<VkImage> fbImages;
     vk::get(vkDevCtx, vkDevCtx->getDevice(), swapchain, fbImages);
-    int32_t numFbImages = (int32_t )fbImages.size();
 
-    perDrawCtx.resize(numFbImages);
+    perDrawCtx.resize(fbImages.size());
 
     m_vkDevCtx = vkDevCtx;
 
     VkResult result = VK_SUCCESS;
-    for (int32_t ctxsIndx = 0; ctxsIndx < numFbImages; ctxsIndx++) {
+    for (size_t ctxsIndx = 0; ctxsIndx < fbImages.size(); ctxsIndx++) {
 
-        VulkanPerDrawContext* pPerDrawContext = GetDrawContext(ctxsIndx);
+        VulkanPerDrawContext* pPerDrawContext = GetDrawContext((int32_t)ctxsIndx);
         pPerDrawContext->m_vkDevCtx = vkDevCtx;
-        pPerDrawContext->contextIndex = ctxsIndx;
+        pPerDrawContext->contextIndex = (int32_t)ctxsIndx;
         if (mVerbose) std::cout << "VkVideoUtils: " << "Init pPerDrawContext " << ctxsIndx << std::endl;
 
         if (mVerbose) std::cout << "VkVideoUtils: " << "CreateCommandBufferPool " << pPerDrawContext->contextIndex << std::endl;
-        result = pPerDrawContext->commandBuffer.CreateCommandBufferPool(vkDevCtx, vkDevCtx->GetGfxQueueFamilyIdx());
+        result = pPerDrawContext->commandBuffer.CreateCommandBufferPool(vkDevCtx, (uint32_t)vkDevCtx->GetGfxQueueFamilyIdx());
         if (result != VK_SUCCESS) {
             return result;
         }

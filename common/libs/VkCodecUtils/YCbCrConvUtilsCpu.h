@@ -53,7 +53,7 @@ public:
     static void CopyRow(const planeType* src, planeType* dst, int count, int /* shiftBits */) {
 
         count *= (int)sizeof(planeType);
-        memcpy(dst, src, count);
+        memcpy(dst, src, (size_t)count);
     }
 
     static void CopyRowShiftLeft(const planeType* src, planeType* dst, int count, int shiftBits) {

@@ -272,7 +272,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
 }
 
 inline VkResult WaitAndGetStatus(const VkInterfaceFunctions* vkIf, VkDevice device, VkFence fence,
-                                 VkQueryPool queryPool, int32_t startQueryId, uint32_t pictureIndex,
+                                 VkQueryPool queryPool, uint32_t startQueryId, uint32_t pictureIndex,
                                   bool resetAfterWait = true, const char* fenceName = "unknown",
                                   const uint64_t fenceWaitTimeout = 100ULL * 1000ULL * 1000ULL /* 100 mSec */,
                                   const uint64_t fenceTotalWaitTimeout = 5ULL * 1000ULL * 1000ULL * 1000ULL /* 5 sec */,

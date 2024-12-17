@@ -85,7 +85,7 @@ VkResult VulkanDeviceMemoryImpl::Initialize(const VkMemoryRequirements& memoryRe
 {
     if (m_memoryRequirements.size >= memoryRequirements.size) {
         if (clearMemory) {
-            VkDeviceSize ret = MemsetData(0x00, 0, m_memoryRequirements.size);
+            VkDeviceSize ret = narrow_cast<VkDeviceSize>(MemsetData(0x00, 0, m_memoryRequirements.size));
             if (ret != m_memoryRequirements.size) {
                 assert(!"Couldn't allocate device memory!");
                 return VK_ERROR_INITIALIZATION_FAILED;
@@ -318,8 +318,8 @@ int64_t VulkanDeviceMemoryImpl::MemsetData(uint32_t value, VkDeviceSize offset, 
     }
 
     assert(size < std::numeric_limits<size_t>::max());
-    memset(setData, value, (size_t)size);
-    return size;
+    memset(setData, (int)value, (size_t)size);
+    return (int64_t)size;
 }
 
 int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(uint8_t *dstBuffer, VkDeviceSize dstOffset,
@@ -335,7 +335,7 @@ int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(uint8_t *dstBuffer, VkDeviceSiz
     }
     assert(size < std::numeric_limits<size_t>::max());
     memcpy(dstBuffer + dstOffset, readData, (size_t)size);
-    return size;
+    return (int64_t)size;
 }
 
 int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(VkSharedBaseObj<VulkanDeviceMemoryImpl>& dstBuffer, VkDeviceSize dstOffset,
@@ -351,7 +351,7 @@ int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(VkSharedBaseObj<VulkanDeviceMem
     }
 
     dstBuffer->CopyDataFromBuffer(readData, 0, dstOffset, size);
-    return size;
+    return (int64_t)size;
 }
 
 int64_t  VulkanDeviceMemoryImpl::CopyDataFromBuffer(const uint8_t* sourceBuffer, VkDeviceSize srcOffset,
@@ -366,7 +366,7 @@ int64_t  VulkanDeviceMemoryImpl::CopyDataFromBuffer(const uint8_t* sourceBuffer,
         assert(size < std::numeric_limits<size_t>::max());
         memcpy(writeData, sourceBuffer + srcOffset, (size_t)size);
     }
-    return size;
+    return (int64_t)size;
 }
 
 int64_t VulkanDeviceMemoryImpl::CopyDataFromBuffer(const VkSharedBaseObj<VulkanDeviceMemoryImpl>& sourceMemory,
@@ -390,7 +390,7 @@ int64_t VulkanDeviceMemoryImpl::CopyDataFromBuffer(const VkSharedBaseObj<VulkanD
 
     assert(size < std::numeric_limits<size_t>::max());
     memcpy(writeData, srcPtr, (size_t)size);
-    return size;
+    return (int64_t)size;
 }
 
 uint8_t* VulkanDeviceMemoryImpl::GetDataPtr(VkDeviceSize offset, VkDeviceSize &maxSize)

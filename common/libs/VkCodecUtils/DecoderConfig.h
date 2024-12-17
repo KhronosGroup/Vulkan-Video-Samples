@@ -222,7 +222,7 @@ struct DecoderConfig {
                 "Size of decode operation in-flight before synchronizing for the "
                 "result - only used with --noDisplay (when no presentation is enabled)",
                 [this](const char **args, const ProgramArgs &a) {
-                    decoderQueueSize = std::atoi(args[0]);
+                    decoderQueueSize = (uint32_t)std::atoi(args[0]);
                     return true;
                 }},
             {"--decodeImagesInFlight", nullptr, 1,
@@ -341,7 +341,7 @@ struct DecoderConfig {
                     std::string token;
                     while (std::getline(stream, token, ',')) {
                         char* endPtr = NULL;
-                        uint32_t initValue = strtoul(token.c_str(), &endPtr, 16);
+                        uint32_t initValue = static_cast<uint32_t>(strtoul(token.c_str(), &endPtr, 16));
                         if ((endPtr == NULL) || (*endPtr != 0)) {
                             std::cerr << "Failed to parse the following initial CRC value:"
                                   << token << std::endl;

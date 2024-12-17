@@ -34,9 +34,9 @@
 
 int32_t VulkanVideoImagePoolNode::Release()
 {
-    uint32_t ret = --m_refCount;
+    int32_t ret = --m_refCount;
     if (ret == 1) {
-        m_parent->ReleaseImageToPool(m_parentIndex);
+        m_parent->ReleaseImageToPool((uint32_t)m_parentIndex);
         m_parentIndex = -1;
         m_parent = nullptr;
     } else if (ret == 0) {
@@ -179,7 +179,7 @@ bool VulkanVideoImagePool::GetAvailableImage(VkSharedBaseObj<VulkanVideoImagePoo
                 if (m_availablePoolNodes & (1ULL << i)) {
                     m_nextNodeToUse = i + 1;
                     m_availablePoolNodes &= ~(1ULL << i);
-                    availablePoolNodeIndx = i;
+                    availablePoolNodeIndx = (int32_t)i;
                     break;
                 }
             }
@@ -196,10 +196,10 @@ bool VulkanVideoImagePool::GetAvailableImage(VkSharedBaseObj<VulkanVideoImagePoo
         } while (retryFirstPoolPartition);
     }
     if (availablePoolNodeIndx != -1) {
-        VkResult result = GetImageSetNewLayout(availablePoolNodeIndx, newImageLayout);
+        VkResult result = GetImageSetNewLayout((uint32_t)availablePoolNodeIndx, newImageLayout);
         if (result == VK_SUCCESS) {
-            m_imageResources[availablePoolNodeIndx].SetParent(this, availablePoolNodeIndx);
-            imageResource = &m_imageResources[availablePoolNodeIndx];
+            m_imageResources[(size_t)availablePoolNodeIndx].SetParent(this, availablePoolNodeIndx);
+            imageResource = &m_imageResources[(size_t)availablePoolNodeIndx];
             return true;
         }
     }

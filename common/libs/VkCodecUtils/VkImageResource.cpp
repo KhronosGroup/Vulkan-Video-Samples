@@ -201,7 +201,7 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
         uint32_t numPlanes = 0;
         // Create separate image views for Y and CbCr planes
         viewInfo.format = mpInfo->vkPlaneFormat[numPlanes];  // For the Y plane
-        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
+        viewInfo.subresourceRange.aspectMask = (VkImageAspectFlags)(VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes);
         result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
         if (result != VK_SUCCESS) {
             return result;
@@ -211,7 +211,7 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
 
         if (mpInfo->planesLayout.numberOfExtraPlanes > 0) {
             viewInfo.format = mpInfo->vkPlaneFormat[numPlanes];  // For the CbCr plane
-            viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
+            viewInfo.subresourceRange.aspectMask = (VkImageAspectFlags)(VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes);
             result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
             if (result != VK_SUCCESS) {
                 return result;
@@ -221,7 +221,7 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
 
             if (mpInfo->planesLayout.numberOfExtraPlanes > 1) {
                 viewInfo.format = mpInfo->vkPlaneFormat[numPlanes];  // For the CbCr plane
-                viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
+                viewInfo.subresourceRange.aspectMask = (VkImageAspectFlags)(VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes);
                 result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
                 if (result != VK_SUCCESS) {
                     return result;

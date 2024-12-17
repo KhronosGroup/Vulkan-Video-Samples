@@ -42,7 +42,6 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
 {
 
     int32_t videoQueueIndx =  programConfig.queueId;
-    const uint32_t loopCount = programConfig.loopCount;
     const int32_t  maxFrameCount = programConfig.maxFrameCount;
     const int32_t numDecodeImagesInFlight = std::max(programConfig.numDecodeImagesInFlight, 4);
     const int32_t numDecodeImagesToPreallocate = programConfig.numDecodeImagesToPreallocate;
@@ -124,7 +123,7 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
         return result;
     }
 
-    m_loopCount = loopCount;
+    m_loopCount = programConfig.loopCount;
     m_startFrame = 0;
     m_maxFrameCount = maxFrameCount;
 
