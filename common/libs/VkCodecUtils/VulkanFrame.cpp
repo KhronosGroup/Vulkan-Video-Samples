@@ -389,7 +389,7 @@ bool VulkanFrame<FrameDataType>::OnFrame( int32_t renderIndex,
 
     if (gfxRendererIsEnabled == false) {
 
-        m_frameDataIndex = (m_frameDataIndex + 1) % m_frameData.size();
+        m_frameDataIndex = (uint32_t)((m_frameDataIndex + 1) % m_frameData.size());
         return continueLoop;
     }
 
@@ -674,7 +674,7 @@ VkResult VulkanFrame<FrameDataType>::DrawFrame( int32_t            renderIndex,
     close(fd);
 #endif
 
-    m_frameDataIndex = (m_frameDataIndex + 1) % m_frameData.size();
+    m_frameDataIndex = ((m_frameDataIndex + 1) % (uint32_t)m_frameData.size());
 
     return result;
 }
