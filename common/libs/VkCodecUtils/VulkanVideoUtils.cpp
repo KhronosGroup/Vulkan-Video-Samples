@@ -797,11 +797,11 @@ VkResult VulkanPerDrawContext::RecordCommandBuffer(VkCommandBuffer cmdBuffer,
     vk::TransformPushConstants constants;
     if (scaleInput) {
         if (displayWidth && (displayWidth != inputImageToDrawFrom->imageWidth)) {
-            constants.texMatrix[0] = vk::Vec2((float)displayWidth / inputImageToDrawFrom->imageWidth, 0.0f);
+            constants.texMatrix[0] = vk::Vec2((float)displayWidth / (float)inputImageToDrawFrom->imageWidth, 0.0f);
         }
 
         if (displayHeight && (displayHeight != inputImageToDrawFrom->imageHeight)) {
-            constants.texMatrix[1] = vk::Vec2(.0f, (float)displayHeight /inputImageToDrawFrom->imageHeight);
+            constants.texMatrix[1] = vk::Vec2(.0f, (float)displayHeight / (float)inputImageToDrawFrom->imageHeight);
         }
     }
 
