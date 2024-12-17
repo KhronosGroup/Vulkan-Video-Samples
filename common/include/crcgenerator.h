@@ -17,6 +17,6 @@
 #ifndef _CRC_GENERATOR_INCLUDED
 #define _CRC_GENERATOR_INCLUDED
 
-extern unsigned long Crc32Table[256];
-void getCRC(uint32_t *checksum, const uint8_t *inputBytes, size_t length, unsigned long crcTable[]);
+extern uint32_t Crc32Table[256];
+void getCRC(uint32_t *checksum, const uint8_t *inputBytes, size_t length, uint32_t crcTable[]);
 #endif //_CRC_GENERATOR_INCLUDED
