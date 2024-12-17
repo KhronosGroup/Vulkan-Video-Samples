@@ -16,7 +16,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::SVE>(const uint8_t *pdatain
 {
     size_t i = 0;
     {
-        static const int lanes = (int)svcntb();
+        static const uint8_t lanes = (uint8_t)svcntb();
 
         svbool_t pred = svwhilelt_b8_u64(i, datasize);
         svbool_t pred_next = svpfalse_b();
@@ -28,7 +28,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::SVE>(const uint8_t *pdatain
         static uint8_t isArrayFilled = 0;
         if (!isArrayFilled)
         {
-            for (int idx = 0; idx < lanes; idx++)
+            for (uint8_t idx = 0; idx < lanes; idx++)
             {
                 data0n[idx] = idx;
             }

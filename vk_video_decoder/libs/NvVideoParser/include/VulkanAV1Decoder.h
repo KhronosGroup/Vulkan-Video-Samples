@@ -381,7 +381,7 @@ class VulkanAV1Decoder : public VulkanVideoDecoder {
     size_t le(int n) {
         size_t t = 0;
         for (int i = 0; i < n; i++) {
-            uint8_t byte = u(8);
+            uint8_t byte = (uint8_t)u(8);
             t += (byte << (i * 8));
         }
         return t;

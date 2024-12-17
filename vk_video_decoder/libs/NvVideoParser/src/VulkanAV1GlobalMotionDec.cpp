@@ -110,7 +110,7 @@ static uint16_t inv_recenter_nonneg(uint16_t r, uint16_t v)
     else if ((v & 1) == 0)
         return (v >> 1) + r;
     else
-        return r - ((v + 1) >> 1);
+        return r - (uint16_t)((v + 1) >> 1);
 }
 
 // Inverse recenters a non-negative literal v in [0, n-1] around a
@@ -120,7 +120,7 @@ static uint16_t inv_recenter_finite_nonneg(uint16_t n, uint16_t r, uint16_t v)
     if ((r << 1) <= n) {
         return inv_recenter_nonneg(r, v);
     } else {
-        return n - 1 - inv_recenter_nonneg(n - 1 - r, v);
+        return (uint16_t)(n - 1 - inv_recenter_nonneg((uint16_t)(n - 1 - r), v));
     }
 }
 
@@ -129,25 +129,25 @@ uint16_t VulkanAV1Decoder::Read_primitive_quniform(uint16_t n)
     if (n <= 1) return 0;
     const int l = get_msb(n - 1) + 1;
     const int m = (1 << l) - n;
-    const int v = u(l - 1);
-    return v < m ? v : (v << 1) - m + u(1);
+    const int v = (int)u(l - 1);
+    return v < m ? (uint16_t)v : (uint16_t)((v << 1) - m + (uint16_t)u(1));
 }
 
 uint16_t VulkanAV1Decoder::Read_primitive_subexpfin(uint16_t n, uint16_t k)
 {
     int i = 0;
-    int mk = 0;
+    uint16_t mk = 0;
 
     while (1) {
         int b = (i ? k + i - 1 : k);
-        int a = (1 << b);
+        uint16_t a = (uint16_t)(1 << b);
 
         if (n <= mk + 3 * a) {
             return Read_primitive_quniform(n - mk) + mk;
         }
 
         if (!u(1)) {
-        return u(b) + mk;
+        return (uint16_t)u(b) + mk;
         }
 
         i = i + 1;
@@ -166,9 +166,9 @@ uint16_t VulkanAV1Decoder::Read_primitive_refsubexpfin(uint16_t n, uint16_t k, u
 
 int16_t VulkanAV1Decoder::Read_signed_primitive_refsubexpfin(uint16_t n, uint16_t k, int16_t ref)
 {
-    ref += n - 1;
-    const uint16_t scaled_n = (n << 1) - 1;
-    return Read_primitive_refsubexpfin(scaled_n, k, ref) - n + 1;
+    ref += (int16_t)(n - 1);
+    const uint16_t scaled_n = (uint16_t)(n << 1) - 1;
+    return (int16_t)(Read_primitive_refsubexpfin(scaled_n, k, ref) - n + 1);
 }
 
 int VulkanAV1Decoder::ReadGlobalMotionParams(AV1WarpedMotionParams *params, const AV1WarpedMotionParams *ref_params, int allow_hp)
@@ -188,24 +188,24 @@ int VulkanAV1Decoder::ReadGlobalMotionParams(AV1WarpedMotionParams *params, cons
     if (type >= ROTZOOM) {
         params->wmmat[2] = Read_signed_primitive_refsubexpfin(
                            GM_ALPHA_MAX + 1, SUBEXPFIN_K,
-                           (ref_params->wmmat[2] >> GM_ALPHA_PREC_DIFF) -
+                           (int16_t)(ref_params->wmmat[2] >> GM_ALPHA_PREC_DIFF) -
                                (1 << GM_ALPHA_PREC_BITS)) *
                            GM_ALPHA_DECODE_FACTOR +
                        (1 << WARPEDMODEL_PREC_BITS);
         params->wmmat[3] = Read_signed_primitive_refsubexpfin(
                            GM_ALPHA_MAX + 1, SUBEXPFIN_K,
-                           (ref_params->wmmat[3] >> GM_ALPHA_PREC_DIFF)) *
+                           (int16_t)(ref_params->wmmat[3] >> GM_ALPHA_PREC_DIFF)) *
                        GM_ALPHA_DECODE_FACTOR;
     }
 
     if (type >= AFFINE) {
         params->wmmat[4] = Read_signed_primitive_refsubexpfin(
                            GM_ALPHA_MAX + 1, SUBEXPFIN_K,
-                           (ref_params->wmmat[4] >> GM_ALPHA_PREC_DIFF)) *
+                           (int16_t)(ref_params->wmmat[4] >> GM_ALPHA_PREC_DIFF)) *
                        GM_ALPHA_DECODE_FACTOR;
         params->wmmat[5] = Read_signed_primitive_refsubexpfin(
                            GM_ALPHA_MAX + 1, SUBEXPFIN_K,
-                           (ref_params->wmmat[5] >> GM_ALPHA_PREC_DIFF) -
+                           (int16_t)(ref_params->wmmat[5] >> GM_ALPHA_PREC_DIFF) -
                                (1 << GM_ALPHA_PREC_BITS)) *
                            GM_ALPHA_DECODE_FACTOR +
                        (1 << WARPEDMODEL_PREC_BITS);
@@ -224,12 +224,12 @@ int VulkanAV1Decoder::ReadGlobalMotionParams(AV1WarpedMotionParams *params, cons
                                         ? GM_TRANS_ONLY_PREC_DIFF + !allow_hp
                                         : GM_TRANS_PREC_DIFF;
         params->wmmat[0] = Read_signed_primitive_refsubexpfin(
-                               (1 << trans_bits) + 1, SUBEXPFIN_K,
-                               (ref_params->wmmat[0] >> trans_prec_diff)) *
+                               (uint16_t)(1 << trans_bits) + 1, SUBEXPFIN_K,
+                               (int16_t)(ref_params->wmmat[0] >> trans_prec_diff)) *
                            trans_dec_factor;
         params->wmmat[1] = Read_signed_primitive_refsubexpfin(
-                               (1 << trans_bits) + 1, SUBEXPFIN_K,
-                               (ref_params->wmmat[1] >> trans_prec_diff)) *
+                               (uint16_t)(1 << trans_bits) + 1, SUBEXPFIN_K,
+                               (int16_t)(ref_params->wmmat[1] >> trans_prec_diff)) *
                                trans_dec_factor;
     }
 

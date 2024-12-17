@@ -190,7 +190,7 @@ void VulkanVideoDecoder::skip_bits(uint32_t n)
                 else
                     m_nalu.get_zerocnt += (m_nalu.get_zerocnt < 2);
             }
-            m_nalu.get_bfr |= c;
+            m_nalu.get_bfr |= (uint32_t)c;
         } else
         {
             m_nalu.get_offset++;

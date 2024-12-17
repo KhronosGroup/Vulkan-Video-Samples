@@ -22,7 +22,7 @@
 #include "VulkanH26xDecoder.h"
 #include "nvVulkanh264ScalingList.h"
 
-#define VK_H264_SPS_VUI_FIELD(pStdVui, nvSpsIn, name) pStdVui->name = nvSpsIn->vui.name
+#define VK_H264_SPS_VUI_FIELD(pStdVui, nvSpsIn, name) pStdVui->name = (uint8_t)(nvSpsIn->vui.name)
 #define SET_VK_H264_SPS_VUI_FIELD(pStdVui, name, value) pStdVui->name = value
 #define VK_H264_SPS_VUI_FLAG(pStdVui, nvSpsIn, name) pStdVui->flags.name = nvSpsIn->vui.name
 
@@ -76,19 +76,19 @@ struct vui_parameters_s
 
 struct seq_parameter_set_svc_extension_s
 {
-    int inter_layer_deblocking_filter_control_present_flag;
-    int extended_spatial_scalability_idc;
-    int chroma_phase_x_plus1_flag;
-    int chroma_phase_y_plus1;
-    int seq_ref_layer_chroma_phase_x_plus1_flag;
-    int seq_ref_layer_chroma_phase_y_plus1;
-    int seq_scaled_ref_layer_left_offset;
-    int seq_scaled_ref_layer_top_offset;
-    int seq_scaled_ref_layer_right_offset;
-    int seq_scaled_ref_layer_bottom_offset;
-    int seq_tcoeff_level_prediction_flag;
-    int adaptive_tcoeff_level_prediction_flag;
-    int slice_header_restriction_flag;
+    uint32_t inter_layer_deblocking_filter_control_present_flag;
+    uint32_t extended_spatial_scalability_idc;
+    uint32_t chroma_phase_x_plus1_flag;
+    uint32_t chroma_phase_y_plus1;
+    uint32_t seq_ref_layer_chroma_phase_x_plus1_flag;
+    uint32_t seq_ref_layer_chroma_phase_y_plus1;
+    uint32_t seq_scaled_ref_layer_left_offset;
+    uint32_t seq_scaled_ref_layer_top_offset;
+    uint32_t seq_scaled_ref_layer_right_offset;
+    uint32_t seq_scaled_ref_layer_bottom_offset;
+    uint32_t seq_tcoeff_level_prediction_flag;
+    uint32_t adaptive_tcoeff_level_prediction_flag;
+    uint32_t slice_header_restriction_flag;
 };
 
 struct seq_parameter_set_s : public StdVideoPictureParametersSet, public StdVideoH264SequenceParameterSet
@@ -233,8 +233,8 @@ struct seq_parameter_set_s : public StdVideoPictureParametersSet, public StdVide
 
             // StdVideoH264HrdParameters   hrd_parameters);
             pStdHrdParameters->cpb_cnt_minus1 = pSps->vui.nal_hrd.cpb_cnt_minus1;
-            pStdHrdParameters->bit_rate_scale = pSps->vui.nal_hrd.bit_rate;
-            pStdHrdParameters->cpb_size_scale = pSps->vui.nal_hrd.cbp_size;
+            pStdHrdParameters->bit_rate_scale = (uint8_t)(pSps->vui.nal_hrd.bit_rate);
+            pStdHrdParameters->cpb_size_scale =(uint8_t)(pSps->vui.nal_hrd.cbp_size);
             // stdVui.pHrdParameters->bit_rate_value_minus1[32];
             // stdVui.pHrdParameters->cpb_size_value_minus1[32];
             // stdVui.pHrdParameters->cbr_flag[32];
@@ -544,7 +544,7 @@ struct slice_header_s
     int first_mb_in_slice;
     int slice_type_raw;
     int slice_type;
-    int pic_parameter_set_id;
+    uint8_t pic_parameter_set_id;
     int colour_plane_id;
     int frame_num;
     int idr_pic_id;
