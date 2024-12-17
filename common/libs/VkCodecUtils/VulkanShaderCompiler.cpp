@@ -42,7 +42,7 @@ static shaderc_shader_kind getShadercShaderType(VkShaderStageFlagBits type)
     default:
         std::cerr << "VulkanShaderCompiler: " << "invalid VKShaderStageFlagBits" << "type = " <<  type;
     }
-    return static_cast<shaderc_shader_kind>(-1);
+    return shaderc_glsl_infer_from_source;
 }
 
 VulkanShaderCompiler::VulkanShaderCompiler()
@@ -108,7 +108,7 @@ VkShaderModule VulkanShaderCompiler::BuildShaderFromFile(const char *fileName,
 
     if (is.is_open()) {
 
-        size_t size = is.tellg();
+        size_t size = (size_t)is.tellg();
         is.seekg(0, std::ios::beg);
         char* shaderCode = new char[size];
         is.read(shaderCode, size);
