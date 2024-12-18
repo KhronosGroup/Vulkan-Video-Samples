@@ -42,7 +42,7 @@ public:
         uint32_t ret = --m_refCount;
         // Destroy the buffer if ref-count reaches zero
         if (ret == 0) {
-            // std::cout << "Delete bitstream buffer " << this << " with size " << GetMaxSize() << std::endl;
+            // LOG_S_DEBUG << "Delete bitstream buffer " << this << " with size " << GetMaxSize() << std::endl;
             delete this;
         }
         return ret;
