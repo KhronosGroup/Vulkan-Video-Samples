@@ -19,7 +19,7 @@
 #define READ_PARAM(i, param, type) {                            \
     int32_t data = 0;                                           \
     if ((++i >= argc) || (sscanf(argv[i], "%d", &data) != 1)) { \
-        fprintf(stderr, "invalid parameter");                   \
+        LOG_ERROR_CONFIG("invalid parameter");                   \
         return -1;                                              \
     } else {                                                    \
         param = (type)data;                                     \
@@ -140,7 +140,7 @@ int EncoderConfigAV1::DoParseArguments(int argc, char* argv[])
             }
         } else if (args[i] == "--profile"){
             if (++i >= argc) {
-                fprintf(stderr, "invalid parameter for %s\n", args[i-1].c_str());
+                LOG_ERROR_CONFIG("invalid parameter for %s", args[i-1].c_str());
                 return -1;
             }
             std::string prfl = args[i];
@@ -152,11 +152,11 @@ int EncoderConfigAV1::DoParseArguments(int argc, char* argv[])
                 profile = STD_VIDEO_AV1_PROFILE_PROFESSIONAL;
             } else {
                 // Invalid profile
-                fprintf(stderr, "Invalid profile: %s\n", prfl.c_str());
+                LOG_ERROR_CONFIG("Invalid profile: %s", prfl.c_str());
                 return -1;
             }
         } else {
-            fprintf(stderr, "Unrecognized option: %s\n", argv[i]);
+            LOG_ERROR_CONFIG("Unrecognized option: %s", argv[i]);
             //printAV1Help();
             return -1;
         }
@@ -194,21 +194,21 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
                                                          quantizationMapCapabilities,
                                                          av1QuantizationMapCapabilities);
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get video capabilities :" << result << " ***" << std::endl;
+        LOG_S_ERROR << "*** Could not get video capabilities :" << result << " ***" << std::endl;
         assert(!"Coult not get Video Capabilities!");
         return result;
     }
 
-    if (verboseMsg) {
-        std::cout << "\t\t\t" << VkVideoCoreProfile::CodecToName(codec) << "encode capabilities: " << std::endl;
-        std::cout << "\t\t\t" << "minBitstreamBufferOffsetAlignment: " << videoCapabilities.minBitstreamBufferOffsetAlignment << std::endl;
-        std::cout << "\t\t\t" << "minBitstreamBufferSizeAlignment: " << videoCapabilities.minBitstreamBufferSizeAlignment << std::endl;
-        std::cout << "\t\t\t" << "pictureAccessGranularity: " << videoCapabilities.pictureAccessGranularity.width << " x " << videoCapabilities.pictureAccessGranularity.height << std::endl;
-        std::cout << "\t\t\t" << "minExtent: " << videoCapabilities.minCodedExtent.width << " x " << videoCapabilities.minCodedExtent.height << std::endl;
-        std::cout << "\t\t\t" << "maxExtent: " << videoCapabilities.maxCodedExtent.width  << " x " << videoCapabilities.maxCodedExtent.height << std::endl;
-        std::cout << "\t\t\t" << "maxDpbSlots: " << videoCapabilities.maxDpbSlots << std::endl;
-        std::cout << "\t\t\t" << "maxActiveReferencePictures: " << videoCapabilities.maxActiveReferencePictures << std::endl;
-    }
+
+    LOG_S_INFO << "\t\t\t" << VkVideoCoreProfile::CodecToName(codec) << "encode capabilities: " << std::endl;
+    LOG_S_INFO << "\t\t\t" << "minBitstreamBufferOffsetAlignment: " << videoCapabilities.minBitstreamBufferOffsetAlignment << std::endl;
+    LOG_S_INFO << "\t\t\t" << "minBitstreamBufferSizeAlignment: " << videoCapabilities.minBitstreamBufferSizeAlignment << std::endl;
+    LOG_S_INFO << "\t\t\t" << "pictureAccessGranularity: " << videoCapabilities.pictureAccessGranularity.width << " x " << videoCapabilities.pictureAccessGranularity.height << std::endl;
+    LOG_S_INFO << "\t\t\t" << "minExtent: " << videoCapabilities.minCodedExtent.width << " x " << videoCapabilities.minCodedExtent.height << std::endl;
+    LOG_S_INFO << "\t\t\t" << "maxExtent: " << videoCapabilities.maxCodedExtent.width  << " x " << videoCapabilities.maxCodedExtent.height << std::endl;
+    LOG_S_INFO << "\t\t\t" << "maxDpbSlots: " << videoCapabilities.maxDpbSlots << std::endl;
+    LOG_S_INFO << "\t\t\t" << "maxActiveReferencePictures: " << videoCapabilities.maxActiveReferencePictures << std::endl;
+
 
     return VK_SUCCESS;
 }
