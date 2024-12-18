@@ -26,9 +26,10 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
-#include <iomanip> 
+#include <iomanip>
 #include <sstream>
 #include "vulkan_interfaces.h"
+#include "Logger.h"
 
 struct ProgramConfig {
 
@@ -83,7 +84,7 @@ struct ProgramConfig {
     }
 
     using ProgramArgs = std::vector<ArgSpec>;
-    static bool showHelp(const char ** argv, const ProgramArgs &spec) { 
+    static bool showHelp(const char ** argv, const ProgramArgs &spec) {
         std::cout << argv[0] << std::endl;
         for ( auto& flag : spec ) {
             std::stringstream ss;
@@ -112,6 +113,12 @@ struct ProgramConfig {
                     exit(EXIT_SUCCESS);
                     return rtn;
                 }},
+            {"--logLevel", "-l", 1, "Set the log level",
+                [this](const char **args, const ProgramArgs &a) {
+                    int logLevel = std::atoi(args[0]);
+                    Logger::instance().setLogLevel(logLevel);
+                    return true;
+                }},
             {"--enableStrDemux", nullptr, 0, "Enable stream demuxing",
                 [this](const char **, const ProgramArgs &a) {
                     enableStreamDemuxing = true;
@@ -133,7 +140,7 @@ struct ProgramConfig {
                         forceParserType = VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR;
                         return true;
                     } else {
-                        std::cerr << "Invalid codec \"" << args[0] << "\"" << std::endl;
+                        LOG_ERROR_CONFIG ("Invalid codec \" %s \"", args[0]);
                         return false;
                     }
                 }},
@@ -230,7 +237,7 @@ struct ProgramConfig {
                 [this](const char **args, const ProgramArgs &a) {
                     loopCount = std::atoi(args[0]);
                     if (loopCount < 0) {
-                        std::cerr << "Loop count must not be negative" << std::endl;
+                        LOG_ERROR_CONFIG("Loop count must not be negative");
                         return false;
                     }
                     return true;
@@ -244,9 +251,9 @@ struct ProgramConfig {
             {"--queueid", nullptr, 1, "Index of the decoder queue to be used",
                 [this](const char **args, const ProgramArgs &a) {
                     queueId = std::atoi(args[0]);
-                    std::cout << queueId << std::endl;
+                    LOG_S_DEBUG << queueId << std::endl;
                     if (queueId < 0) {
-                        std::cerr << "queueid must not be negative" << std::endl;
+                        LOG_ERROR_CONFIG("queueid must not be negative");
                         return false;
                     }
                     return true;
@@ -260,11 +267,7 @@ struct ProgramConfig {
                 [this](const char **args, const ProgramArgs &a) {
                     size_t size = SetHexDeviceUUID(args[0]);
                     if (size != VK_UUID_SIZE) {
-                        std::cerr << "Invalid deviceUuid format used: " << args[0]
-                                  << " with size: " << strlen(args[0])
-                                  << std::endl;
-                        std::cerr << "deviceUuid must be represented by 16 hex (32 bytes) values."
-                                  << std::endl;
+                        LOG_ERROR_CONFIG("Invalid deviceUuid format used: %s with size: %d. deviceUuid must be represented by 16 hex (32 bytes) values.", args[0], strlen(args[0]));
                         return false;
                     }
                     return true;
@@ -311,8 +314,7 @@ struct ProgramConfig {
                         char* endPtr = NULL;
                         uint32_t initValue = strtoul(token.c_str(), &endPtr, 16);
                         if ((endPtr == NULL) || (*endPtr != 0)) {
-                            std::cerr << "Failed to parse the following initial CRC value:"
-                                  << token << std::endl;
+                            LOG_ERROR_CONFIG("Failed to parse the following initial CRC value: %s", token.c_str());
                             return false;
                         }
 
@@ -330,24 +332,23 @@ struct ProgramConfig {
                 (a.short_flag != nullptr && strcmp(argv[i], a.short_flag) == 0);
             });
             if (flag == spec.end()) {
-                std::cerr << "Unknown argument \"" << argv[i] << "\"" << std::endl;
-                std::cout << std::endl;
+                LOG_ERROR_CONFIG("Unknown argument \" %s \"", argv[i]);
                 showHelp(argv, spec);
                 exit(EXIT_FAILURE);
             }
 
             if (i + flag->numArgs >= argc) {
-                std::cerr << "Missing arguments for \"" << argv[i] << "\"" << std::endl;
+                LOG_ERROR_CONFIG("Missing arguments for \" %s \"", argv[i]);
                 exit(EXIT_FAILURE);
             }
 
             bool disableValueCheck = false;
             if (i + 1 < argc && strcmp(argv[i + 1], "--") == 0) {
                 if (i + 1 + flag->numArgs >= argc) {
-                    std::cerr << "Missing arguments for \"" << argv[i] << "\"" << std::endl;
+                    LOG_ERROR_CONFIG("Missing arguments for \" %s \"", argv[i]);
                     exit(EXIT_FAILURE);
                 }
-                disableValueCheck = true; 
+                disableValueCheck = true;
                 i++;
             }
 
@@ -356,11 +357,9 @@ struct ProgramConfig {
             if (!disableValueCheck) {
                 for (int j = 1; j <= flag->numArgs; j++) {
                     if (argv[i + j][0] == '-') {
-                        std::cerr << "Invalid value \"" << argv[i + j] << "\" for \"" << argv[i] << "\" "
-                            "(we don't allow values starting with `-` by default). You probably missed to "
-                            "set a value for \"" << argv[i] << "\"." << std::endl;
-                        std::cerr << "Use \"-- " << argv[i + j] << "\" if you meant to set \"" << argv[i + j]
-                            << "\" for \"" << argv[i] << "\"." << std::endl;
+                        LOG_ERROR_CONFIG("Invalid value \" %s \" for \" %s \"(we don't allow values starting with `-` by default). You probably missed to "
+                            "set a value for \" %s", argv[i + j], argv[i], argv[i]);
+                        LOG_ERROR_CONFIG("Use \"--%s\" if you meant to set \"%s\" for \"%s\".", argv[i + j], argv[i + j], argv[i]);
                         exit(EXIT_FAILURE);
                     }
                 }
@@ -377,9 +376,8 @@ struct ProgramConfig {
         if (((outputcrcPerFrame != 0) || (outputcrc != 0))) {
             if (crcInitValue.empty() != false) {
                 if (outputFileName.empty() != false) {
-                    std::cerr << "Please specify -o if you intend to use CRC calculation, CRC calculation requires HOST accessible memory."
-                                "Host accessible linear images requires an extra copy at the moment."
-                                << std::endl;
+                    LOG_ERROR_CONFIG("Please specify -o if you intend to use CRC calculation, CRC calculation requires HOST accessible memory."
+                                     "Host accessible linear images requires an extra copy at the moment.");
 
                     exit(EXIT_FAILURE);
                 }
