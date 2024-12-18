@@ -16,6 +16,7 @@
 
 #include <iostream>
 #include "VkDecoderUtils/VideoStreamDemuxer.h"
+#include "Logger.h"
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -28,7 +29,7 @@ extern "C" {
 
 inline bool check(int e, int iLine, const char *szFile) {
     if (e < 0) {
-        std::cerr << "General error " << e << " at line " << iLine << " in file " << szFile;
+        LOG_S_ERROR << "General error " << e << " at line " << iLine << " in file " << szFile;
         return false;
     }
     return true;
@@ -54,16 +55,16 @@ private:
     {
 
         if (!fmtc) {
-            std::cerr << "No AVFormatContext provided.";
+            LOG_S_ERROR << "No AVFormatContext provided.";
             return -1;
         }
 
-        std::cout << "Media format: " << fmtc->iformat->long_name << " (" << fmtc->iformat->name << ")";
+        LOG_S_DEBUG << "Media format: " << fmtc->iformat->long_name << " (" << fmtc->iformat->name << ")";
 
         ck(avformat_find_stream_info(fmtc, NULL));
         videoStream = av_find_best_stream(fmtc, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
         if (videoStream < 0) {
-            std::cerr << "FFmpeg error: " << __FILE__ << " " << __LINE__ << " " << "Could not find stream in input file";
+            LOG_S_ERROR << "FFmpeg error: " << __FILE__ << " " << __LINE__ << " " << "Could not find stream in input file";
             return -1;
         }
 
@@ -143,7 +144,7 @@ private:
             }
 
             if (!bsf) {
-                std::cerr << "FFmpeg error: " << __FILE__ << " " << __LINE__ << " " << "av_bsf_get_by_name(): " << videoCodec << " failed";
+                LOG_S_ERROR << "FFmpeg error: " << __FILE__ << " " << __LINE__ << " " << "av_bsf_get_by_name(): " << videoCodec << " failed";
                 return -1;
             }
             ck(av_bsf_alloc(bsf, &bsfc));
@@ -168,7 +169,7 @@ private:
 
         AVFormatContext *ctx = NULL;
         if (!(ctx = avformat_alloc_context())) {
-            std::cerr << "FFmpeg error: " << __FILE__ << " " << __LINE__;
+            LOG_S_ERROR << "FFmpeg error: " << __FILE__ << " " << __LINE__;
             return NULL;
         }
 
@@ -176,13 +177,13 @@ private:
         int avioc_buffer_size = 8 * 1024 * 1024;
         avioc_buffer = (uint8_t *)av_malloc(avioc_buffer_size);
         if (!avioc_buffer) {
-            std::cerr << "FFmpeg error: " << __FILE__ << " " << __LINE__;
+            LOG_S_ERROR << "FFmpeg error: " << __FILE__ << " " << __LINE__;
             return NULL;
         }
         avioc = avio_alloc_context(avioc_buffer, avioc_buffer_size,
             0, pDataProvider, &ReadPacket, NULL, NULL);
         if (!avioc) {
-            std::cerr << "FFmpeg error: " << __FILE__ << " " << __LINE__;
+            LOG_S_ERROR << "FFmpeg error: " << __FILE__ << " " << __LINE__;
             return NULL;
         }
         ctx->pb = avioc;
@@ -385,7 +386,7 @@ public:
             break;
         }
         // assert(!"Unknown CHROMA_SUBSAMPLING!");
-        std::cerr << "\nUnknown CHROMA_SUBSAMPLING from format: " << format << std::endl;
+        LOG_S_ERROR << "\nUnknown CHROMA_SUBSAMPLING from format: " << format << std::endl;
         return VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR;
     }
 
@@ -401,7 +402,7 @@ public:
                     case STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE:
                         break;
                     default:
-                        std::cerr << "\nInvalid h.264 profile: " << profile << std::endl;
+                        LOG_S_ERROR << "\nInvalid h.264 profile: " << profile << std::endl;
                 }
             }
             break;
@@ -415,7 +416,7 @@ public:
                     case STD_VIDEO_H265_PROFILE_IDC_SCC_EXTENSIONS:
                         break;
                     default:
-                        std::cerr << "\nInvalid h.265 profile: " << profile << std::endl;
+                        LOG_S_ERROR << "\nInvalid h.265 profile: " << profile << std::endl;
                 }
             }
             break;
@@ -427,12 +428,12 @@ public:
                     case STD_VIDEO_AV1_PROFILE_PROFESSIONAL:
                         break;
                     default:
-                        std::cerr << "\nInvalid AV1 profile: " << profile << std::endl;
+                        LOG_S_ERROR << "\nInvalid AV1 profile: " << profile << std::endl;
                 }
             }
             break;
             default:
-                std::cerr << "\nInvalid codec type: " << FFmpegToVkCodecOperation(videoCodec) << std::endl;
+                LOG_S_ERROR << "\nInvalid codec type: " << FFmpegToVkCodecOperation(videoCodec) << std::endl;
         }
         return (uint32_t)profile;
     }
@@ -497,12 +498,12 @@ public:
 
     virtual void DumpStreamParameters() const {
 
-        std::cout << "Width: "    << codedWidth << std::endl;
-        std::cout << "Height: "   << codedHeight <<  std::endl;
-        std::cout << "BitDepth: " << codedLumaBitDepth << std::endl;
-        std::cout << "Profile: "  << profile << std::endl;
-        std::cout << "Level: "    << level << std::endl;
-        std::cout << "Aspect Ration: "    << (float)sample_aspect_ratio.num / sample_aspect_ratio.den << std::endl;
+        LOG_S_DEBUG << "Width: "    << codedWidth << std::endl;
+        LOG_S_DEBUG << "Height: "   << codedHeight <<  std::endl;
+        LOG_S_DEBUG << "BitDepth: " << codedLumaBitDepth << std::endl;
+        LOG_S_DEBUG << "Profile: "  << profile << std::endl;
+        LOG_S_DEBUG << "Level: "    << level << std::endl;
+        LOG_S_DEBUG << "Aspect Ration: "    << (float)sample_aspect_ratio.num / sample_aspect_ratio.den << std::endl;
 
         static const char* FieldOrder[] = {
             "UNKNOWN",
@@ -512,7 +513,7 @@ public:
             "TB: Top coded first, bottom displayed first",
             "BT: Bottom coded first, top displayed first",
         };
-        std::cout << "Field Order: "    << FieldOrder[field_order] << std::endl;
+        LOG_S_DEBUG << "Field Order: "    << FieldOrder[field_order] << std::endl;
 
         static const char* ColorRange[] = {
             "UNSPECIFIED",
@@ -520,7 +521,7 @@ public:
             "JPEG: the normal     2^n-1   JPEG YUV ranges",
             "NB: Not part of ABI",
         };
-        std::cout << "Color Range: "    << ColorRange[colorRange] << std::endl;
+        LOG_S_DEBUG << "Color Range: "    << ColorRange[colorRange] << std::endl;
 
         static const char* ColorPrimaries[] = {
             "RESERVED0",
@@ -540,7 +541,7 @@ public:
             "JEDEC_P22: JEDEC P22 phosphors",
             "NB: Not part of ABI",
         };
-        std::cout << "Color Primaries: "    << ColorPrimaries[colorPrimaries] << std::endl;
+        LOG_S_DEBUG << "Color Primaries: "    << ColorPrimaries[colorPrimaries] << std::endl;
 
         static const char* ColorTransferCharacteristic[] = {
             "RESERVED0",
@@ -564,7 +565,7 @@ public:
             "ARIB_STD_B67:  ARIB STD-B67, known as Hybrid log-gamma",
             "NB: Not part of ABI",
         };
-        std::cout << "Color Transfer Characteristic: "    << ColorTransferCharacteristic[colorTransferCharacteristics] << std::endl;
+        LOG_S_DEBUG << "Color Transfer Characteristic: "    << ColorTransferCharacteristic[colorTransferCharacteristics] << std::endl;
 
         static const char* ColorSpace[] = {
             "RGB:   order of coefficients is actually GBR, also IEC 61966-2-1 (sRGB)",
@@ -584,7 +585,7 @@ public:
             "ICTCP:  ITU-R BT.2100-0, ICtCp",
             "NB:  Not part of ABI",
         };
-        std::cout << "Color Space: "    << ColorSpace[colorSpace] << std::endl;
+        LOG_S_DEBUG << "Color Space: "    << ColorSpace[colorSpace] << std::endl;
 
         static const char* ChromaLocation[] = {
             "UNSPECIFIED",
@@ -596,7 +597,7 @@ public:
             "BOTTOM",
             "NB:Not part of ABI",
         };
-        std::cout << "Chroma Location: "    << ChromaLocation[chromaLocation] << std::endl;
+        LOG_S_DEBUG << "Chroma Location: "    << ChromaLocation[chromaLocation] << std::endl;
     }
 
 private:
