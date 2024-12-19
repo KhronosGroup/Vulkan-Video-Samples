@@ -87,7 +87,7 @@ static bool GetNextFrame(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder
                   << std::endl;
     }
 
-    curFrameDataQueueIndex = (curFrameDataQueueIndex + 1) % frameDataQueue.size();
+    curFrameDataQueueIndex = (curFrameDataQueueIndex + 1) % (uint32_t)frameDataQueue.size();
 
     return continueLoop;
 }
