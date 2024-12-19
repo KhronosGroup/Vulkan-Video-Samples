@@ -120,7 +120,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
               << "\tBit depth    : " << pVideoFormat->bit_depth_luma_minus8 + 8 << std::endl;
 
     uint32_t numDecodeSurfaces = std::max(m_videoFrameBuffer->GetCurrentNumberQueueSlots(),
-                                          (pVideoFormat->minNumDecodeSurfaces + m_numDecodeImagesInFlight));
+                                          ((uint32_t)pVideoFormat->minNumDecodeSurfaces + (uint32_t)m_numDecodeImagesInFlight));
     assert(numDecodeSurfaces <= VulkanVideoFrameBuffer::maxImages);
 
     int32_t videoQueueFamily = m_vkDevCtx->GetVideoDecodeQueueFamilyIdx();
@@ -174,7 +174,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     };
 
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
-                                                       m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
+                                                       (uint32_t)m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        videoCodec)) {
         FAIL_WITH_RESULT(VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR,
                          "video codec " << VkVideoCoreProfile::CodecToName(videoCodec) << " is not supported");
@@ -290,7 +290,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     if (!m_videoSession ||
             !m_videoSession->IsCompatible( m_vkDevCtx,
                                            sessionCreateFlags,
-                                           m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
+                                           (uint32_t)m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                            &videoProfile,
                                            outImageFormat,
                                            sessionMaxCodedExtent,
@@ -300,7 +300,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
         result = VulkanVideoSession::Create( m_vkDevCtx,
                                              sessionCreateFlags,
-                                             m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
+                                             (uint32_t)m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                              &videoProfile,
                                              outImageFormat,
                                              sessionMaxCodedExtent,
@@ -419,7 +419,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
         if (needNewFilter) {
             result = VulkanFilterYuvCompute::Create(m_vkDevCtx,
-                                                m_vkDevCtx->GetComputeQueueFamilyIdx(),
+                                                (uint32_t)m_vkDevCtx->GetComputeQueueFamilyIdx(),
                                                 0,
                                                 m_filterType,
                                                 numDecodeSurfaces + 1,
@@ -511,7 +511,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         if (!bitstreamHasFilmGrain) {
             // AV1 filmGrain uses the output of the decoder, even when in coincide mode
             // Otherwise the output is the same as the setup DPB image
-            outImageUsage &= ~VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+            outImageUsage &= (VkImageUsageFlags)~VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
         }
 
         // The output in coincide mode is the same as the DPB setup image
@@ -637,7 +637,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                     numDecodeSurfaces,
                                                     imageSpecsIndex,
                                                     imageSpecs,
-                                                    m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
+                                                    (uint32_t)m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                     m_numDecodeImagesToPreallocate);
 
     assert((uint32_t)ret == numDecodeSurfaces);
@@ -662,7 +662,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
         uint32_t allocateNumBuffers = std::min<uint32_t>(
                 m_decodeFramesData.GetBitstreamBuffersQueue().GetMaxNodes(),
-                (m_numBitstreamBuffersToPreallocate - availableBuffers));
+                (uint32_t)(m_numBitstreamBuffersToPreallocate - availableBuffers));
 
         allocateNumBuffers = std::min<uint32_t>(allocateNumBuffers,
                 m_decodeFramesData.GetBitstreamBuffersQueue().GetFreeNodesNumber());
@@ -673,7 +673,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
             VkDeviceSize allocSize = std::max<VkDeviceSize>(m_maxStreamBufferSize, 2 * 1024 * 1024);
 
             result = VulkanBitstreamBufferImpl::Create(m_vkDevCtx,
-                    m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
+                    (uint32_t)m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                     VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR,
                     allocSize,
                     videoCapabilities.minBitstreamBufferOffsetAlignment,
@@ -696,7 +696,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
     // Save the original config
     m_videoFormat = *pVideoFormat;
-    return numDecodeSurfaces;
+    return (int32_t)numDecodeSurfaces;
 }
 
 bool VkVideoDecoder::UpdatePictureParameters(VkSharedBaseObj<StdVideoPictureParametersSet>& pictureParametersObject,
@@ -797,7 +797,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     if (m_dumpDecodeData) {
         std::cout << "currPicIdx: " << currPicIdx << ", currentVideoQueueIndx: " << m_currentVideoQueueIndx << ", decodePicCount: " << m_decodePicCount << std::endl;
     }
-    m_videoFrameBuffer->SetPicNumInDecodeOrder(currPicIdx, picNumInDecodeOrder);
+    m_videoFrameBuffer->SetPicNumInDecodeOrder(currPicIdx, (uint64_t)picNumInDecodeOrder);
 
     NvVkDecodeFrameDataSlot frameDataSlot;
     int32_t retPicIdx = GetCurrentFrameData((uint32_t)currPicIdx, frameDataSlot);
@@ -837,7 +837,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         pCurrFrameDecParams->decodeFrameInfo.srcBufferRange
     };
 
-    uint32_t baseArrayLayer = (m_useImageArray || m_useImageViewArray) ? pCurrFrameDecParams->currPicIdx : 0;
+    uint32_t baseArrayLayer = (m_useImageArray || m_useImageViewArray) ? (uint32_t)pCurrFrameDecParams->currPicIdx : 0;
     const VkImageMemoryBarrier2KHR dpbBarrierTemplates[1] = {
         { // VkImageMemoryBarrier
 
@@ -867,7 +867,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
     VulkanVideoFrameBuffer::PictureResourceInfo dpbSetupPictureResourceInfo = VulkanVideoFrameBuffer::PictureResourceInfo();
     int resourceIndexDpb = m_videoFrameBuffer->GetCurrentImageResourceByIndex(
-                                                          pCurrFrameDecParams->currPicIdx,
+                                                          (int8_t)(pCurrFrameDecParams->currPicIdx),
                                                           m_imageSpecsIndex.decodeDpb,
                                                           &pCurrFrameDecParams->dpbSetupPictureResource,
                                                           &dpbSetupPictureResourceInfo,
@@ -911,7 +911,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         assert(m_useSeparateOutputImages != VK_FALSE);
 
         int resourceIndexOut = m_videoFrameBuffer->GetCurrentImageResourceByIndex(
-                                                              pCurrFrameDecParams->currPicIdx,
+                                                              (int8_t)(pCurrFrameDecParams->currPicIdx),
                                                               m_imageSpecsIndex.decodeOut,
                                                               pOutputPictureResource,
                                                               &currentOutputPictureResourceInfo,
@@ -980,7 +980,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
         // FIXME: VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR is incorrect layout for linear or filtered output
         int resourceIndexFilter = m_videoFrameBuffer->GetCurrentImageResourceByIndex(
-                                                                 pCurrFrameDecParams->currPicIdx,
+                                                                 (int8_t)(pCurrFrameDecParams->currPicIdx),
                                                                  filterOutImageSpecsIndex,
                                                                  pFrameFilterOutResource,
                                                                  pFrameFilterOutResourceInfo,
@@ -1122,12 +1122,12 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         int32_t spsId = pCurrFrameDecParams->pStdPps->GetSpsId(isSps);
         assert(!isSps);
         assert(spsId >= 0);
-        assert(pOwnerPictureParameters->HasSpsId(spsId));
+        assert(pOwnerPictureParameters->HasSpsId((uint32_t)spsId));
         bool isPps = false;
         int32_t ppsId =  pCurrFrameDecParams->pStdPps->GetPpsId(isPps);
         assert(isPps);
         assert(ppsId >= 0);
-        assert(pOwnerPictureParameters->HasPpsId(ppsId));
+        assert(pOwnerPictureParameters->HasPpsId((uint32_t)ppsId));
 
         decodeBeginInfo.videoSessionParameters = *pOwnerPictureParameters;
 
@@ -1155,7 +1155,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                                         pCurrFrameDecParams->pStdSps,
                                                                         pCurrFrameDecParams->pStdVps,
                                                                         filterCmdBuffer);
-    int32_t retVal = m_videoFrameBuffer->QueuePictureForDecode(currPicIdx, pDecodePictureInfo,
+    int32_t retVal = m_videoFrameBuffer->QueuePictureForDecode((int8_t)currPicIdx, pDecodePictureInfo,
                                                                &referencedObjectsInfo,
                                                                &frameSynchronizationInfo);
     if (currPicIdx != retVal) {
@@ -1345,7 +1345,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                            &submitInfo,
                                                            videoDecodeCompleteFence,
                                                            "Video Decode",
-                                                           picNumInDecodeOrder);
+                                                           (uint64_t)picNumInDecodeOrder);
     assert(result == VK_SUCCESS);
     if (result != VK_SUCCESS) {
         FAIL_WITH_RESULT(result, "queue submit failed");
@@ -1435,7 +1435,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         VkSharedBaseObj<VkImageResourceView> inputImageView;
         VkSharedBaseObj<VkImageResourceView> outputImageView;
         assert(m_imageSpecsIndex.filterIn != InvalidImageTypeIdx);
-        int32_t index = m_videoFrameBuffer->GetCurrentImageResourceByIndex(currPicIdx, m_imageSpecsIndex.filterIn, inputImageView);
+        int32_t index = m_videoFrameBuffer->GetCurrentImageResourceByIndex((int8_t)currPicIdx, m_imageSpecsIndex.filterIn, inputImageView);
         assert(index == currPicIdx);
         assert(inputImageView);
 
@@ -1444,12 +1444,12 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         }
 
         assert(m_imageSpecsIndex.filterOut != InvalidImageTypeIdx);
-        index = m_videoFrameBuffer->GetCurrentImageResourceByIndex(currPicIdx, m_imageSpecsIndex.filterOut,
+        index = m_videoFrameBuffer->GetCurrentImageResourceByIndex((int8_t)currPicIdx, m_imageSpecsIndex.filterOut,
                                                                    outputImageView);
 
         assert(index == currPicIdx);
         VkVideoPictureResourceInfoKHR outputImageResource {VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR};
-        index = m_videoFrameBuffer->GetCurrentImageResourceByIndex(currPicIdx, m_imageSpecsIndex.filterOut,
+        index = m_videoFrameBuffer->GetCurrentImageResourceByIndex((int8_t)currPicIdx, m_imageSpecsIndex.filterOut,
                                                                    &outputImageResource, nullptr,
                                                                    VK_IMAGE_LAYOUT_GENERAL);
 
@@ -1535,7 +1535,7 @@ VkDeviceSize VkVideoDecoder::GetBitstreamBuffer(VkDeviceSize size,
         VkDeviceSize offsetAlignment = std::max(m_minBitstreamBufferOffsetAlignment, minBitstreamBufferOffsetAlignment);
         VkDeviceSize sizeAlignment   = std::max(m_minBitstreamBufferSizeAlignment, minBitstreamBufferSizeAlignment);
         VkResult result = VulkanBitstreamBufferImpl::Create(m_vkDevCtx,
-                m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
+                (uint32_t)m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                 VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR,
                 newSize, offsetAlignment,
                 sizeAlignment,
@@ -1625,7 +1625,7 @@ void VkVideoDecoder::Deinitialize()
 
     if (m_vkDevCtx->GetVideoDecodeNumQueues() > 1) {
         for (uint32_t queueId = 0; queueId <  (uint32_t)m_vkDevCtx->GetVideoDecodeNumQueues(); queueId++) {
-            m_vkDevCtx->MultiThreadedQueueWaitIdle(VulkanDeviceContext::DECODE, queueId);
+            m_vkDevCtx->MultiThreadedQueueWaitIdle(VulkanDeviceContext::DECODE, (int32_t)queueId);
         }
     } else {
         m_vkDevCtx->MultiThreadedQueueWaitIdle(VulkanDeviceContext::DECODE, m_currentVideoQueueIndx);
@@ -1655,7 +1655,7 @@ int32_t VkVideoDecoder::AddRef()
 
 int32_t VkVideoDecoder::Release()
 {
-    uint32_t ret;
+    int32_t ret;
     ret = --m_refCount;
     // Destroy the device if refcount reaches zero
     if (ret == 0) {

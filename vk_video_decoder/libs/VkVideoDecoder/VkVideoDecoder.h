@@ -83,7 +83,7 @@ public:
             VkCommandPoolCreateInfo cmdPoolInfo = {};
             cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
             cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-            cmdPoolInfo.queueFamilyIndex = m_vkDevCtx->GetVideoDecodeQueueFamilyIdx();
+            cmdPoolInfo.queueFamilyIndex = (uint32_t)m_vkDevCtx->GetVideoDecodeQueueFamilyIdx();
             VkResult result = m_vkDevCtx->CreateCommandPool(*m_vkDevCtx, &cmdPoolInfo, nullptr, &m_videoCommandPool);
             assert(result == VK_SUCCESS);
             if (result != VK_SUCCESS) {
@@ -300,7 +300,7 @@ private:
         if (slotId < m_decodeFramesData.size()) {
             frameDataSlot.commandBuffer   = m_decodeFramesData.GetCommandBuffer(slotId);
             frameDataSlot.slot = slotId;
-            return slotId;
+            return (int32_t)slotId;
         }
         return -1;
     }

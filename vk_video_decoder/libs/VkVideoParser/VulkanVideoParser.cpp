@@ -324,18 +324,18 @@ public:
         assert((slot >= 0) && ((uint8_t)slot < m_dpbMaxSize));
         m_slotInUseMask |= (1 << slot);
         m_dpbSlotsAvailable.pop();
-        m_dpb[slot].Reserve();
+        m_dpb[(size_t)slot].Reserve();
         return slot;
     }
 
     void FreeSlot(int8_t slot)
     {
         assert((uint8_t)slot < m_dpbMaxSize);
-        assert(m_dpb[slot].isInUse());
+        assert(m_dpb[(size_t)slot].isInUse());
         assert(m_slotInUseMask & (1 << slot));
 
-        m_dpb[slot].Invalidate();
-        m_dpbSlotsAvailable.push(slot);
+        m_dpb[(size_t)slot].Invalidate();
+        m_dpbSlotsAvailable.push((uint8_t)slot);
         m_slotInUseMask &= ~(1 << slot);
     }
 
@@ -349,7 +349,7 @@ public:
     int8_t GetSlotOfPictureResource(vkPicBuffBase* pPic)
     {
         for (int8_t i = 0; i < (int8_t)m_dpbMaxSize; i++) {
-            if ((m_slotInUseMask & (1 << i)) && m_dpb[i].isInUse() && (pPic == m_dpb[i].getPictureResource())) {
+            if ((m_slotInUseMask & (1 << i)) && m_dpb[(size_t)i].isInUse() && (pPic == m_dpb[(size_t)i].getPictureResource())) {
                 return i;
             }
         }
@@ -364,7 +364,7 @@ public:
                 m_dpb[slot].setPictureResource(pPic, age);
             } else if (pPic) {
                 if (m_dpb[slot].getPictureResource() == pPic) {
-                    FreeSlot(slot);
+                    FreeSlot((int8_t)slot);
                 }
             }
         }
@@ -506,11 +506,11 @@ public:
 
             assert((dpbSlotIndex == (uint32_t)dpbSlot) || is_non_existing);
             pReferenceSlots[dpbEntryIdx].sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
-            pReferenceSlots[dpbEntryIdx].slotIndex = dpbSlotIndex;
-            pReferenceSlots[dpbEntryIdx].pNext = pDpbRefList[dpbEntryIdx].Init(dpbSlotIndex);
+            pReferenceSlots[dpbEntryIdx].slotIndex = (int32_t)dpbSlotIndex;
+            pReferenceSlots[dpbEntryIdx].pNext = pDpbRefList[dpbEntryIdx].Init((int8_t)dpbSlotIndex);
 
             StdVideoDecodeH264ReferenceInfo* pRefPicInfo = &pDpbRefList[dpbEntryIdx].stdReferenceInfo;
-            pRefPicInfo->FrameNum = FrameIdx;
+            pRefPicInfo->FrameNum = (uint16_t)FrameIdx;
             if (m_dumpParserData) {
                 std::cout << "\tdpbEntryIdx: " << dpbEntryIdx
                           << "dpbSlotIndex: " << dpbSlotIndex
@@ -535,8 +535,8 @@ public:
 
             assert((dpbSlotIndex == (uint32_t)dpbSlot) || is_non_existing);
             pReferenceSlots[dpbEntryIdx].sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
-            pReferenceSlots[dpbEntryIdx].slotIndex = dpbSlotIndex;
-            pReferenceSlots[dpbEntryIdx].pNext = pDpbSlotInfo[dpbEntryIdx].Init(dpbSlotIndex);
+            pReferenceSlots[dpbEntryIdx].slotIndex = (int32_t)dpbSlotIndex;
+            pReferenceSlots[dpbEntryIdx].pNext = pDpbSlotInfo[dpbEntryIdx].Init((int8_t)dpbSlotIndex);
 
             StdVideoDecodeH265ReferenceInfo* pRefPicInfo = &pDpbSlotInfo[dpbEntryIdx].stdReferenceInfo;
             pRefPicInfo->PicOrderCntVal = PicOrderCnt;
@@ -565,8 +565,8 @@ public:
 
             assert((dpbSlotIndex == (uint32_t)dpbSlot) || is_non_existing);
             pReferenceSlots[dpbEntryIdx].sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
-            pReferenceSlots[dpbEntryIdx].slotIndex = dpbSlotIndex;
-            pReferenceSlots[dpbEntryIdx].pNext = pDpbSlotInfo[dpbEntryIdx].Init(dpbSlotIndex);
+            pReferenceSlots[dpbEntryIdx].slotIndex = (int32_t)dpbSlotIndex;
+            pReferenceSlots[dpbEntryIdx].pNext = pDpbSlotInfo[dpbEntryIdx].Init((int8_t)dpbSlotIndex);
 
             StdVideoDecodeAV1ReferenceInfo* pRefPicInfo = &pDpbSlotInfo[dpbEntryIdx].stdReferenceInfo;
             (void)pRefPicInfo;
@@ -907,7 +907,7 @@ int32_t VulkanVideoParser::AddRef() { return ++m_refCount; }
 
 int32_t VulkanVideoParser::Release()
 {
-    uint32_t ret;
+    int32_t ret;
     ret = --m_refCount;
     // Destroy the device if refcount reaches zero
     if (ret == 0) {
@@ -975,7 +975,7 @@ VkResult VulkanVideoParser::Initialize(
     nvdp.bufferSizeAlignment   = 256;
 
     nvdp.referenceClockRate = m_clockRate;
-    nvdp.errorThreshold = errorThreshold;
+    nvdp.errorThreshold = (int32_t)errorThreshold;
     nvdp.outOfBandPictureParameters = outOfBandPictureParameters;
     nvdp.isAnnexB = false;
 
@@ -1059,7 +1059,7 @@ int8_t VulkanVideoParser::GetPicIdx(VkPicIf* pPicBuf)
 
 int8_t VulkanVideoParser::GetPicDpbSlot(int8_t picIndex)
 {
-    return m_pictureToDpbSlotMap[picIndex];
+    return m_pictureToDpbSlotMap[(size_t)picIndex];
 }
 
 int8_t VulkanVideoParser::GetPicDpbSlot(vkPicBuffBase* pPicBuf)
@@ -1091,8 +1091,8 @@ bool VulkanVideoParser::SetFieldPicFlag(int8_t picIndex, bool fieldPicFlag)
 
 int8_t VulkanVideoParser::SetPicDpbSlot(int8_t picIndex, int8_t dpbSlot)
 {
-    int8_t oldDpbSlot = m_pictureToDpbSlotMap[picIndex];
-    m_pictureToDpbSlotMap[picIndex] = dpbSlot;
+    int8_t oldDpbSlot = m_pictureToDpbSlotMap[(size_t)picIndex];
+    m_pictureToDpbSlotMap[(size_t)picIndex] = dpbSlot;
     if (dpbSlot >= 0) {
         m_dpbSlotsMask |= (1 << picIndex);
     } else {
@@ -1172,7 +1172,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
     m_nvsi.nMaxWidth = std::max(m_nvsi.nMaxWidth, m_nvsi.nDisplayWidth);
     m_nvsi.nMaxHeight = std::max(m_nvsi.nMaxHeight, m_nvsi.nDisplayHeight);
 
-    m_maxNumDecodeSurfaces = pnvsi->nMinNumDecodeSurfaces;
+    m_maxNumDecodeSurfaces = (uint32_t)pnvsi->nMinNumDecodeSurfaces;
 
     if (m_decoderHandler) {
         VkParserDetectedVideoFormat detectedFormat;
@@ -1189,8 +1189,8 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
         detectedFormat.frame_rate.numerator = NV_FRAME_RATE_NUM(pnvsi->frameRate);
         detectedFormat.frame_rate.denominator = NV_FRAME_RATE_DEN(pnvsi->frameRate);
         detectedFormat.progressive_sequence = pnvsi->bProgSeq;
-        detectedFormat.coded_width = pnvsi->nCodedWidth;
-        detectedFormat.coded_height = pnvsi->nCodedHeight;
+        detectedFormat.coded_width = (uint32_t)pnvsi->nCodedWidth;
+        detectedFormat.coded_height = (uint32_t)pnvsi->nCodedHeight;
         detectedFormat.display_area.right = pnvsi->nDisplayWidth;
         detectedFormat.display_area.bottom = pnvsi->nDisplayHeight;
         detectedFormat.filmGrainUsed = pnvsi->hasFilmGrain;
@@ -1235,7 +1235,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
 
         detectedFormat.bit_depth_luma_minus8 = pnvsi->uBitDepthLumaMinus8;
         detectedFormat.bit_depth_chroma_minus8 = pnvsi->uBitDepthChromaMinus8;
-        detectedFormat.bitrate = pnvsi->lBitrate;
+        detectedFormat.bitrate = (uint32_t)pnvsi->lBitrate;
         detectedFormat.display_aspect_ratio.x = pnvsi->lDARWidth;
         detectedFormat.display_aspect_ratio.y = pnvsi->lDARHeight;
         detectedFormat.video_signal_description.video_format = pnvsi->lVideoFormat;
@@ -1244,7 +1244,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
         detectedFormat.video_signal_description.transfer_characteristics = pnvsi->lTransferCharacteristics;
         detectedFormat.video_signal_description.matrix_coefficients = pnvsi->lMatrixCoefficients;
         detectedFormat.seqhdr_data_length = (uint32_t)std::min((size_t)pnvsi->cbSequenceHeader, sizeof(raw_seqhdr_data));
-        detectedFormat.minNumDecodeSurfaces = pnvsi->nMinNumDecodeSurfaces;
+        detectedFormat.minNumDecodeSurfaces = (uint32_t)pnvsi->nMinNumDecodeSurfaces;
         detectedFormat.maxNumDpbSlots = configDpbSlots;
         detectedFormat.codecProfile = pnvsi->codecProfile;
 
@@ -1263,7 +1263,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
         // parser creation so overwrite it with NumDecodeSurface. (only if nDecodeRT
         // > 1)
         if (maxDecodeRTs > 1) {
-            m_maxNumDecodeSurfaces = maxDecodeRTs;
+            m_maxNumDecodeSurfaces = (uint32_t)maxDecodeRTs;
         }
     } else {
         assert(!"m_pDecoderHandler is NULL");
@@ -1273,7 +1273,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
    if (pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR ||
         pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR)
     {
-        m_maxNumDpbSlots = m_dpb.Init(configDpbSlots, false /* reconfigure the DPB size if true */);
+        m_maxNumDpbSlots = (uint32_t)m_dpb.Init(configDpbSlots, false /* reconfigure the DPB size if true */);
         // Ensure the picture map is empited, so that DPB slot management doesn't get confused in-between sequences.
         m_pictureToDpbSlotMap.fill(-1);
     }
@@ -1282,13 +1282,13 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
     {
         if (m_dpb.getMaxSize() < configDpbSlots)
         {
-            m_maxNumDpbSlots = m_dpb.Init(configDpbSlots, false);
+            m_maxNumDpbSlots = (uint32_t)m_dpb.Init(configDpbSlots, false);
         }
     } else {
         assert(!"Codec DPB management not fully implemented");
     }
 
-    return m_maxNumDecodeSurfaces;
+    return (int32_t)m_maxNumDecodeSurfaces;
 }
 
 // FillDpbState
@@ -1314,7 +1314,7 @@ uint32_t VulkanVideoParser::FillDpbH264State(
     for (int32_t inIdx = 0; (uint32_t)inIdx < maxDpbInSlotsInUse; inIdx++) {
         // used_for_reference: 0 = unused, 1 = top_field, 2 = bottom_field, 3 =
         // both_fields
-        const uint32_t used_for_reference = dpbIn[inIdx].used_for_reference & fieldIsReferenceMask;
+        const uint32_t used_for_reference = ((uint32_t)dpbIn[inIdx].used_for_reference) & fieldIsReferenceMask;
         if (used_for_reference) {
             int8_t picIdx = (!dpbIn[inIdx].not_existing && dpbIn[inIdx].pPicBuf)
                 ? GetPicIdx(dpbIn[inIdx].pPicBuf)
@@ -1331,7 +1331,7 @@ uint32_t VulkanVideoParser::FillDpbH264State(
                            process for gaps in frame_num */
                 !!dpbIn[inIdx].is_long_term, isFieldRef,
                 !!(used_for_reference & topFieldMask),
-                !!(used_for_reference & bottomFieldMask), dpbIn[inIdx].FrameIdx,
+                !!(used_for_reference & bottomFieldMask), (int16_t)dpbIn[inIdx].FrameIdx,
                 fieldOrderCntList, GetPic(dpbIn[inIdx].pPicBuf));
             if (picIdx >= 0) {
                 refDpbUsedAndValidMask |= (1 << picIdx);
@@ -1409,9 +1409,9 @@ uint32_t VulkanVideoParser::FillDpbH264State(
                     dpbSlot = m_dpb.AllocateSlot();
                     assert((dpbSlot >= 0) && ((uint32_t)dpbSlot < m_maxNumDpbSlots));
                     SetPicDpbSlot(picIdx, dpbSlot);
-                    m_dpb[dpbSlot].setPictureResource(picBuff, m_nCurrentPictureID);
+                    m_dpb[(uint32_t)dpbSlot].setPictureResource(picBuff, m_nCurrentPictureID);
                 }
-                m_dpb[dpbSlot].MarkInUse(m_nCurrentPictureID);
+                m_dpb[(uint32_t)dpbSlot].MarkInUse(m_nCurrentPictureID);
                 assert(dpbSlot >= 0);
 
                 if (dpbSlot >= 0) {
@@ -1464,7 +1464,7 @@ uint32_t VulkanVideoParser::FillDpbH264State(
                 uint32_t minDiffPOC = 0x7fff;
                 for (uint32_t j = 0; j < numUsedRef; j++) {
                     if (!refOnlyDpbIn[j].is_non_existing && (refOnlyDpbIn[j].used_for_reference & refOnlyDpbIn[dpbIdx].used_for_reference) == refOnlyDpbIn[dpbIdx].used_for_reference) {
-                        uint32_t diffPOC = abs((int32_t)(refOnlyDpbIn[j].FieldOrderCnt[0] - refOnlyDpbIn[dpbIdx].FieldOrderCnt[0]));
+                        uint32_t diffPOC = (uint32_t)abs((int32_t)(refOnlyDpbIn[j].FieldOrderCnt[0] - refOnlyDpbIn[dpbIdx].FieldOrderCnt[0]));
                         if (diffPOC <= minDiffPOC) {
                             minDiffPOC = diffPOC;
                             picIdx = GetPicIdx(refOnlyDpbIn[j].m_picBuff);
@@ -1478,7 +1478,7 @@ uint32_t VulkanVideoParser::FillDpbH264State(
             }
             assert((dpbSlot >= 0) && ((uint32_t)dpbSlot < m_maxNumDpbSlots));
             refOnlyDpbIn[dpbIdx].setH264PictureData(pDpbRefList, pReferenceSlots,
-                dpbIdx, dpbSlot, pd->progressive_frame);
+                dpbIdx, (uint32_t)dpbSlot, pd->progressive_frame);
             pGopReferenceImagesIndexes[dpbIdx] = picIdx;
         }
     }
@@ -1603,15 +1603,15 @@ uint32_t VulkanVideoParser::FillDpbH265State(
             if (dpbSlot < 0) {
                 dpbSlot = m_dpb.AllocateSlot();
                 assert(dpbSlot >= 0);
-                SetPicDpbSlot(picIdx, dpbSlot);
-                m_dpb[dpbSlot].setPictureResource(picBuff, m_nCurrentPictureID);
+                SetPicDpbSlot((int8_t)picIdx, dpbSlot);
+                m_dpb[(uint8_t)dpbSlot].setPictureResource(picBuff, m_nCurrentPictureID);
             }
-            m_dpb[dpbSlot].MarkInUse(m_nCurrentPictureID);
+            m_dpb[(uint32_t)dpbSlot].MarkInUse(m_nCurrentPictureID);
             assert(dpbSlot >= 0);
 
             if (dpbSlot >= 0) {
                 refOnlyDpbIn[dpbIdx].dpbSlot = dpbSlot;
-                uint32_t originalDpbIndex = refOnlyDpbIn[dpbIdx].originalDpbIndex;
+                uint32_t originalDpbIndex = (uint32_t)refOnlyDpbIn[dpbIdx].originalDpbIndex;
                 assert(originalDpbIndex < HEVC_MAX_DPB_SLOTS);
                 frmListToDpb[originalDpbIndex] = dpbSlot;
             } else {
@@ -1644,7 +1644,7 @@ uint32_t VulkanVideoParser::FillDpbH265State(
         }
         assert((dpbSlot >= 0) && (dpbSlot < HEVC_MAX_DPB_SLOTS));
         refOnlyDpbIn[dpbIdx].setH265PictureData(pDpbSlotInfo, pReferenceSlots,
-            dpbIdx, dpbSlot);
+            dpbIdx, (uint32_t)dpbSlot);
         pGopReferenceImagesIndexes[dpbIdx] = GetPicIdx(refOnlyDpbIn[dpbIdx].m_picBuff);
     }
 
@@ -1775,7 +1775,7 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
         }
         printf("\nm_pictureToDpbSlotMap: ");
         for (int i = 0; i < MAX_FRM_CNT; i++) {
-            printf("%02d ", m_pictureToDpbSlotMap[i]);
+            printf("%02d ", m_pictureToDpbSlotMap[(size_t)i]);
         }
         printf("\n");
 
@@ -1805,7 +1805,7 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
         int8_t dpbSlot = GetPicDpbSlot(picIdx);
         assert(dpbSlot >= 0);
         //pKhr->referenceNameSlotIndices[refName] = dpbSlot;
-        activeReferences[dpbSlot]++;
+        activeReferences[(size_t)dpbSlot]++;
         //hdr.delta_frame_id_minus_1[dpbSlot] = pin->delta_frame_id_minus_1[pin->ref_frame_idx[i]];
     }
 
@@ -1821,8 +1821,8 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
             }
 
             refDpbUsedAndValidMask |= (1 << picIdx);
-            m_dpb[dpbSlot].MarkInUse(m_nCurrentPictureID);
-            if (activeReferences[dpbSlot] == 0) {
+            m_dpb[(uint32_t)dpbSlot].MarkInUse(m_nCurrentPictureID);
+            if (activeReferences[(size_t)dpbSlot] == 0) {
                 continue;
             }
 
@@ -1925,7 +1925,7 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
         }
         printf("\nm_pictureToDpbSlotMap: ");
         for (int i = 0; i < MAX_FRM_CNT; i++) {
-            printf("%02d ", m_pictureToDpbSlotMap[i]);
+            printf("%02d ", m_pictureToDpbSlotMap[(size_t)i]);
         }
         printf("\n");
 
@@ -1955,7 +1955,7 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
         int8_t dpbSlot = GetPicDpbSlot(picIdx);
         assert(dpbSlot >= 0);
         //pKhr->referenceNameSlotIndices[refName] = dpbSlot;
-        activeReferences[dpbSlot]++;
+        activeReferences[(size_t)dpbSlot]++;
         //hdr.delta_frame_id_minus_1[dpbSlot] = pin->delta_frame_id_minus_1[pin->ref_frame_idx[i]];
     }
 
@@ -1971,8 +1971,8 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
             }
 
             refDpbUsedAndValidMask |= (1 << picIdx);
-            m_dpb[dpbSlot].MarkInUse(m_nCurrentPictureID);
-            if (activeReferences[dpbSlot] == 0) {
+            m_dpb[(uint32_t)dpbSlot].MarkInUse(m_nCurrentPictureID);
+            if (activeReferences[(size_t)dpbSlot] == 0) {
                 continue;
             }
 
@@ -1982,8 +1982,8 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
             pGopReferenceImagesIndexes[referenceIndex] = picIdx;
 
             VkExtent2D &codedExtent = pDpbSlotInfo[referenceIndex].codedExtent;
-            codedExtent.width = m_dpb[dpbSlot].getPictureResource()->decodeWidth;
-            codedExtent.height = m_dpb[dpbSlot].getPictureResource()->decodeHeight;
+            codedExtent.width = (uint32_t)m_dpb[(uint32_t)dpbSlot].getPictureResource()->decodeWidth;
+            codedExtent.height = (uint32_t)m_dpb[(uint32_t)dpbSlot].getPictureResource()->decodeHeight;
 
             referenceIndex++;
         }
@@ -2058,7 +2058,7 @@ int8_t VulkanVideoParser::AllocateDpbSlotForCurrentH264(
             dpbSlot = m_dpb.AllocateSlot();
             assert(dpbSlot >= 0);
             SetPicDpbSlot(currPicIdx, dpbSlot);
-            m_dpb[dpbSlot].setPictureResource(pPic, m_nCurrentPictureID);
+            m_dpb[(uint32_t)dpbSlot].setPictureResource(pPic, m_nCurrentPictureID);
         }
         assert(dpbSlot >= 0);
     }
@@ -2079,7 +2079,7 @@ int8_t VulkanVideoParser::AllocateDpbSlotForCurrentH265(vkPicBuffBase* pPic,
             dpbSlot = m_dpb.AllocateSlot();
             assert(dpbSlot >= 0);
             SetPicDpbSlot(currPicIdx, dpbSlot);
-            m_dpb[dpbSlot].setPictureResource(pPic, m_nCurrentPictureID);
+            m_dpb[(uint32_t)dpbSlot].setPictureResource(pPic, m_nCurrentPictureID);
         }
         assert(dpbSlot >= 0);
     }
@@ -2099,7 +2099,7 @@ int8_t VulkanVideoParser::AllocateDpbSlotForCurrentAV1(vkPicBuffBase* pPic,
             dpbSlot = m_dpb.AllocateSlot();
             assert(dpbSlot >= 0);
             SetPicDpbSlot(currPicIdx, dpbSlot); // Assign the dpbSlot to the current picture index.
-            m_dpb[dpbSlot].setPictureResource(pPic, m_nCurrentPictureID); // m_nCurrentPictureID is our main index.
+            m_dpb[(uint32_t)dpbSlot].setPictureResource(pPic, m_nCurrentPictureID); // m_nCurrentPictureID is our main index.
         }
         assert(dpbSlot >= 0);
     }
@@ -2174,7 +2174,7 @@ bool VulkanVideoParser::DecodePicture(
         return false;
     }
 
-    const uint32_t PicIdx = GetPicIdx(pd->pCurrPic);
+    const uint32_t PicIdx = (uint32_t)GetPicIdx(pd->pCurrPic);
     if (PicIdx >= MAX_FRM_CNT) {
         assert(0);
         return false;
@@ -2182,7 +2182,7 @@ bool VulkanVideoParser::DecodePicture(
 
     VkParserPerFrameDecodeParameters pictureParams = VkParserPerFrameDecodeParameters();
     VkParserPerFrameDecodeParameters* pCurrFrameDecParams = &pictureParams;
-    pCurrFrameDecParams->currPicIdx = PicIdx;
+    pCurrFrameDecParams->currPicIdx = (int32_t)PicIdx;
     pCurrFrameDecParams->numSlices = pd->numSlices;
     pCurrFrameDecParams->firstSliceIndex = pd->firstSliceIndex;
     pCurrFrameDecParams->bitstreamDataOffset = pd->bitstreamDataOffset;
@@ -2640,8 +2640,8 @@ bool VulkanVideoParser::DecodePicture(
         pVkPicInfo->tilesOffset = pin->tilesOffset;
 
         // Use current frames with and height for display and writing to output
-        pDecodePictureInfo->displayWidth = pin->FrameWidth;
-        pDecodePictureInfo->displayHeight = pin->FrameHeight;
+        pDecodePictureInfo->displayWidth = (int32_t)pin->FrameWidth;
+        pDecodePictureInfo->displayHeight = (int32_t)pin->FrameHeight;
     }
 
     if (m_codecType != VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {

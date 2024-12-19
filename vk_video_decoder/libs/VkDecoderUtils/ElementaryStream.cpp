@@ -16,7 +16,16 @@
 
 #include <string.h>
 #include <fstream>
+// mio is a vendored third-party header-only library; silence its warnings.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
 #include "mio/mio.hpp"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 #include "VkDecoderUtils/VideoStreamDemuxer.h"
 
 class ElementaryStream : public VideoStreamDemuxer {
@@ -151,7 +160,7 @@ public:
 
         // Compute and return the pointer to data at new offset.
         *ppVideo = (m_pBitstreamData + offset);
-        return m_bitstreamDataSize - offset;
+        return (int64_t)m_bitstreamDataSize - offset;
     }
 
     virtual void DumpStreamParameters() const {

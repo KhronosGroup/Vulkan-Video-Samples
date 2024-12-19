@@ -193,7 +193,7 @@ public:
     int32_t init(const VulkanDeviceContext* vkDevCtx,
         const VkVideoProfileInfoKHR* pDecodeProfile,
         uint32_t                 numImages,
-        uint32_t                 maxNumImageTypeIdx,
+        uint8_t                  maxNumImageTypeIdx,
         const std::array<VulkanVideoFrameBuffer::ImageSpec, DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES>& imageSpecs,
         uint32_t                 queueFamilyIndex);
 
@@ -269,7 +269,7 @@ public:
     VkSemaphore                            m_consumerCompleteSemaphore;
 private:
     uint32_t                               m_numImages;
-    uint32_t                               m_maxNumImageTypeIdx;
+    uint8_t                                m_maxNumImageTypeIdx;
     std::vector<NvPerFrameDecodeResources> m_perFrameDecodeResources;
     std::array<VulkanVideoFrameBuffer::ImageSpec, DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES>    m_imageSpecs;
 };
@@ -326,7 +326,7 @@ public:
 
         uint32_t flushedImages = 0;
         while (!m_displayFrames.empty()) {
-            int8_t pictureIndex = m_displayFrames.front();
+            int8_t pictureIndex = (int8_t)m_displayFrames.front();
             assert((pictureIndex >= 0) && ((uint32_t)pictureIndex < m_perFrameDecodeImageSet.size()));
             m_displayFrames.pop();
             if (!m_perFrameDecodeImageSet[(uint32_t)pictureIndex].IsAvailable()) {
@@ -341,7 +341,7 @@ public:
 
     virtual int32_t InitImagePool(const VkVideoProfileInfoKHR* pDecodeProfile,
                                   uint32_t                 numImages,
-                                  uint32_t                 maxNumImageTypeIdx,
+                                  uint8_t                  maxNumImageTypeIdx,
                                   const std::array<VulkanVideoFrameBuffer::ImageSpec, DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES>& imageSpecs,
                                   uint32_t                 queueFamilyIndex,
                                   int32_t                  numImagesToPreallocate)
@@ -393,17 +393,17 @@ public:
         assert((uint32_t)picId < m_perFrameDecodeImageSet.size());
 
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
-        m_perFrameDecodeImageSet[picId].m_displayOrder = m_frameNumInDisplayOrder++;
-        m_perFrameDecodeImageSet[picId].m_timestamp = pDispInfo->timestamp;
-        m_perFrameDecodeImageSet[picId].m_inDisplayQueue = true;
-        m_perFrameDecodeImageSet[picId].AddRef();
+        m_perFrameDecodeImageSet[(uint32_t)picId].m_displayOrder = (uint32_t)m_frameNumInDisplayOrder++;
+        m_perFrameDecodeImageSet[(uint32_t)picId].m_timestamp = (uint64_t)pDispInfo->timestamp;
+        m_perFrameDecodeImageSet[(uint32_t)picId].m_inDisplayQueue = true;
+        m_perFrameDecodeImageSet[(uint32_t)picId].AddRef();
 
         m_displayFrames.push((uint8_t)picId);
 
         if (m_debug) {
             std::cout << "==> Queue Display Picture picIdx: " << (uint32_t)picId
-                      << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[picId].m_displayOrder << "\tdecodeOrder: " << m_perFrameDecodeImageSet[picId].m_decodeOrder
-                      << "\ttimestamp " << m_perFrameDecodeImageSet[picId].m_timestamp << std::endl;
+                      << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[(uint32_t)picId].m_displayOrder << "\tdecodeOrder: " << m_perFrameDecodeImageSet[(uint32_t)picId].m_decodeOrder
+                      << "\ttimestamp " << m_perFrameDecodeImageSet[(uint32_t)picId].m_timestamp << std::endl;
         }
         return picId;
     }
@@ -419,47 +419,47 @@ public:
             // Otherwise we may step over a hot command buffer by starting a new recording.
             // This fence wait should be NOP in 99.9% of the cases, because the decode queue is deep enough to
             // ensure the frame has already been completed.
-            assert(m_perFrameDecodeImageSet[picId].m_frameCompleteFence != VK_NULL_HANDLE);
-            vk::WaitAndResetFence(m_vkDevCtx, *m_vkDevCtx, m_perFrameDecodeImageSet[picId].m_frameCompleteFence,
+            assert(m_perFrameDecodeImageSet[(uint32_t)picId].m_frameCompleteFence != VK_NULL_HANDLE);
+            vk::WaitAndResetFence(m_vkDevCtx, *m_vkDevCtx, m_perFrameDecodeImageSet[(uint32_t)picId].m_frameCompleteFence,
                                   true, "frameCompleteFence");
         }
 
         if ((pFrameSynchronizationInfo->syncOnFrameConsumerDoneFence  == 1) &&
-             (m_perFrameDecodeImageSet[picId].m_useConsummerSignalSemaphore == 0) &&
-             (m_perFrameDecodeImageSet[picId].m_hasConsummerSignalFence == 1) &&
-             (m_perFrameDecodeImageSet[picId].m_frameConsumerDoneFence != VK_NULL_HANDLE)) {
+             (m_perFrameDecodeImageSet[(uint32_t)picId].m_useConsummerSignalSemaphore == 0) &&
+             (m_perFrameDecodeImageSet[(uint32_t)picId].m_hasConsummerSignalFence == 1) &&
+             (m_perFrameDecodeImageSet[(uint32_t)picId].m_frameConsumerDoneFence != VK_NULL_HANDLE)) {
 
-            vk::WaitAndResetFence(m_vkDevCtx, *m_vkDevCtx, m_perFrameDecodeImageSet[picId].m_frameConsumerDoneFence,
+            vk::WaitAndResetFence(m_vkDevCtx, *m_vkDevCtx, m_perFrameDecodeImageSet[(uint32_t)picId].m_frameConsumerDoneFence,
                                   true, "frameConsumerDoneFence");
 
         }
 
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
-        m_perFrameDecodeImageSet[picId].m_picDispInfo = *pDecodePictureInfo;
-        m_perFrameDecodeImageSet[picId].m_inDecodeQueue = true;
-        m_perFrameDecodeImageSet[picId].m_imageSpecsIndex = pFrameSynchronizationInfo->imageSpecsIndex;
-        m_perFrameDecodeImageSet[picId].stdPps = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pStdPps);
-        m_perFrameDecodeImageSet[picId].stdSps = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pStdSps);
-        m_perFrameDecodeImageSet[picId].stdVps = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pStdVps);
-        m_perFrameDecodeImageSet[picId].bitstreamData = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pBitstreamData);
-        m_perFrameDecodeImageSet[picId].filterPoolNode = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pFilterPoolNode);
+        m_perFrameDecodeImageSet[(uint32_t)picId].m_picDispInfo = *pDecodePictureInfo;
+        m_perFrameDecodeImageSet[(uint32_t)picId].m_inDecodeQueue = true;
+        m_perFrameDecodeImageSet[(uint32_t)picId].m_imageSpecsIndex = pFrameSynchronizationInfo->imageSpecsIndex;
+        m_perFrameDecodeImageSet[(uint32_t)picId].stdPps = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pStdPps);
+        m_perFrameDecodeImageSet[(uint32_t)picId].stdSps = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pStdSps);
+        m_perFrameDecodeImageSet[(uint32_t)picId].stdVps = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pStdVps);
+        m_perFrameDecodeImageSet[(uint32_t)picId].bitstreamData = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pBitstreamData);
+        m_perFrameDecodeImageSet[(uint32_t)picId].filterPoolNode = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pFilterPoolNode);
 
         if (m_debug) {
             std::cout << "==> Queue Decode Picture picIdx: " << (uint32_t)picId
-                      << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[picId].m_displayOrder << "\tdecodeOrder: " << m_perFrameDecodeImageSet[picId].m_decodeOrder
+                      << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[(uint32_t)picId].m_displayOrder << "\tdecodeOrder: " << m_perFrameDecodeImageSet[(uint32_t)picId].m_decodeOrder
                       << std::endl;
         }
 
         if (pFrameSynchronizationInfo->hasFrameCompleteSignalFence) {
-            pFrameSynchronizationInfo->frameCompleteFence = m_perFrameDecodeImageSet[picId].m_frameCompleteFence;
+            pFrameSynchronizationInfo->frameCompleteFence = m_perFrameDecodeImageSet[(uint32_t)picId].m_frameCompleteFence;
             if (pFrameSynchronizationInfo->frameCompleteFence) {
-                m_perFrameDecodeImageSet[picId].m_hasFrameCompleteSignalFence = true;
+                m_perFrameDecodeImageSet[(uint32_t)picId].m_hasFrameCompleteSignalFence = true;
             }
         }
 
-        if (m_perFrameDecodeImageSet[picId].m_hasConsummerSignalFence) {
-            pFrameSynchronizationInfo->frameConsumerDoneFence = m_perFrameDecodeImageSet[picId].m_frameConsumerDoneFence;
-            m_perFrameDecodeImageSet[picId].m_hasConsummerSignalFence = false;
+        if (m_perFrameDecodeImageSet[(uint32_t)picId].m_hasConsummerSignalFence) {
+            pFrameSynchronizationInfo->frameConsumerDoneFence = m_perFrameDecodeImageSet[(uint32_t)picId].m_frameConsumerDoneFence;
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_hasConsummerSignalFence = false;
         }
 
         if (pFrameSynchronizationInfo->hasFrameCompleteSignalSemaphore) {
@@ -468,34 +468,34 @@ public:
 
                 pFrameSynchronizationInfo->decodeCompleteTimelineValue = DecodeFrameBufferIf::GetSemaphoreValue(
                                                                             DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_DECODE,
-                                                                            m_perFrameDecodeImageSet[picId].m_decodeOrder);
+                                                                            m_perFrameDecodeImageSet[(uint32_t)picId].m_decodeOrder);
 
                 if (pFrameSynchronizationInfo->hasFilterSignalSemaphore) {
                     pFrameSynchronizationInfo->filterCompleteTimelineValue = DecodeFrameBufferIf::GetSemaphoreValue(
                                                                               DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_FILTER,
-                                                                              m_perFrameDecodeImageSet[picId].m_decodeOrder);
+                                                                              m_perFrameDecodeImageSet[(uint32_t)picId].m_decodeOrder);
 
-                    m_perFrameDecodeImageSet[picId].m_frameCompleteTimelineValue = pFrameSynchronizationInfo->filterCompleteTimelineValue;
+                    m_perFrameDecodeImageSet[(uint32_t)picId].m_frameCompleteTimelineValue = pFrameSynchronizationInfo->filterCompleteTimelineValue;
 
                 } else {
 
-                    m_perFrameDecodeImageSet[picId].m_frameCompleteTimelineValue = pFrameSynchronizationInfo->decodeCompleteTimelineValue;
+                    m_perFrameDecodeImageSet[(uint32_t)picId].m_frameCompleteTimelineValue = pFrameSynchronizationInfo->decodeCompleteTimelineValue;
 
                 }
 
-                m_perFrameDecodeImageSet[picId].m_hasFrameCompleteSignalSemaphore = true;
+                m_perFrameDecodeImageSet[(uint32_t)picId].m_hasFrameCompleteSignalSemaphore = true;
             }
         }
 
-        if (m_perFrameDecodeImageSet[picId].m_useConsummerSignalSemaphore) {
+        if (m_perFrameDecodeImageSet[(uint32_t)picId].m_useConsummerSignalSemaphore) {
             pFrameSynchronizationInfo->hasFrameConsumerSignalSemaphore = true;
             pFrameSynchronizationInfo->consumerCompleteSemaphore = m_perFrameDecodeImageSet.m_consumerCompleteSemaphore;
-            pFrameSynchronizationInfo->frameConsumerDoneTimelineValue = m_perFrameDecodeImageSet[picId].m_frameConsumerDoneTimelineValue;
-            m_perFrameDecodeImageSet[picId].m_useConsummerSignalSemaphore = false;
+            pFrameSynchronizationInfo->frameConsumerDoneTimelineValue = m_perFrameDecodeImageSet[(uint32_t)picId].m_frameConsumerDoneTimelineValue;
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_useConsummerSignalSemaphore = false;
         }
 
         pFrameSynchronizationInfo->queryPool = m_queryPool;
-        pFrameSynchronizationInfo->startQueryId = picId;
+        pFrameSynchronizationInfo->startQueryId = (uint32_t)picId;
         pFrameSynchronizationInfo->numQueries = 1;
 
         return picId;
@@ -509,74 +509,74 @@ public:
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         if (!m_displayFrames.empty()) {
             numberofPendingFrames = (int)m_displayFrames.size();
-            pictureIndex = m_displayFrames.front();
+            pictureIndex = (int)m_displayFrames.front();
             assert((pictureIndex >= 0) && ((uint32_t)pictureIndex < m_perFrameDecodeImageSet.size()));
-            assert(!(m_ownedByDisplayMask & (1 << pictureIndex)));
-            m_ownedByDisplayMask |= (1 << pictureIndex);
+            assert(!(m_ownedByDisplayMask & (1U << pictureIndex)));
+            m_ownedByDisplayMask |= (1U << pictureIndex);
             m_displayFrames.pop();
-            m_perFrameDecodeImageSet[pictureIndex].m_inDisplayQueue = false;
-            m_perFrameDecodeImageSet[pictureIndex].m_ownedByConsummer = true;
+            m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_inDisplayQueue = false;
+            m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_ownedByConsummer = true;
         }
 
         if ((uint32_t)pictureIndex < m_perFrameDecodeImageSet.size()) {
             pDecodedFrame->pictureIndex = pictureIndex;
 
-            pDecodedFrame->imageLayerIndex = m_perFrameDecodeImageSet[pictureIndex].m_picDispInfo.imageLayerIndex;
+            pDecodedFrame->imageLayerIndex = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_picDispInfo.imageLayerIndex;
 
             {
-                uint8_t displayOutImageType = m_perFrameDecodeImageSet[pictureIndex].m_imageSpecsIndex.displayOut;
-                if (m_perFrameDecodeImageSet[pictureIndex].ImageExist(displayOutImageType)) {
-                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].view = m_perFrameDecodeImageSet[pictureIndex].GetImageView(displayOutImageType);
-                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].singleLevelView = m_perFrameDecodeImageSet[pictureIndex].GetSingleLevelImageView(displayOutImageType);
+                uint8_t displayOutImageType = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_imageSpecsIndex.displayOut;
+                if (m_perFrameDecodeImageSet[(uint32_t)pictureIndex].ImageExist(displayOutImageType)) {
+                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].view = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].GetImageView(displayOutImageType);
+                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].singleLevelView = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].GetSingleLevelImageView(displayOutImageType);
                     pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].inUse = true;
                 }
             }
 
             {
-                uint8_t linearOutImageType = m_perFrameDecodeImageSet[pictureIndex].m_imageSpecsIndex.linearOut;
+                uint8_t linearOutImageType = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_imageSpecsIndex.linearOut;
                 if (linearOutImageType == InvalidImageTypeIdx) {
-                    linearOutImageType = m_perFrameDecodeImageSet[pictureIndex].m_imageSpecsIndex.decodeOut;
+                    linearOutImageType = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_imageSpecsIndex.decodeOut;
                 }
 
-                if (m_perFrameDecodeImageSet[pictureIndex].ImageExist(linearOutImageType)) {
-                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_LINEAR].view = m_perFrameDecodeImageSet[pictureIndex].GetImageView(linearOutImageType);
-                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_LINEAR].singleLevelView = m_perFrameDecodeImageSet[pictureIndex].GetSingleLevelImageView(linearOutImageType);
+                if (m_perFrameDecodeImageSet[(uint32_t)pictureIndex].ImageExist(linearOutImageType)) {
+                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_LINEAR].view = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].GetImageView(linearOutImageType);
+                    pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_LINEAR].singleLevelView = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].GetSingleLevelImageView(linearOutImageType);
                     pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_LINEAR].inUse = true;
                 }
             }
 
-            pDecodedFrame->displayWidth  = m_perFrameDecodeImageSet[pictureIndex].m_picDispInfo.displayWidth;
-            pDecodedFrame->displayHeight = m_perFrameDecodeImageSet[pictureIndex].m_picDispInfo.displayHeight;
+            pDecodedFrame->displayWidth  = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_picDispInfo.displayWidth;
+            pDecodedFrame->displayHeight = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_picDispInfo.displayHeight;
 
-            if (m_perFrameDecodeImageSet[pictureIndex].m_hasFrameCompleteSignalFence) {
-                pDecodedFrame->frameCompleteFence = m_perFrameDecodeImageSet[pictureIndex].m_frameCompleteFence;
-                m_perFrameDecodeImageSet[pictureIndex].m_hasFrameCompleteSignalFence = false;
+            if (m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_hasFrameCompleteSignalFence) {
+                pDecodedFrame->frameCompleteFence = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_frameCompleteFence;
+                m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_hasFrameCompleteSignalFence = false;
             } else {
                 pDecodedFrame->frameCompleteFence = VkFence();
             }
 
-            if (m_perFrameDecodeImageSet[pictureIndex].m_hasFrameCompleteSignalSemaphore) {
+            if (m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_hasFrameCompleteSignalSemaphore) {
                 pDecodedFrame->frameCompleteSemaphore = m_perFrameDecodeImageSet.m_frameCompleteSemaphore;
-                pDecodedFrame->frameCompleteDoneSemValue = m_perFrameDecodeImageSet[pictureIndex].m_frameCompleteTimelineValue;
-                m_perFrameDecodeImageSet[pictureIndex].m_hasFrameCompleteSignalSemaphore = false;
+                pDecodedFrame->frameCompleteDoneSemValue = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_frameCompleteTimelineValue;
+                m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_hasFrameCompleteSignalSemaphore = false;
 
                 pDecodedFrame->consumerCompleteSemaphore = m_perFrameDecodeImageSet.m_consumerCompleteSemaphore;
                 pDecodedFrame->frameConsumerDoneSemValue = DecodeFrameBufferIf::GetSemaphoreValue(
                                                                DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_DISPLAY,
-                                                               m_perFrameDecodeImageSet[pictureIndex].m_displayOrder);
+                                                               m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_displayOrder);
 
             } else {
                 pDecodedFrame->frameCompleteSemaphore = VK_NULL_HANDLE;
             }
 
-            pDecodedFrame->frameConsumerDoneFence = m_perFrameDecodeImageSet[pictureIndex].m_frameConsumerDoneFence;
+            pDecodedFrame->frameConsumerDoneFence = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_frameConsumerDoneFence;
 
-            pDecodedFrame->timestamp = m_perFrameDecodeImageSet[pictureIndex].m_timestamp;
-            pDecodedFrame->decodeOrder = m_perFrameDecodeImageSet[pictureIndex].m_decodeOrder;
-            pDecodedFrame->displayOrder = m_perFrameDecodeImageSet[pictureIndex].m_displayOrder;
+            pDecodedFrame->timestamp = (uint64_t)m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_timestamp;
+            pDecodedFrame->decodeOrder = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_decodeOrder;
+            pDecodedFrame->displayOrder = m_perFrameDecodeImageSet[(uint32_t)pictureIndex].m_displayOrder;
 
             pDecodedFrame->queryPool = m_queryPool;
-            pDecodedFrame->startQueryId = pictureIndex;
+            pDecodedFrame->startQueryId = (uint32_t)pictureIndex;
             pDecodedFrame->numQueries = 1;
         }
 
@@ -595,19 +595,19 @@ public:
             int picId = pDecodedFrameRelease->pictureIndex;
             assert((picId >= 0) && ((uint32_t)picId < m_perFrameDecodeImageSet.size()));
 
-            assert(m_perFrameDecodeImageSet[picId].m_decodeOrder == pDecodedFrameRelease->decodeOrder);
-            assert(m_perFrameDecodeImageSet[picId].m_displayOrder == pDecodedFrameRelease->displayOrder);
+            assert(m_perFrameDecodeImageSet[(uint32_t)picId].m_decodeOrder == pDecodedFrameRelease->decodeOrder);
+            assert(m_perFrameDecodeImageSet[(uint32_t)picId].m_displayOrder == pDecodedFrameRelease->displayOrder);
 
-            assert(m_ownedByDisplayMask & (1 << picId));
-            m_ownedByDisplayMask &= ~(1 << picId);
-            m_perFrameDecodeImageSet[picId].m_inDecodeQueue = false;
-            m_perFrameDecodeImageSet[picId].m_ownedByConsummer = false;
-            m_perFrameDecodeImageSet[picId].Release();
+            assert(m_ownedByDisplayMask & (1U << picId));
+            m_ownedByDisplayMask &= ~(1U << picId);
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_inDecodeQueue = false;
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_ownedByConsummer = false;
+            m_perFrameDecodeImageSet[(uint32_t)picId].Release();
 
-            m_perFrameDecodeImageSet[picId].m_hasConsummerSignalFence = pDecodedFrameRelease->hasConsummerSignalFence;
-            m_perFrameDecodeImageSet[picId].m_useConsummerSignalSemaphore = pDecodedFrameRelease->hasConsummerSignalSemaphore;
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_hasConsummerSignalFence = pDecodedFrameRelease->hasConsummerSignalFence;
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_useConsummerSignalSemaphore = pDecodedFrameRelease->hasConsummerSignalSemaphore;
             if (pDecodedFrameRelease->hasConsummerSignalSemaphore) {
-                m_perFrameDecodeImageSet[picId].m_frameConsumerDoneTimelineValue =
+                m_perFrameDecodeImageSet[(uint32_t)picId].m_frameConsumerDoneTimelineValue =
                         DecodeFrameBufferIf::GetSemaphoreValue(
                             DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_DISPLAY,
                             pDecodedFrameRelease->displayOrder);
@@ -629,7 +629,7 @@ public:
             if ((uint32_t)referenceSlotIndexes[resId] < m_perFrameDecodeImageSet.size()) {
 
                 VkResult result = m_perFrameDecodeImageSet.GetImageSetNewLayout(m_vkDevCtx,
-                                     referenceSlotIndexes[resId], imageTypeIdx,
+                                     (uint32_t)referenceSlotIndexes[resId], imageTypeIdx,
                                      newImageLayerLayout,
                                      &pPictureResources[resId],
                                      &pPictureResourcesInfo[resId]);
@@ -642,7 +642,7 @@ public:
                 assert(pPictureResources[resId].sType == VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR);
             }
         }
-        return numResources;
+        return (int32_t)numResources;
     }
 
     virtual int32_t GetCurrentImageResourceByIndex(int8_t referenceSlotIndex, uint8_t imageTypeIdx,
@@ -655,7 +655,7 @@ public:
         if ((uint32_t)referenceSlotIndex < m_perFrameDecodeImageSet.size()) {
 
             VkResult result = m_perFrameDecodeImageSet.GetImageSetNewLayout(m_vkDevCtx,
-                                                                            referenceSlotIndex,
+                                                                            (uint32_t)referenceSlotIndex,
                                                                             imageTypeIdx,
                                                                             newImageLayerLayout,
                                                                             pPictureResource,
@@ -676,7 +676,7 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         if ((uint32_t)referenceSlotIndex < m_perFrameDecodeImageSet.size()) {
-            imageView = m_perFrameDecodeImageSet[referenceSlotIndex].GetImageView(imageTypeIdx);
+            imageView = m_perFrameDecodeImageSet[(uint32_t)referenceSlotIndex].GetImageView(imageTypeIdx);
             return referenceSlotIndex;
         }
         return -1;
@@ -697,8 +697,8 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         if ((uint32_t)picId < m_perFrameDecodeImageSet.size()) {
-            uint64_t oldPicNumInDecodeOrder = m_perFrameDecodeImageSet[picId].m_decodeOrder;
-            m_perFrameDecodeImageSet[picId].m_decodeOrder = picNumInDecodeOrder;
+            uint64_t oldPicNumInDecodeOrder = m_perFrameDecodeImageSet[(uint32_t)picId].m_decodeOrder;
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_decodeOrder = picNumInDecodeOrder;
             return oldPicNumInDecodeOrder;
         }
         assert(false);
@@ -709,8 +709,8 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         if ((uint32_t)picId < m_perFrameDecodeImageSet.size()) {
-            int32_t oldPicNumInDisplayOrder = m_perFrameDecodeImageSet[picId].m_displayOrder;
-            m_perFrameDecodeImageSet[picId].m_displayOrder = picNumInDisplayOrder;
+            int32_t oldPicNumInDisplayOrder = (int32_t)m_perFrameDecodeImageSet[(uint32_t)picId].m_displayOrder;
+            m_perFrameDecodeImageSet[(uint32_t)picId].m_displayOrder = (uint32_t)picNumInDisplayOrder;
             return oldPicNumInDisplayOrder;
         }
         assert(false);
@@ -721,31 +721,31 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         int32_t foundPicId = -1;
-        int64_t minDecodeOrder = m_perFrameDecodeImageSet[0].m_decodeOrder + 1000;
+        int64_t minDecodeOrder = (int64_t)(m_perFrameDecodeImageSet[0].m_decodeOrder + 1000);
         uint32_t numAvailablePictures = 0;
         for (uint32_t picId = 0; picId < m_perFrameDecodeImageSet.size(); picId++) {
             if (m_perFrameDecodeImageSet[picId].IsAvailable()) {
                 numAvailablePictures++;
                 if ((int64_t)m_perFrameDecodeImageSet[picId].m_decodeOrder < minDecodeOrder) {
-                    foundPicId = picId;
+                    foundPicId = (int32_t)picId;
                     minDecodeOrder = (int64_t)m_perFrameDecodeImageSet[picId].m_decodeOrder;
                 }
             }
         }
 
         if (foundPicId >= 0) {
-            m_perFrameDecodeImageSet[foundPicId].Reset();
-            m_perFrameDecodeImageSet[foundPicId].AddRef();
-            m_perFrameDecodeImageSet[foundPicId].m_picIdx = foundPicId;
+            m_perFrameDecodeImageSet[(uint32_t)foundPicId].Reset();
+            m_perFrameDecodeImageSet[(uint32_t)foundPicId].AddRef();
+            m_perFrameDecodeImageSet[(uint32_t)foundPicId].m_picIdx = foundPicId;
 
             if (m_debug) {
                 std::cout << "==> ReservePictureBuffer picIdx: " << (uint32_t)foundPicId << " of " << numAvailablePictures
-                          << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[foundPicId].m_decodeOrder << "\tdecodeOrder: "
-                          << m_perFrameDecodeImageSet[foundPicId].m_decodeOrder
-                          << "\ttimestamp " << m_perFrameDecodeImageSet[foundPicId].m_timestamp << std::endl;
+                          << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[(uint32_t)foundPicId].m_decodeOrder << "\tdecodeOrder: "
+                          << m_perFrameDecodeImageSet[(uint32_t)foundPicId].m_decodeOrder
+                          << "\ttimestamp " << m_perFrameDecodeImageSet[(uint32_t)foundPicId].m_timestamp << std::endl;
             }
 
-            return &m_perFrameDecodeImageSet[foundPicId];
+            return &m_perFrameDecodeImageSet[(uint32_t)foundPicId];
         }
 
         assert(foundPicId >= 0);
@@ -755,7 +755,7 @@ public:
     virtual uint32_t GetCurrentNumberQueueSlots() const
     {
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
-        return m_perFrameDecodeImageSet.size();
+        return (uint32_t)m_perFrameDecodeImageSet.size();
     }
 
     virtual ~VkVideoFrameBuffer()
@@ -773,7 +773,7 @@ private:
     uint32_t                 m_ownedByDisplayMask;
     int32_t                  m_frameNumInDisplayOrder;
     uint32_t                 m_numberParameterUpdates;
-    uint32_t                 m_maxNumImageTypeIdx : 4;
+    uint8_t                  m_maxNumImageTypeIdx;
     uint32_t                 m_debug : 1;
 };
 
@@ -798,7 +798,7 @@ int32_t VkVideoFrameBuffer::AddRef()
 
 int32_t VkVideoFrameBuffer::Release()
 {
-    uint32_t ret;
+    int32_t ret;
     ret = --m_refCount;
     // Destroy the device if refcount reaches zero
     if (ret == 0) {
@@ -926,7 +926,7 @@ void NvPerFrameDecodeResources::Deinit(const VulkanDeviceContext* vkDevCtx)
 int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
                                        const VkVideoProfileInfoKHR* pDecodeProfile,
                                        uint32_t                 numImages,
-                                       uint32_t                 maxNumImageTypeIdx,
+                                       uint8_t                  maxNumImageTypeIdx,
                                        const std::array<VulkanVideoFrameBuffer::ImageSpec, DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES>& imageSpecs,
                                        uint32_t                 queueFamilyIndex)
 {
@@ -974,7 +974,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
 
     m_queueFamilyIndex = queueFamilyIndex;
 
-    for (uint32_t imageTypeIdx = 0; imageTypeIdx < maxNumImageTypeIdx; imageTypeIdx++) {
+    for (uint8_t imageTypeIdx = 0; imageTypeIdx < maxNumImageTypeIdx; imageTypeIdx++) {
 
         if (!(imageSpecs[imageTypeIdx].imageTypeIdx < DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES)) {
             continue;

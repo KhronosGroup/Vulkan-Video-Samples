@@ -146,7 +146,7 @@ public:
 
     virtual int32_t InitImagePool(const VkVideoProfileInfoKHR* pDecodeProfile,
                                   uint32_t                 numImages,
-                                  uint32_t                 maxNumImageTypeIdx,
+                                  uint8_t                  maxNumImageTypeIdx,
                                   const std::array<VulkanVideoFrameBuffer::ImageSpec, DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES>& imageSpecs,
                                   uint32_t                 queueFamilyIndex,
                                   int32_t                  numImagesToPreallocate) = 0;

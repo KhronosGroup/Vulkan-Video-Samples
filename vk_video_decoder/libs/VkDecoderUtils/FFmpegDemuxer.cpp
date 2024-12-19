@@ -176,7 +176,7 @@ private:
 
         uint8_t *avioc_buffer = NULL;
         int avioc_buffer_size = 8 * 1024 * 1024;
-        avioc_buffer = (uint8_t *)av_malloc(avioc_buffer_size);
+        avioc_buffer = (uint8_t *)av_malloc((size_t)avioc_buffer_size);
         if (!avioc_buffer) {
             std::cerr << "FFmpeg error: " << __FILE__ << " " << __LINE__;
             return NULL;

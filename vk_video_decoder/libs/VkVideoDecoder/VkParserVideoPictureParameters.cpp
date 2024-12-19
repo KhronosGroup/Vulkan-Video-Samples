@@ -199,19 +199,19 @@ VkResult VkParserVideoPictureParameters::CreateParametersObject(const VulkanDevi
         assert (currentId >= 0);
         switch (pStdVideoPictureParametersSet->GetParameterType()) {
             case StdVideoPictureParametersSet::PPS_TYPE:
-                m_ppsIdsUsed.set(currentId, true);
+                m_ppsIdsUsed.set((size_t)currentId, true);
                 break;
 
             case StdVideoPictureParametersSet::SPS_TYPE:
-                m_spsIdsUsed.set(currentId, true);
+                m_spsIdsUsed.set((size_t)currentId, true);
                 break;
 
             case StdVideoPictureParametersSet::VPS_TYPE:
-                m_vpsIdsUsed.set(currentId, true);
+                m_vpsIdsUsed.set((size_t)currentId, true);
             break;
 
             case StdVideoPictureParametersSet::AV1_SPS_TYPE:
-                m_av1SpsIdsUsed.set(currentId, true);
+                m_av1SpsIdsUsed.set((size_t)currentId, true);
                 break;
             default:
                 assert(!"Invalid StdVideoPictureParametersSet Parameter Type!");
@@ -274,19 +274,19 @@ VkResult VkParserVideoPictureParameters::UpdateParametersObject(const StdVideoPi
         assert (currentId >= 0);
         switch (pStdVideoPictureParametersSet->GetParameterType()) {
             case StdVideoPictureParametersSet::PPS_TYPE:
-                m_ppsIdsUsed.set(currentId, true);
+                m_ppsIdsUsed.set((size_t)currentId, true);
                 break;
 
             case StdVideoPictureParametersSet::SPS_TYPE:
-                m_spsIdsUsed.set(currentId, true);
+                m_spsIdsUsed.set((size_t)currentId, true);
                 break;
 
             case StdVideoPictureParametersSet::VPS_TYPE:
-                m_vpsIdsUsed.set(currentId, true);
+                m_vpsIdsUsed.set((size_t)currentId, true);
             break;
 
             case StdVideoPictureParametersSet::AV1_SPS_TYPE:
-            m_av1SpsIdsUsed.set(currentId, true);
+            m_av1SpsIdsUsed.set((size_t)currentId, true);
             break;
             default:
                 assert(!"Invalid StdVideoPictureParametersSet Parameter Type!");
@@ -436,7 +436,7 @@ int32_t VkParserVideoPictureParameters::FlushPictureParametersQueue(VkSharedBase
         numQueueItems++;
     }
 
-    return numQueueItems;
+    return (int32_t)numQueueItems;
 }
 
 bool VkParserVideoPictureParameters::CheckStdObjectBeforeUpdate(VkSharedBaseObj<StdVideoPictureParametersSet>& stdPictureParametersSet,
@@ -504,7 +504,7 @@ int32_t VkParserVideoPictureParameters::AddRef()
 
 int32_t VkParserVideoPictureParameters::Release()
 {
-    uint32_t ret;
+    int32_t ret;
     ret = --m_refCount;
     // Destroy the device if refcount reaches zero
     if (ret == 0) {

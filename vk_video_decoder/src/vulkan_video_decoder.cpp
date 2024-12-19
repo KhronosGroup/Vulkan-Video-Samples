@@ -113,7 +113,7 @@ public:
 
     int32_t Release()
     {
-        uint32_t ret;
+        int32_t ret;
         ret = --m_refCount;
         // Destroy the device if refcount reaches zero
         if (ret == 0) {
