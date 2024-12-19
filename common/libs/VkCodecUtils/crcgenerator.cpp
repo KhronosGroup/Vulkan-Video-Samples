@@ -100,6 +100,6 @@ unsigned long Crc32Table[256] = {
 void getCRC(uint32_t *checksum, const uint8_t *inputBytes, size_t length, unsigned long crcTable[])
 {
     for (size_t i = 0; i < length; i += 1) {
-        *checksum = crcTable[inputBytes[i] ^ (*checksum & 0xff)] ^ (*checksum >> 8);
+        *checksum = (uint32_t)crcTable[inputBytes[i] ^ (*checksum & 0xff)] ^ (*checksum >> 8);
     }
 }
