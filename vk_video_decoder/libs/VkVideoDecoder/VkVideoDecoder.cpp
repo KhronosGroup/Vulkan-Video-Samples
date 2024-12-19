@@ -763,7 +763,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
     VulkanVideoFrameBuffer::PictureResourceInfo dpbSetupPictureResourceInfo = VulkanVideoFrameBuffer::PictureResourceInfo();
     int resourceIndexDpb = m_videoFrameBuffer->GetCurrentImageResourceByIndex(
-                                                          pCurrFrameDecParams->currPicIdx,
+                                                          (uint8_t)(pCurrFrameDecParams->currPicIdx),
                                                           m_imageSpecsIndex.decodeDpb,
                                                           &pCurrFrameDecParams->dpbSetupPictureResource,
                                                           &dpbSetupPictureResourceInfo,
@@ -802,7 +802,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         assert(m_useSeparateOutputImages != VK_FALSE);
 
         int resourceIndexOut = m_videoFrameBuffer->GetCurrentImageResourceByIndex(
-                                                              pCurrFrameDecParams->currPicIdx,
+                                                              (uint8_t)(pCurrFrameDecParams->currPicIdx),
                                                               m_imageSpecsIndex.decodeOut,
                                                               pOutputPictureResource,
                                                               &currentOutputPictureResourceInfo,
@@ -864,7 +864,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
         // FIXME: VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR is incorrect layout for linear or filtered output
         int resourceIndexFilter = m_videoFrameBuffer->GetCurrentImageResourceByIndex(
-                                                                 pCurrFrameDecParams->currPicIdx,
+                                                                 (uint8_t)(pCurrFrameDecParams->currPicIdx),
                                                                  filterOutImageSpecsIndex,
                                                                  pFrameFilterOutResource,
                                                                  pFrameFilterOutResourceInfo,
@@ -1029,7 +1029,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                                         pCurrFrameDecParams->pStdSps,
                                                                         pCurrFrameDecParams->pStdVps,
                                                                         filterCmdBuffer);
-    int32_t retVal = m_videoFrameBuffer->QueuePictureForDecode(currPicIdx, pDecodePictureInfo,
+    int32_t retVal = m_videoFrameBuffer->QueuePictureForDecode((uint8_t)currPicIdx, pDecodePictureInfo,
                                                                &referencedObjectsInfo,
                                                                &frameSynchronizationInfo);
     if (currPicIdx != retVal) {
@@ -1322,7 +1322,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         VkSharedBaseObj<VkImageResourceView> inputImageView;
         VkSharedBaseObj<VkImageResourceView> outputImageView;
         assert(m_imageSpecsIndex.filterIn != InvalidImageTypeIdx);
-        int32_t index = m_videoFrameBuffer->GetCurrentImageResourceByIndex(currPicIdx, m_imageSpecsIndex.filterIn, inputImageView);
+        int32_t index = m_videoFrameBuffer->GetCurrentImageResourceByIndex((uint8_t)(currPicIdx), m_imageSpecsIndex.filterIn, inputImageView);
         assert(index == currPicIdx);
         assert(inputImageView);
 
@@ -1331,7 +1331,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         }
 
         assert(m_imageSpecsIndex.filterOut != InvalidImageTypeIdx);
-        index = m_videoFrameBuffer->GetCurrentImageResourceByIndex(currPicIdx, m_imageSpecsIndex.filterOut,
+        index = m_videoFrameBuffer->GetCurrentImageResourceByIndex((uint8_t)currPicIdx, m_imageSpecsIndex.filterOut,
                                                                    outputImageView);
 
         assert(index == currPicIdx);
