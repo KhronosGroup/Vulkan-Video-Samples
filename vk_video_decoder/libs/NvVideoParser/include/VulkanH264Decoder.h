@@ -737,8 +737,8 @@ typedef bool (*PFNSORTCHECK)(int, int *, const DPBPicNum *, const VkParserPictur
 class VulkanH264Decoder: public VulkanVideoDecoder
 {
 public:
-    enum { MAX_NUM_SPS = 32 };
-    enum { MAX_NUM_PPS = 256 };
+    enum { MAX_NUM_SPS = 31 };
+    enum { MAX_NUM_PPS = 255 };
 
 public:
     VulkanH264Decoder(VkVideoCodecOperationFlagBitsKHR std);
