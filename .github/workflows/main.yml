@@ -35,12 +35,14 @@ jobs:
 
       - name: Install dependencies
         run: |
+          wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list http://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
           sudo apt update
           sudo apt install --assume-yes --no-install-recommends valgrind python3-pip ninja-build
           sudo apt install cmake
           sudo apt install libx11-dev libwayland-dev
           sudo apt install libavformat-dev
-          sudo apt install libvulkan-dev
+          sudo apt install vulkan-sdk
 
       - name: Install i386 dependencies
         if: matrix.platform == 'linux-x86'
@@ -52,7 +54,7 @@ jobs:
           sudo apt remove --assume-yes zlib1g-dev
           sudo apt install libx11-dev:i386 libwayland-dev:i386
           sudo apt install libavformat-dev:i386
-          sudo apt install libvulkan-dev:i386
+          sudo apt install vulkan-sdk:i386
 
       - name: Build
         shell: bash
@@ -117,6 +119,21 @@ jobs:
           # Get the contents of the first folder in the archive
           Get-ChildItem -Path $tempExtractPath\ffmpeg-master-latest-win64-gpl-shared | Where-Object { $_.PSIsContainer } | Copy-Item -Destination $finalDestination -Force -Recurse
           echo "$finalDestination\bin" | Out-File -Encoding ASCII -Append $env:GITHUB_PATH
+
+      - name: Set up Vulkan SDK
+        run: |
+          curl -L -o VulkanSDK.exe https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime.exe
+          start /wait VulkanSDK.exe /S /D=C:\VulkanSDK
+        shell: cmd
+
+      - name: Set Vulkan SDK Environment Variables
+        run: |
+          setx VULKAN_SDK "C:\VulkanSDK"
+          setx PATH "%VULKAN_SDK%\Bin;%PATH%"
+        shell: cmd
+
+      - name: Confirm Vulkan SDK Installation
+        run: vulkaninfo.exe
 
       - name: Build
         run: |
