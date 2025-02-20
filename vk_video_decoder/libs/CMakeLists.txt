@@ -3,9 +3,6 @@ project(${VULKAN_VIDEO_DECODER_LIB}, LANGUAGES CXX)
 
 set(LIBVKVIDEODECODER_SRC
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/../src/vulkan_video_decoder.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/Shell.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/ShellDirect.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/Shell.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/Helpers.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.h
@@ -50,11 +47,9 @@ set(LIBVKVIDEODECODER_SRC
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/nvVkFormats.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/crcgenerator.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanCommandBufferPool.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanCommandBufferPool.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/VideoStreamDemuxer.h
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/ElementaryStream.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoParser/VulkanVideoParser.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.h
@@ -87,10 +82,8 @@ link_directories(
     )
 
 if(WIN32)
-    list(APPEND libraries PRIVATE ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB_SHARED})
+    list(APPEND libraries PRIVATE ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB_SHARED})
 else()
-    list(APPEND libraries PRIVATE -lX11)
-    list(APPEND libraries PRIVATE -lavcodec -lavutil -lavformat)
     list(APPEND libraries PRIVATE -L${SHADERC_LIB_SHARED_DIR} -l${SHADERC_LIB_SHARED})
     list(APPEND libraries PRIVATE -L${CMAKE_INSTALL_LIBDIR} -l${VULKAN_VIDEO_PARSER_LIB})
     list(APPEND libraries PRIVATE -L${LIBNVPARSER_BINARY_ROOT} -l${VULKAN_VIDEO_PARSER_LIB})
@@ -100,25 +93,8 @@ if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
     list(APPEND definitions PRIVATE -DWIN32_LEAN_AND_MEAN)
 
-    list(APPEND LIBVKVIDEODECODER_SRC ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/ShellWin32.cpp ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/ShellWin32.h)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     list(APPEND libraries PRIVATE -ldl -lrt -lpthread)
-
-    if(BUILD_WSI_XCB_SUPPORT AND DEMOS_WSI_SELECTION STREQUAL "XCB")
-        find_package(XCB REQUIRED)
-
-        list(APPEND LIBVKVIDEODECODER_SRC ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/ShellXcb.cpp ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/ShellXcb.h)
-        list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_XCB_KHR)
-        list(APPEND includes PRIVATE ${XCB_INCLUDES})
-        list(APPEND libraries PRIVATE ${XCB_LIBRARIES})
-    elseif(BUILD_WSI_WAYLAND_SUPPORT AND DEMOS_WSI_SELECTION STREQUAL "WAYLAND")
-        find_package(Wayland REQUIRED)
-
-        list(APPEND LIBVKVIDEODECODER_SRC ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/ShellWayland.cpp ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/ShellWayland.h)
-        list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WAYLAND_KHR)
-        list(APPEND includes PRIVATE ${WAYLAND_CLIENT_INCLUDE_DIR})
-        list(APPEND libraries PRIVATE ${WAYLAND_CLIENT_LIBRARIES})
-    endif()
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/..)

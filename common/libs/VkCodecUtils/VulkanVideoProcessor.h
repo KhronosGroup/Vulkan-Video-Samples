@@ -20,8 +20,8 @@
 #include "DecoderConfig.h"
 #include "VkDecoderUtils/VideoStreamDemuxer.h"
 #include "VkVideoDecoder/VkVideoDecoder.h"
-#include "VkCodecUtils/VkVideoFrameToFile.h"
 #include "VkCodecUtils/VkVideoQueue.h"
+#include "VkVideoFrameOutput.h"
 
 class VulkanVideoProcessor : public VkVideoQueue<VulkanDecodedFrame> {
 public:
@@ -43,6 +43,7 @@ public:
 
     int32_t Initialize(const VulkanDeviceContext* vkDevCtx,
                        VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
+                       VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
                        DecoderConfig& programConfig);
 
     void Deinit();
@@ -78,12 +79,12 @@ private:
         , m_vkVideoFrameBuffer()
         , m_vkVideoDecoder()
         , m_vkParser()
+        , m_frameToFile()
         , m_currentBitstreamOffset(0)
         , m_videoFrameNum(0)
         , m_videoStreamsCompleted(false)
         , m_usesStreamDemuxer(false)
         , m_usesFramePreparser(false)
-        , m_frameToFile()
         , m_loopCount(1)
         , m_startFrame(0)
         , m_maxFrameCount(-1)
@@ -113,12 +114,12 @@ private:
     VkSharedBaseObj<VulkanVideoFrameBuffer> m_vkVideoFrameBuffer;
     VkSharedBaseObj<VkVideoDecoder> m_vkVideoDecoder;
     VkSharedBaseObj<IVulkanVideoParser> m_vkParser;
+    VkSharedBaseObj<VkVideoFrameOutput> m_frameToFile;
     int64_t  m_currentBitstreamOffset;
     uint32_t m_videoFrameNum;
     uint32_t m_videoStreamsCompleted : 1;
     uint32_t m_usesStreamDemuxer : 1;
     uint32_t m_usesFramePreparser : 1;
-    VkVideoFrameToFile m_frameToFile;
     int32_t   m_loopCount;
     uint32_t  m_startFrame;
     int32_t   m_maxFrameCount;
