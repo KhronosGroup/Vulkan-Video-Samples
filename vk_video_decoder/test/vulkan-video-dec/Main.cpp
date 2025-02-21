@@ -1,12 +1,11 @@
 /*
- * Copyright (C) 2016 Google, Inc.
- * Copyright 2020 NVIDIA Corporation.
+ * Copyright 2024 NVIDIA Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,20 +14,34 @@
  * limitations under the License.
  */
 
-#include <assert.h>
-#include <string>
-#include <vector>
-#include <cstring>
-#include <cstdio>
+#include <iostream>
 
 #include "VkCodecUtils/DecoderConfig.h"
-#include "VkCodecUtils/VulkanDeviceContext.h"
-#include "VkCodecUtils/VulkanVideoProcessor.h"
+#include "vulkan_video_decoder.h"
+#include "VkVideoCore/VkVideoCoreProfile.h"
+#include "VkCodecUtils/VulkanFrame.h"
 #include "VkCodecUtils/VulkanDecoderFrameProcessor.h"
+#include "VkDecoderUtils/VideoStreamDemuxer.h"
 #include "VkShell/Shell.h"
-#include "VkCodecUtils/VkVideoFrameToFile.h"
 
-int main(int argc, const char **argv) {
+static void DumpDecoderStreeamInfo(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder)
+{
+    const VkVideoProfileInfoKHR videoProfileInfo = vulkanVideoDecoder->GetVkProfile();
+
+    const VkExtent3D extent = vulkanVideoDecoder->GetVideoExtent();
+
+    std::cout << "Test Video Input Information" << std::endl
+               << "\tCodec        : " << VkVideoCoreProfile::CodecToName(videoProfileInfo.videoCodecOperation) << std::endl
+               << "\tCoded size   : [" << extent.width << ", " << extent.height << "]" << std::endl
+               << "\tChroma Subsampling:";
+
+    VkVideoCoreProfile::DumpFormatProfiles(&videoProfileInfo);
+    std::cout << std::endl;
+}
+
+int main(int argc, const char** argv)
+{
+    std::cout << "Enter decoder test" << std::endl;
 
     DecoderConfig decoderConfig(argv[0]);
     decoderConfig.ParseArgs(argc, argv);
@@ -110,7 +123,6 @@ int main(int argc, const char **argv) {
                                                VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
                                                VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR));
         if (result != VK_SUCCESS) {
-
             assert(!"Can't initialize the Vulkan physical device!");
             return -1;
         }
@@ -136,15 +148,8 @@ int main(int argc, const char **argv) {
                                             videoStreamDemuxer);
 
         if (result != VK_SUCCESS) {
-
             assert(!"Can't initialize the VideoStreamDemuxer!");
             return result;
-        }
-
-        VkSharedBaseObj<VulkanVideoProcessor> vulkanVideoProcessor;
-        result = VulkanVideoProcessor::Create(decoderConfig, &vkDevCtxt, vulkanVideoProcessor);
-        if (result != VK_SUCCESS) {
-            return -1;
         }
 
         VkSharedBaseObj<VkVideoFrameToFile> frameToFile;
@@ -162,13 +167,25 @@ int main(int argc, const char **argv) {
             }
         }
 
-        vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        VkSharedBaseObj<VulkanVideoDecoder> vulkanVideoDecoder;
+        result = CreateVulkanVideoDecoder(vkDevCtxt.getInstance(),
+                                        vkDevCtxt.getPhysicalDevice(),
+                                        vkDevCtxt.getDevice(),
+                                        videoStreamDemuxer,
+                                        frameToFile,
+                                        argc, argv,
+                                        vulkanVideoDecoder);
+        if (result != VK_SUCCESS) {
+            fprintf(stderr, "Error creating video decoder\n");
+            return -1;
+        }
 
-        VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoProcessor);
+        DumpDecoderStreeamInfo(vulkanVideoDecoder);
+
+        VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoDecoder);
         DecoderFrameProcessorState frameProcessor(&vkDevCtxt, videoQueue, 0);
 
         displayShell->AttachFrameProcessor(frameProcessor);
-
         displayShell->RunLoop();
 
     } else {
@@ -181,11 +198,9 @@ int main(int argc, const char **argv) {
                                               nullptr,
                                               requestVideoDecodeQueueMask);
         if (result != VK_SUCCESS) {
-
             assert(!"Can't initialize the Vulkan physical device!");
             return -1;
         }
-
 
         result = vkDevCtxt.CreateVulkanDevice(numDecodeQueues,
                                               0,     // num encode queues
@@ -199,7 +214,6 @@ int main(int argc, const char **argv) {
                                               requestVideoComputeQueueMask != 0   // createComputeQueue
                                               );
         if (result != VK_SUCCESS) {
-
             assert(!"Failed to create Vulkan device!");
             return -1;
         }
@@ -214,16 +228,8 @@ int main(int argc, const char **argv) {
                                             videoStreamDemuxer);
 
         if (result != VK_SUCCESS) {
-
             assert(!"Can't initialize the VideoStreamDemuxer!");
             return result;
-        }
-
-        VkSharedBaseObj<VulkanVideoProcessor> vulkanVideoProcessor;
-        result = VulkanVideoProcessor::Create(decoderConfig, &vkDevCtxt, vulkanVideoProcessor);
-        if (result != VK_SUCCESS) {
-            std::cerr << "Error creating the decoder instance: " << result << std::endl;
-            return -1;
         }
 
         VkSharedBaseObj<VkVideoFrameToFile> frameToFile;
@@ -241,9 +247,22 @@ int main(int argc, const char **argv) {
             }
         }
 
-        vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        VkSharedBaseObj<VulkanVideoDecoder> vulkanVideoDecoder;
+        result = CreateVulkanVideoDecoder(vkDevCtxt.getInstance(),
+                                        vkDevCtxt.getPhysicalDevice(),
+                                        vkDevCtxt.getDevice(),
+                                        videoStreamDemuxer,
+                                        frameToFile,
+                                        argc, argv,
+                                        vulkanVideoDecoder);
+        if (result != VK_SUCCESS) {
+            fprintf(stderr, "Error creating video decoder\n");
+            return -1;
+        }
 
-        VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoProcessor);
+        DumpDecoderStreeamInfo(vulkanVideoDecoder);
+
+        VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoDecoder);
         DecoderFrameProcessorState frameProcessor(&vkDevCtxt, videoQueue, decoderConfig.decoderQueueSize);
 
         bool continueLoop = true;
@@ -252,5 +271,9 @@ int main(int argc, const char **argv) {
         } while (continueLoop);
     }
 
-    return 0;
+    /*******************************************************************************************/
+
+    std::cout << "Exit decoder test" << std::endl;
 }
+
+

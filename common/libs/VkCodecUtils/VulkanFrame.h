@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "VkCodecUtils/VulkanVideoUtils.h"
 #include "VkCodecUtils/FrameProcessor.h"
 #include "VkCodecUtils/VkVideoQueue.h"
 
@@ -29,7 +30,6 @@ class VulkanFrame : public FrameProcessor {
 public:
 
     static VkResult Create(const VulkanDeviceContext* vkDevCtx,
-                           VkSharedBaseObj<VkVideoQueue<FrameDataType>>& videoQueue,
                            VkSharedBaseObj<VulkanFrame>& frameProcessor);
 
     virtual int32_t AddRef()
@@ -47,13 +47,15 @@ public:
         return ret;
     }
 
+    virtual int AttachQueue(VkSharedBaseObj<VkVideoRefCountBase>& videoQueue);
+
     virtual int AttachShell(const Shell& sh);
     virtual void DetachShell();
 
     virtual int AttachSwapchain(const Shell& sh);
     virtual void DetachSwapchain();
 
-    virtual int CreateFrameData(int count);
+    virtual int32_t CreateFrameData(int32_t count);
     virtual void DestroyFrameData();
 
     virtual bool OnKey(Key key);
@@ -75,8 +77,7 @@ public:
     void PrepareViewport(const VkExtent2D& extent);
 
 private:
-    VulkanFrame(const VulkanDeviceContext* vkDevCtx,
-                VkSharedBaseObj<VkVideoQueue<FrameDataType>>& videoProcessor);
+    VulkanFrame(const VulkanDeviceContext* vkDevCtx);
     virtual ~VulkanFrame();
 
 private:

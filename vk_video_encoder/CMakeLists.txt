@@ -1,9 +1,10 @@
 # The name of our project is "VULKAN_VIDEO_TESTS". CMakeLists files in this project can
 # refer to the root source directory of the project as ${VULKAN_VIDEO_TESTS_SOURCE_DIR} and
 # to the root binary directory of the project as ${VULKAN_BINARY_DIR}.
-cmake_minimum_required(VERSION 2.8.11)
+cmake_minimum_required(VERSION 3.20.0)
 
 include(CheckCXXCompilerFlag)
+include(FetchContent)
 
 # This must come before the project command.
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12" CACHE STRING "Minimum OS X deployment version")
@@ -29,6 +30,9 @@ if (USE_CCACHE)
         set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
     endif(CCACHE_FOUND)
 endif()
+
+# Handle Vulkan and shaderc dependencies
+include(FindVulkanAndDependencies)
 
 ############ LINUX LIBRARY includes ######################################
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -58,7 +62,6 @@ endif()
 
 ############ WINDOWS LIBRARY includes ######################################
 if(WIN32)
-    add_definitions(-DNOMINMAX="1")
     if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         message(STATUS "Selected Windows build type: Debug")
         if(NOT DEFINED ENV{LIB_ARCH_DIR})
@@ -243,7 +246,74 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_LIBDIR}")
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN -DNOMINMAX="1")
+    set(DisplayServer Win32)
+    if (NOT MSVC_VERSION LESS 1900)
+        # Enable control flow guard
+        message(STATUS "Building demos with control flow guard")
+        add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/guard:cf>")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /guard:cf")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /guard:cf")
+    endif()
+    set(DEMO_INCLUDE_DIRS
+       "${PROJECT_SOURCE_DIR}/icd/common"
+        ${DEMO_INCLUDE_DIRS}
+    )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if (NOT DEMOS_WSI_SELECTION)
+        set(DEMOS_WSI_SELECTION "XCB")
+    endif()
+
+    if (DEMOS_WSI_SELECTION STREQUAL "XCB")
+        if (NOT BUILD_WSI_XCB_SUPPORT)
+            message( FATAL_ERROR "Selected XCB for demos build but not building Xcb support" )
+        endif()
+        set(DEMO_INCLUDE_DIRS
+            ${XCB_INCLUDE_DIRS}
+            ${DEMO_INCLUDE_DIRS}
+        )
+        link_libraries(${XCB_LIBRARIES})
+        add_definitions(-DVK_USE_PLATFORM_XCB_KHR)
+    elseif(DEMOS_WSI_SELECTION STREQUAL "XLIB")
+        if (NOT BUILD_WSI_XLIB_SUPPORT)
+            message( FATAL_ERROR "Selected XLIB for demos build but not building Xlib support" )
+        endif()
+        set(DEMO_INCLUDE_DIRS
+            ${X11_INCLUDE_DIR}
+            ${DEMO_INCLUDE_DIRS}
+        )
+        link_libraries(${X11_LIBRARIES})
+        add_definitions(-DVK_USE_PLATFORM_XLIB_KHR)
+    elseif(DEMOS_WSI_SELECTION STREQUAL "WAYLAND")
+        if (NOT BUILD_WSI_WAYLAND_SUPPORT)
+            message( FATAL_ERROR "Selected Wayland for demos build but not building Wayland support" )
+        endif()
+        set(DEMO_INCLUDE_DIRS
+            ${WAYLAND_CLIENT_INCLUDE_DIR}
+            ${DEMO_INCLUDE_DIRS}
+        )
+        link_libraries(${WAYLAND_CLIENT_LIBRARIES})
+        add_definitions(-DVK_USE_PLATFORM_WAYLAND_KHR)
+    elseif(DEMOS_WSI_SELECTION STREQUAL "DISPLAY")
+        add_definitions(-DVK_USE_PLATFORM_DISPLAY_KHR)
+    else()
+        message( FATAL_ERROR "Unrecognized value for DEMOS_WSI_SELECTION: ${DEMOS_WSI_SELECTION}" )
+     endif()
+
+    include_directories ("${PROJECT_SOURCE_DIR}/icd/common")
+    link_libraries(${API_LOWERCASE} m)
+else()
+    message(FATAL_ERROR "Unsupported Platform!")
+endif()
+
+add_definitions(-DVK_USE_VIDEO_QUEUE)
+add_definitions(-DVK_USE_VIDEO_DECODE_QUEUE)
+add_definitions(-DVK_USE_VIDEO_ENCODE_QUEUE)
+add_definitions(-DVK_ENABLE_BETA_EXTENSIONS)
+
 find_package(FFmpeg REQUIRED)
+set(FFMPEG_AVAILABLE OFF)
 
 # FFMPEG_FOUND - system has ffmpeg or libav
 # FFMPEG_INCLUDE_DIR - the ffmpeg include directory
@@ -254,33 +324,44 @@ find_package(FFmpeg REQUIRED)
 if(FFMPEG_FOUND)
     message("Found FFMPEG/LibAV libraries")
     include_directories(${FFMPEG_INCLUDE_DIR})
+    set(FFMPEG_AVAILABLE ON)
 else()
     if(WIN32)
-		find_library(AVCODEC_LIB NAMES avcodec PATHS ${VULKAN_FFMPEG_LIB_PATH})
-		message(STATUS ${AVCODEC_LIB})
-		find_library(AVFORMAT_LIB NAMES avformat PATHS ${VULKAN_FFMPEG_LIB_PATH})
-		message(STATUS ${AVFORMAT_LIB})
-		find_library(AVUTIL_LIB NAMES avutil PATHS ${VULKAN_FFMPEG_LIB_PATH})
-		message(STATUS ${AVUTIL_LIB})
-		include_directories(${FFMPEG_INCLUDE_DIR})
+       find_library(AVCODEC_LIB NAMES avcodec PATHS ${VULKAN_FFMPEG_LIB_PATH})
+       message(STATUS ${AVCODEC_LIB})
+       find_library(AVFORMAT_LIB NAMES avformat PATHS ${VULKAN_FFMPEG_LIB_PATH})
+       message(STATUS ${AVFORMAT_LIB})
+       find_library(AVUTIL_LIB NAMES avutil PATHS ${VULKAN_FFMPEG_LIB_PATH})
+       message(STATUS ${AVUTIL_LIB})
 
-   install(DIRECTORY "${VULKAN_FFMPEG_LIB_PATH}/../bin/"
-           DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
-           PATTERN "*.def" EXCLUDE
-           PATTERN "*.a" EXCLUDE)
+       if(AVCODEC_LIB AND AVFORMAT_LIB AND AVUTIL_LIB)
+           message(STATUS "Found FFMPEG libraries manually")
+           set(FFMPEG_AVAILABLE ON)
+	       include_directories(${FFMPEG_INCLUDE_DIR})
 
-   install(DIRECTORY "${VULKAN_FFMPEG_LIB_PATH}/"
-           DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
+	       install(DIRECTORY "${VULKAN_FFMPEG_LIB_PATH}/../bin/"
+	       DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
+	            PATTERN "*.def" EXCLUDE
+	            PATTERN "*.a" EXCLUDE)
 
+	       install(DIRECTORY "${VULKAN_FFMPEG_LIB_PATH}/"
+	            DESTINATION "${CMAKE_INSTALL_PREFIX}/lib")
+       else()
+            message(WARNING "Can't find libavcodec, libavformat, or libavutil on Windows!")
+       endif()
     else()
-		message("Can't find libavcodec, libavformat or libavutil. Please add them!")
+        message(WARNING "Can't find libavcodec, libavformat, or libavutil on Linux!")
     endif()
+endif()
+
+if (NOT FFMPEG_AVAILABLE)
+    message(WARNING "FFMPEG demuxing is not going to be suppored.")
 endif()
 
 set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../scripts")
 
 # Header file for CMake settings
-include_directories("${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/../common/include")
+include_directories("${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/../common/include" "${VULKAN_HEADERS_INCLUDE_DIR}" "${Vulkan_INCLUDE_DIR}")
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(COMMON_COMPILE_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
@@ -301,8 +382,8 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_COMPILE_FLAGS} -std=c++11 -fno-rtti")
     if (UNIX)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
     endif()
 endif()
 
@@ -354,7 +435,6 @@ endif()
 
 option(BUILD_LOADER "Build loader" ON)
 option(BUILD_TESTS "Build tests" ON)
-option(BUILD_LAYERS "Build layers" ON)
 option(BUILD_DEMOS "Build demos" ON)
 if (APPLE)
     option(BUILD_VKJSON "Build vkjson" OFF)
@@ -363,28 +443,12 @@ else()
 endif()
 option(BUILD_ICD "Build icd" ON)
 
-option(CUSTOM_GLSLANG_BIN_ROOT "Use the user defined GLSLANG_BINARY_ROOT" OFF)
-option(CUSTOM_SPIRV_TOOLS_BIN_ROOT "Use the user defined SPIRV_TOOLS*BINARY_ROOT paths" OFF)
-
-#Choose natural default paths for glslang and SPIRV-Tools binaries to support custom definition by the user on the CMake command line or in the GUI
-set(GLSLANG_BINARY_ROOT "${CMAKE_BINARY_DIR}/../glslang" CACHE STRING "User defined path to the glslang binaries for this project")
-set(SPIRV_TOOLS_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools" CACHE STRING "User defined path to the SPIRV-Tools binaries for this project")
-set(SPIRV_TOOLS_OPT_BINARY_ROOT "${CMAKE_BINARY_DIR}/../SPIRV-Tools/opt" CACHE STRING "User defined path to the SPIRV-Tools-opt binaries for this project")
-
-# Define a variable for a default root location to the gslang, SPIRV-Tools and other external sources and cache it to allow the user to customize it as needed
-set(EXTERNAL_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../vk_video_decoder/external" CACHE STRING "Root path to external sources such as glslang and SPIRV-Tools")
 set(VK_VIDEO_COMMON_LIBS_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../common/libs" CACHE STRING "Root path to common vkvideo libs sources")
 set(VK_VIDEO_DECODER_LIBS_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../vk_video_decoder/libs" CACHE STRING "Root path to common vkvideo decoder libs sources")
 set(VK_VIDEO_DECODER_LIBS_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}../vk_video_decoder/include" CACHE STRING "Root path to video decoder libs includes")
 set(VK_VIDEO_ENCODER_LIBS_SOURCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/libs" CACHE STRING "Root path to common vkvideo encoder libs sources")
 
 if (WIN32)
-    if(CUSTOM_GLSLANG_BIN_ROOT)
-        set(GSLANG_FINAL_BINARY_PATH ${GLSLANG_BINARY_ROOT}/${BUILDTGT_DIR})
-    else()
-        set(GSLANG_FINAL_BINARY_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}")
-    endif()
-
     if(DISABLE_BUILD_PATH_DECORATION)
         set (DEBUG_DECORATION "")
         set (RELEASE_DECORATION "")
@@ -392,164 +456,9 @@ if (WIN32)
         set (DEBUG_DECORATION "Debug")
         set (RELEASE_DECORATION "Release")
     endif()
-
-    # Take some steps to set up a variable pointing to the final glslang binaries given the variety of input options
-    set (GLSLANG_SEARCH_PATH "${GSLANG_FINAL_BINARY_PATH}/glslang/${RELEASE_DECORATION}"
-                             "${GSLANG_FINAL_BINARY_PATH}/glslang/OSDependent/Windows/${RELEASE_DECORATION}"
-                             "${GSLANG_FINAL_BINARY_PATH}/hlsl/${RELEASE_DECORATION}"
-                             "${GSLANG_FINAL_BINARY_PATH}/OGLCompilersDLL/${RELEASE_DECORATION}"
-                             "${GSLANG_FINAL_BINARY_PATH}/SPIRV/${RELEASE_DECORATION}" )
-
-    set (GLSLANG_DEBUG_SEARCH_PATH "${GSLANG_FINAL_BINARY_PATH}/glslang/${DEBUG_DECORATION}"
-                                   "${GSLANG_FINAL_BINARY_PATH}/glslang/OSDependent/Windows/${DEBUG_DECORATION}"
-                                   "${GSLANG_FINAL_BINARY_PATH}/hlsl/${DEBUG_DECORATION}"
-                                   "${GSLANG_FINAL_BINARY_PATH}/OGLCompilersDLL/${DEBUG_DECORATION}"
-                                   "${GSLANG_FINAL_BINARY_PATH}/SPIRV/${DEBUG_DECORATION}")
-
-    if(CUSTOM_SPIRV_TOOLS_BIN_ROOT)
-        set (SPIRV_TOOLS_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/${BUILDTGT_DIR}/source/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/${BUILDTGT_DIR}/source/${DEBUG_DECORATION}")
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/${BUILDTGT_DIR}/source/opt/${DEBUG_DECORATION}")
-    else()
-        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/${DEBUG_DECORATION}")
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${RELEASE_DECORATION}")
-        set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${DEBUG_DECORATION}")
-    endif()
 else()
     # not WIN32
-    if(CUSTOM_GLSLANG_BIN_ROOT)
-        set (GLSLANG_SEARCH_PATH "${GLSLANG_BINARY_ROOT}/install/lib"
-                                 "${GLSLANG_BINARY_ROOT}/glslang"
-                                 "${GLSLANG_BINARY_ROOT}/glslang/OSDependent/Unix"
-                                 "${GLSLANG_BINARY_ROOT}/OGLCompilersDLL"
-                                 "${GLSLANG_BINARY_ROOT}/SPIRV"
-                                 "${GLSLANG_BINARY_ROOT}/hlsl"
-                                 "${GLSLANG_BINARY_ROOT}/StandAlone")
-    else()
-        set (GLSLANG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/install/lib" "${CMAKE_SOURCE_DIR}/../x86_64/lib/glslang" )
-    endif()
-
-    if(CUSTOM_SPIRV_TOOLS_BIN_ROOT)
-        set (SPIRV_TOOLS_SEARCH_PATH "${SPIRV_TOOLS_BINARY_ROOT}/source" )
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${SPIRV_TOOLS_OPT_BINARY_ROOT}/source/opt" )
-    else()
-        set (SPIRV_TOOLS_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
-        set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt" "${CMAKE_SOURCE_DIR}/../x86_64/lib/spirv-tools" )
-    endif()
 endif()
-
-find_program(GLSLANG_VALIDATOR NAMES glslangValidator
-             HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/install/bin"
-                   "${GLSLANG_BINARY_ROOT}/StandAlone"
-                   "${PROJECT_SOURCE_DIR}/external/${BINDATA_DIR}")
-
-find_path(GLSLANG_SPIRV_INCLUDE_DIR SPIRV/spirv.hpp HINTS "${EXTERNAL_SOURCE_ROOT}/glslang"
-                                                    "${CMAKE_SOURCE_DIR}/../glslang"
-                                              DOC "Path to SPIRV/spirv.hpp")
-
-find_path(SPIRV_TOOLS_INCLUDE_DIR spirv-tools/libspirv.h HINTS "${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools/include"
-                                                   "${CMAKE_SOURCE_DIR}/../glslang/External/spirv-tools/include"
-                                             DOC "Path to spirv-tools/libspirv.h")
-
-
-set(SHADERC_ROOT_PATH "${EXTERNAL_SOURCE_ROOT}/shaderc/${BUILDTGT_DIR}")
-set(SHADERC_SEARCH_PATH "${SHADERC_ROOT_PATH}/install/lib")
-
-
-find_library(VULKAN_LIB NAMES vulkan
-             HINTS ${VULKAN_LIB_SEARCH_PATH} )
-
-find_library(GLSLANG_LIB NAMES glslang
-             HINTS ${GLSLANG_SEARCH_PATH} )
-
-find_library(OGLCompiler_LIB NAMES OGLCompiler
-             HINTS ${GLSLANG_SEARCH_PATH} )
-
-find_library(OSDependent_LIB NAMES OSDependent
-             HINTS ${GLSLANG_SEARCH_PATH} )
-
-find_library(HLSL_LIB NAMES HLSL
-             HINTS ${GLSLANG_SEARCH_PATH} )
-
-find_library(SPIRV_LIB NAMES SPIRV
-             HINTS ${GLSLANG_SEARCH_PATH} )
-
-find_library(SPIRV_REMAPPER_LIB NAMES SPVRemapper
-             HINTS ${GLSLANG_SEARCH_PATH} )
-
-find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools
-             HINTS ${SPIRV_TOOLS_SEARCH_PATH} )
-
-find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt
-             HINTS ${SPIRV_TOOLS_OPT_SEARCH_PATH} )
-
-find_library(SHADERC_LIB NAMES shaderc_shared
-             HINTS ${SHADERC_SEARCH_PATH} )
-
-if (WIN32 AND NOT DEFINED DEQP_TARGET)
-    add_library(glslang         STATIC IMPORTED)
-    add_library(OGLCompiler     STATIC IMPORTED)
-    add_library(OSDependent     STATIC IMPORTED)
-    add_library(HLSL            STATIC IMPORTED)
-    add_library(SPIRV           STATIC IMPORTED)
-    add_library(SPVRemapper     STATIC IMPORTED)
-    add_library(Loader          STATIC IMPORTED)
-    add_library(SPIRV-Tools-opt STATIC IMPORTED)
-    add_library(SPIRV-Tools     STATIC IMPORTED)
-
-    find_library(GLSLANG_DLIB NAMES glslangd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(OGLCompiler_DLIB NAMES OGLCompilerd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(OSDependent_DLIB NAMES OSDependentd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(HLSL_DLIB NAMES HLSLd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_DLIB NAMES SPIRVd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd
-                 HINTS ${GLSLANG_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd
-                 HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH} )
-    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd
-                 HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH} )
-
-    set_target_properties(glslang PROPERTIES
-                         IMPORTED_LOCATION       "${GLSLANG_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${GLSLANG_DLIB}")
-    set_target_properties(OGLCompiler PROPERTIES
-                         IMPORTED_LOCATION       "${OGLCompiler_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${OGLCompiler_DLIB}")
-    set_target_properties(OSDependent PROPERTIES
-                         IMPORTED_LOCATION       "${OSDependent_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
-    set_target_properties(HLSL PROPERTIES
-                         IMPORTED_LOCATION       "${HLSL_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${HLSL_DLIB}")
-    set_target_properties(SPIRV PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
-    set_target_properties(SPVRemapper PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_REMAPPER_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_REMAPPER_DLIB}")
-    set_target_properties(SPIRV-Tools PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_TOOLS_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
-    set_target_properties(SPIRV-Tools-opt PROPERTIES
-                         IMPORTED_LOCATION       "${SPIRV_TOOLS_OPT_LIB}"
-                         IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_OPT_DLIB}")
-
-    set (SPIRV_TOOLS_LIBRARIES SPIRV-Tools-opt SPIRV-Tools)
-    set (GLSLANG_LIBRARIES ${SHADERC_LIB} glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper ${SPIRV_TOOLS_LIBRARIES})
-else ()
-    # not WIN32
-    set (SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
-    set (GLSLANG_LIBRARIES ${SHADERC_LIB} ${GLSLANG_LIB} ${OGLCompiler_LIB} ${OSDependent_LIB} ${HLSL_LIB} ${SPIRV_LIB} ${SPIRV_REMAPPER_LIB} ${SPIRV_TOOLS_LIBRARIES})
-endif()
-
-message("Found GLSLANG libraries: ${GLSLANG_LIBRARIES}")
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
@@ -573,10 +482,6 @@ macro(run_external_revision_generate source_dir symbol_name output)
 endmacro()
 
 # Custom target for generated vulkan helper file dependencies
-set(generate_helper_files_DEPENDS)
-if(BUILD_LAYERS)
-    LIST(APPEND generate_helper_files_DEPENDS spirv_tools_commit_id.h)
-endif()
 add_custom_target(generate_helper_files DEPENDS
     vk_enum_string_helper.h
     vk_safe_struct.h
@@ -586,7 +491,6 @@ add_custom_target(generate_helper_files DEPENDS
     vk_dispatch_table_helper.h
     vk_extension_helper.h
     vk_typemap_helper.h
-    ${generate_helper_files_DEPENDS}
     )
 set_target_properties(generate_helper_files PROPERTIES FOLDER ${LVL_TARGET_FOLDER})
 
@@ -599,9 +503,6 @@ run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
 run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
 run_vk_xml_generate(helper_file_generator.py vk_typemap_helper.h)
-if(BUILD_LAYERS)
-    run_external_revision_generate(${EXTERNAL_SOURCE_ROOT}/glslang/External/spirv-tools SPIRV_TOOLS_COMMIT_ID spirv_tools_commit_id.h)
-endif()
 
 if(NOT WIN32)
     include(GNUInstallDirs)
@@ -638,6 +539,7 @@ endif()
 set(VKVIDEO_UTILS_VLF_SOURCES
     ../common/layers/vk_format_utils.cpp
     )
+
 if (WIN32)
     add_library(VkVideoUtils STATIC ${VKVIDEO_UTILS_VLF_SOURCES})
     target_compile_definitions(VkVideoUtils PUBLIC _CRT_SECURE_NO_WARNINGS)

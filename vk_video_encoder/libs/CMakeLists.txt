@@ -13,39 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.20.0)
 project(${VULKAN_VIDEO_ENCODER_LIB}, LANGUAGES CXX)
 
-add_definitions(-DVK_USE_VIDEO_QUEUE)
-add_definitions(-DVK_USE_VIDEO_DECODE_QUEUE)
-add_definitions(-DVK_USE_VIDEO_ENCODE_QUEUE)
-add_definitions(-DVK_ENABLE_BETA_EXTENSIONS)
-
-if(WIN32)
-    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
-endif()
-
-# Define a custom target to generate the dispatch table files
-add_custom_target(GenerateDispatchTables
-    DEPENDS ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.h
-            ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.cpp
-)
-
-# Add the custom command to generate the dispatch tables
-macro(generate_dispatch_table out)
-    add_custom_command(OUTPUT ${out}
-        COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/generate-dispatch-table.py ${out}
-        DEPENDS ${SCRIPTS_DIR}/generate-dispatch-table.py
-        )
-endmacro()
-
-generate_dispatch_table(${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.h)
-generate_dispatch_table(${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.cpp)
-
-# Even though shaderc.hpp is a headers-only library, adding
-# a dependency here will force clients of the library to rebuild
-# when it changes.
-set(LIBVKVIDEOENCODER
+set(LIBVKVIDEOENCODER_SRC
     ${VK_VIDEO_ENCODER_LIBS_SOURCE_ROOT}/../src/vulkan_video_encoder.cpp
     ${VK_VIDEO_ENCODER_LIBS_SOURCE_ROOT}/VkVideoEncoder/VkEncoderConfigH264.cpp
     ${VK_VIDEO_ENCODER_LIBS_SOURCE_ROOT}/VkVideoEncoder/VkEncoderConfigH264.h
@@ -123,13 +94,16 @@ include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/../")
 include_directories(BEFORE ${VULKAN_VIDEO_ENCODER_INCLUDE}/../libs)
 include_directories(BEFORE ${VULKAN_VIDEO_ENCODER_INCLUDE})
 include_directories(BEFORE ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT})
-include_directories(BEFORE ${SHADERC_ROOT_PATH}/install/include)
 
-add_library(${VULKAN_VIDEO_ENCODER_LIB} SHARED ${LIBVKVIDEOENCODER})
+link_directories(
+    ${VULKAN_LIB_DIR}
+    )
+
+add_library(${VULKAN_VIDEO_ENCODER_LIB} SHARED ${LIBVKVIDEOENCODER_SRC})
 # Link the libraries
-target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${GLSLANG_LIBRARIES})
+target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${SHADERC_LIB_SHARED})
 # Ensure the library depends on the generation of these files
-add_dependencies(${VULKAN_VIDEO_ENCODER_LIB} GenerateDispatchTables)
+add_dependencies(${VULKAN_VIDEO_ENCODER_LIB} GenerateDispatchTables ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB})
 
 target_include_directories(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${VULKAN_VIDEO_ENCODER_INCLUDE} ${VULKAN_VIDEO_ENCODER_INCLUDE}/../NvVideoParser PRIVATE include)
 target_compile_definitions(${VULKAN_VIDEO_ENCODER_LIB}
@@ -142,7 +116,6 @@ find_package(Threads)
 set_target_properties(${VULKAN_VIDEO_ENCODER_LIB} PROPERTIES SOVERSION ${VULKAN_VIDEO_ENCODER_LIB_VERSION})
 
 if(WIN32)
-    add_definitions(-DVK_USE_PLATFORM_WIN32_KHR -DWIN32_LEAN_AND_MEAN -DNOMINMAX)
     set_target_properties(${VULKAN_VIDEO_ENCODER_LIB} PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS")
     set_target_properties(${VULKAN_VIDEO_ENCODER_LIB} PROPERTIES COMPILE_DEFINITIONS_DEBUG "/SUBSYSTEM:WINDOWS")
     set_target_properties(${VULKAN_VIDEO_ENCODER_LIB} PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:WINDOWS")
@@ -151,21 +124,23 @@ if(WIN32)
     set_target_properties(${VULKAN_VIDEO_ENCODER_LIB} PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS")
 endif()
 
-add_library(${VULKAN_VIDEO_ENCODER_STATIC_LIB} STATIC ${LIBVKVIDEOENCODER})
+add_library(${VULKAN_VIDEO_ENCODER_STATIC_LIB} STATIC ${LIBVKVIDEOENCODER_SRC})
 # Link the libraries
-target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${GLSLANG_LIBRARIES})
+target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_LIB_SHARED})
 # Ensure the library depends on the generation of these files
-add_dependencies(${VULKAN_VIDEO_ENCODER_STATIC_LIB} GenerateDispatchTables)
+add_dependencies(${VULKAN_VIDEO_ENCODER_STATIC_LIB} GenerateDispatchTables ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB})
 target_include_directories(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${VULKAN_VIDEO_ENCODER_INCLUDE} ${VULKAN_VIDEO_ENCODER_INCLUDE}/../NvVideoParser PRIVATE include)
-
-install(TARGETS ${VULKAN_VIDEO_ENCODER_LIB} ${VULKAN_VIDEO_ENCODER_STATIC_LIB}
-                RUNTIME DESTINATION "${VULKAN_VIDEO_TESTS_SOURCE_DIR}/bin/libs/vk_video_encoder/${LIB_ARCH_DIR}"
-                ARCHIVE DESTINATION "${VULKAN_VIDEO_TESTS_SOURCE_DIR}/bin/libs/vk_video_encoder/${LIB_ARCH_DIR}"
-                LIBRARY DESTINATION "${VULKAN_VIDEO_TESTS_SOURCE_DIR}/bin/libs/vk_video_encoder/${LIB_ARCH_DIR}"
-        )
 
 install(TARGETS ${VULKAN_VIDEO_ENCODER_LIB} ${VULKAN_VIDEO_ENCODER_STATIC_LIB}
                 RUNTIME DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         )
+
+if(WIN32)
+    install(TARGETS ${VULKAN_VIDEO_ENCODER_LIB} ${VULKAN_VIDEO_ENCODER_STATIC_LIB}
+                    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+                    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+                    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+            )
+endif()

@@ -1,29 +1,3 @@
-macro(generate_dispatch_table out)
-    add_custom_command(OUTPUT ${out}
-        COMMAND ${PYTHON_EXECUTABLE} ${SCRIPTS_DIR}/generate-dispatch-table.py ${out}
-        DEPENDS ${SCRIPTS_DIR}/generate-dispatch-table.py
-        )
-endmacro()
-
-macro(glsl_to_spirv src)
-    add_custom_command(OUTPUT ${src}.h
-        COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${CMAKE_CURRENT_SOURCE_DIR}/${src}.h ${GLSLANG_VALIDATOR}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/glsl-to-spirv ${CMAKE_CURRENT_SOURCE_DIR}/${src} ${GLSLANG_VALIDATOR}
-        )
-endmacro()
-
-macro(compile_cuda src)
-    get_filename_component(OUT_FILE_NAME ${src} NAME)
-    set(CUDA_OUT_FILE_NAME ${OUT_FILE_NAME}.o)
-    add_custom_command(OUTPUT ${CUDA_OUT_FILE_NAME}
-        COMMAND ${NVCC} -std=c++11 -o ${CMAKE_CURRENT_BINARY_DIR}/${CUDA_OUT_FILE_NAME} -c ${CMAKE_CURRENT_SOURCE_DIR}/${src}
-        DEPENDS ${NVCC} ${CMAKE_CURRENT_SOURCE_DIR}/${src}
-        )
-endmacro()
-
-generate_dispatch_table(${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.h)
-generate_dispatch_table(${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.cpp)
-
 set(sources
     Main.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkShell/Shell.cpp
@@ -35,9 +9,9 @@ set(sources
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceContext.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceContext.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanShaderCompiler.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanShaderCompiler.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceMemoryImpl.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceMemoryImpl.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanShaderCompiler.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VkBufferResource.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VkBufferResource.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VkImageResource.cpp
@@ -73,25 +47,36 @@ set(sources
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/nvVkFormats.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/crcgenerator.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanCommandBufferPool.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanCommandBufferPool.h
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VkVideoFrameToFile.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/FFmpegDemuxer.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/VideoStreamDemuxer.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/VideoStreamDemuxer.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/ElementaryStream.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.cpp
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoParser/VulkanVideoParser.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.h
+    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoParser/VulkanVideoParser.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkParserVideoPictureParameters.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkParserVideoPictureParameters.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.cpp
     )
 
+# Conditionally include FFmpegDemuxer.cpp
+if(FFMPEG_AVAILABLE)
+    list(APPEND sources ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/FFmpegDemuxer.cpp)
+endif()
+
 set(definitions
     PRIVATE -DVK_NO_PROTOTYPES
-    PRIVATE -DGLM_FORCE_RADIANS)
+    PRIVATE -DGLM_FORCE_RADIANS
+    PRIVATE -DVIDEO_DISPLAY_QUEUE_SUPPORT)
+
+# Conditionally include FFMPEG_DEMUXER_SUPPORT
+if(FFMPEG_AVAILABLE)
+    list(APPEND definitions PRIVATE -DFFMPEG_DEMUXER_SUPPORT)
+endif()
 
 set(includes
     PRIVATE ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}
@@ -100,21 +85,23 @@ set(includes
 
 set(libraries PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
+# Extract the directory part of the Vulkan library path
+get_filename_component(VULKAN_LIB_DIR "${Vulkan_LIBRARIES}" DIRECTORY)
+
 link_directories(
     ${VULKAN_VIDEO_DEVICE_LIBS_PATH}
     ${VULKAN_VIDEO_DEC_LIBS_PATH}
-    ${VULKAN_TEGRA_LIBS_PATH}
     ${VULKAN_VIDEO_PARSER_LIB_PATH}
-    ${SHADERC_SEARCH_PATH}
     ${LIBNVPARSER_BINARY_ROOT}
+    ${VULKAN_LIB_DIR}
     )
 
 if(WIN32)
-    list(APPEND libraries PRIVATE ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${VULKAN_VIDEO_PARSER_LIB} ${GLSLANG_LIBRARIES})
+    list(APPEND libraries PUBLIC ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB_SHARED})
 else()
     list(APPEND libraries PRIVATE -lX11)
     list(APPEND libraries PRIVATE -lavcodec -lavutil -lavformat)
-    list(APPEND libraries PRIVATE -L${SHADERC_SEARCH_PATH} -lshaderc_shared)
+    list(APPEND libraries PRIVATE -L${SHADERC_LIB_SHARED_DIR} -l${SHADERC_LIB_SHARED})
     list(APPEND libraries PRIVATE -L${CMAKE_INSTALL_LIBDIR} -l${VULKAN_VIDEO_PARSER_LIB})
     list(APPEND libraries PRIVATE -L${LIBNVPARSER_BINARY_ROOT} -l${VULKAN_VIDEO_PARSER_LIB})
 endif()
@@ -156,12 +143,11 @@ list(APPEND includes PRIVATE ${VULKAN_VIDEO_PARSER_INCLUDE})
 list(APPEND includes PRIVATE ${VULKAN_VIDEO_APIS_INCLUDE})
 list(APPEND includes PRIVATE ${VULKAN_VIDEO_APIS_INCLUDE}/vulkan)
 list(APPEND includes PRIVATE ${VULKAN_VIDEO_APIS_INCLUDE}/nvidia_utils/vulkan)
-list(APPEND includes PRIVATE ${SHADERC_ROOT_PATH}/install/include)
 
-add_executable(vk-video-dec-test ${generate_helper_files} ${sources})
+add_executable(vk-video-dec-test ${sources})
 target_compile_definitions(vk-video-dec-test ${definitions})
 target_include_directories(vk-video-dec-test ${includes})
-target_link_libraries(vk-video-dec-test ${libraries})
-add_dependencies(vk-video-dec-test generate_helper_files)
+target_link_libraries(vk-video-dec-test PUBLIC ${libraries})
+add_dependencies(vk-video-dec-test GenerateDispatchTables ${VULKAN_VIDEO_PARSER_LIB} ${VULKAN_VIDEO_DECODER_LIB} ${SHADERC_LIB})
 
 install(TARGETS vk-video-dec-test RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "VkCodecUtils/VkVideoRefCountBase.h"
-#include "VkCodecUtils/ProgramConfig.h"
 
 class Shell;
 
@@ -49,13 +48,15 @@ public:
     FrameProcessor(const FrameProcessor &frameProcessor) = delete;
     FrameProcessor &operator=(const FrameProcessor &frameProcessor) = delete;
 
+    virtual int AttachQueue(VkSharedBaseObj<VkVideoRefCountBase>& videoQueue) = 0;
+
     virtual int AttachShell(const Shell &shell) = 0;
     virtual void DetachShell() = 0;
 
     virtual int AttachSwapchain(const Shell &shell) = 0;
     virtual void DetachSwapchain() {}
 
-    virtual int CreateFrameData(int count) = 0;
+    virtual int32_t CreateFrameData(int32_t count) = 0;
     virtual void DestroyFrameData() = 0;
 
     virtual bool OnKey(Key key) = 0;

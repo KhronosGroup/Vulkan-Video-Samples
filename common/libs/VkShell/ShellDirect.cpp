@@ -29,7 +29,7 @@
 static const std::vector<VkExtensionProperties> directSurfaceExtensions {
     VkExtensionProperties{ VK_KHR_DISPLAY_EXTENSION_NAME, VK_KHR_DISPLAY_SPEC_VERSION },
     VkExtensionProperties{ VK_EXT_DIRECT_MODE_DISPLAY_EXTENSION_NAME, VK_EXT_DIRECT_MODE_DISPLAY_SPEC_VERSION }
-#if defined(VK_USE_PLATFORM_XLIB_KHR)
+#if defined(VK_USE_PLATFORM_XLIB_XRANDR_EXT)
   , VkExtensionProperties{ VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME, VK_EXT_ACQUIRE_XLIB_DISPLAY_SPEC_VERSION }
 #endif
 };
@@ -39,8 +39,8 @@ const std::vector<VkExtensionProperties>& ShellDirect::GetRequiredInstanceExtens
     return directSurfaceExtensions;
 }
 
-ShellDirect::ShellDirect(const VulkanDeviceContext* vkDevCtx, const Configuration& configuration, VkSharedBaseObj<FrameProcessor>& frameProcessor)
-    : Shell(vkDevCtx, configuration, frameProcessor),
+ShellDirect::ShellDirect(const VulkanDeviceContext* vkDevCtx, const Configuration& configuration)
+    : Shell(vkDevCtx, configuration),
       m_vkDisplay(), m_displayWidth(), m_displayHeight(), m_quitLoop(false)
 {
 
