@@ -82,8 +82,8 @@ public:
     { }
 
     VkResult Initialize(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice,
-                        VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
-                        VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
+                        VideoStreamDemuxer* videoStreamDemuxer,
+                        VkVideoFrameOutput* frameOutput,
                         const VkWsiDisplay* pWsiDisplay,
                         int argc, const char** argv);
 
@@ -123,16 +123,19 @@ private:
     DecoderConfig                         m_decoderConfig;
     VkSharedBaseObj<VkVideoDecoder>       m_decoder;
     VkSharedBaseObj<VulkanVideoProcessor> m_vulkanVideoProcessor;
+    VkSharedBaseObj<VideoStreamDemuxer>   m_videoStreamDemuxer;
+    VkSharedBaseObj<VkVideoFrameOutput>   m_frameOutput;
 };
 
 VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
                                             VkPhysicalDevice vkPhysicalDevice,
                                             VkDevice vkDevice,
-                                            VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
-                                            VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
+                                            VideoStreamDemuxer* videoStreamDemuxer,
+                                            VkVideoFrameOutput* frameOutput,
                                             const VkWsiDisplay* pWsiDisplay,
                                             int argc, const char** argv)
 {
+
     m_decoderConfig.ParseArgs(argc, argv);
 
     VkResult result = m_vkDevCtxt.InitVulkanDecoderDevice(m_decoderConfig.appName.c_str(),
@@ -239,9 +242,30 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
         return result;
     }
 
+    if (videoStreamDemuxer != nullptr) {
+        m_videoStreamDemuxer = videoStreamDemuxer;
+    } else {
+        VkResult result = VideoStreamDemuxer::Create(m_decoderConfig.videoFileName.c_str(),
+        m_decoderConfig.forceParserType,
+        (m_decoderConfig.enableStreamDemuxing == 1),
+        m_decoderConfig.initialWidth,
+        m_decoderConfig.initialHeight,
+        m_decoderConfig.initialBitdepth,
+        m_videoStreamDemuxer);
+
+        if (result != VK_SUCCESS) {
+        assert(!"Can't initialize the VideoStreamDemuxer!");
+        return result;
+        }
+    }
+
+    if (frameOutput != nullptr) {
+        m_frameOutput = frameOutput;
+    }
+
     int32_t initStatus = m_vulkanVideoProcessor->Initialize(&m_vkDevCtxt,
-                                                            videoStreamDemuxer,
-                                                            frameToFile,
+                                                            m_videoStreamDemuxer,
+                                                            m_frameOutput,
                                                             m_decoderConfig);
     if (initStatus != 0) {
         return VK_ERROR_INITIALIZATION_FAILED;
@@ -252,26 +276,28 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
 
 VK_VIDEO_DECODER_EXPORT
 VkResult CreateVulkanVideoDecoder(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice,
-                                  VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
-                                  VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
+                                  VideoStreamDemuxer  *videoStreamDemuxer,
+                                  VkVideoFrameOutput* frameToFile,
                                   const VkWsiDisplay* pWsiDisplay,
                                   int argc, const char** argv,
                                   VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder)
 {
-    switch((uint32_t)videoStreamDemuxer->GetVideoCodec())
-    {
-        case VK_VIDEO_CODEC_OPERATION_NONE_KHR: // auto
-        case VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR:
-        case VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR:
-        case VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR:
+    if (videoStreamDemuxer) {
+        switch((uint32_t)videoStreamDemuxer->GetVideoCodec())
         {
+            case VK_VIDEO_CODEC_OPERATION_NONE_KHR: // auto
+            case VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR:
+            case VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR:
+            case VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR:
+            {
 
+            }
+            break;
+
+            default:
+                assert(!"Unsupported codec type!!!\n");
+                return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
         }
-        break;
-
-    default:
-        assert(!"Unsupported codec type!!!\n");
-        return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 
     VkSharedBaseObj<VulkanVideoDecoderImpl> vulkanVideoDecoderObj( new VulkanVideoDecoderImpl(argv[0]));
@@ -280,7 +306,7 @@ VkResult CreateVulkanVideoDecoder(VkInstance vkInstance, VkPhysicalDevice vkPhys
     }
 
     VkResult result = vulkanVideoDecoderObj->Initialize(vkInstance, vkPhysicalDevice, vkDevice,
-                                                        videoStreamDemuxer, frameToFile, pWsiDisplay,
+        videoStreamDemuxer, frameToFile, pWsiDisplay,
                                                         argc, argv);
     if (result != VK_SUCCESS) {
         vulkanVideoDecoderObj = nullptr;

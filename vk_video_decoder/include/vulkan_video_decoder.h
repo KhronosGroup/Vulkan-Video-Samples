@@ -72,6 +72,8 @@ class VkWsiDisplay;
  * @param[in]  videoStreamDemuxer A stream processor that abstracts elementary streams or container
  *                                formats (e.g., MPEG, Matroska). This object will be used to
  *                                feed data into the decoder.
+ * @param[in]  frameOutput        A frame output that abstracts how to write decoded video frames to a destination,
+ *                                with support for various formats including Y4M and CRC generation.
  * @param[in]  pWsiDisplay        The display device context, if display is required, otherwise a nullptr.
  *
  * @param[in]  argc               The number of configuration arguments passed for decoder setup.
@@ -90,8 +92,8 @@ class VkWsiDisplay;
  */
 extern "C" VK_VIDEO_DECODER_EXPORT
 VkResult CreateVulkanVideoDecoder(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice,
-                                  VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
-                                  VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
+                                  VideoStreamDemuxer* videoStreamDemuxer,
+                                  VkVideoFrameOutput* frameOutput,
                                   const VkWsiDisplay* pWsiDisplay,
                                   int argc, const char** argv,
                                   VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder);

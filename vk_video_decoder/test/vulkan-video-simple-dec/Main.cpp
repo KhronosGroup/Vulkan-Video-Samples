@@ -102,60 +102,16 @@ static void deinit(std::vector<VulkanDecodedFrame>& frameDataQueue,
 int main(int argc, const char** argv)
 {
     std::cout << "Enter decoder test" << std::endl;
-
+    VkResult result;
     DecoderConfig decoderConfig(argv[0]);
     decoderConfig.ParseArgs(argc, argv);
-
-    switch (decoderConfig.forceParserType)
-    {
-        case VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR:
-            break;
-        case VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR:
-            break;
-        case VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR:
-            break;
-        default:
-            std::cout << "Simple decoder does not support demuxing "
-                      << "and the decoder type must be set with --codec <codec type>"
-                      << std::endl;
-            return -1;
-    }
-
-    VkSharedBaseObj<VideoStreamDemuxer> videoStreamDemuxer;
-    VkResult result = VideoStreamDemuxer::Create(decoderConfig.videoFileName.c_str(),
-                                                 decoderConfig.forceParserType,
-                                                 (decoderConfig.enableStreamDemuxing == 1),
-                                                 decoderConfig.initialWidth,
-                                                 decoderConfig.initialHeight,
-                                                 decoderConfig.initialBitdepth,
-                                                 videoStreamDemuxer);
-
-    if (result != VK_SUCCESS) {
-        assert(!"Can't initialize the VideoStreamDemuxer!");
-        return result;
-    }
-
-    VkSharedBaseObj<VkVideoFrameOutput> frameToFile;
-    if (!decoderConfig.outputFileName.empty()) {
-        const char* crcOutputFile = decoderConfig.outputcrcPerFrame ? decoderConfig.crcOutputFileName.c_str() : nullptr;
-        result = VkVideoFrameOutput::Create(decoderConfig.outputFileName.c_str(),
-                                          decoderConfig.outputy4m,
-                                          decoderConfig.outputcrcPerFrame,
-                                          crcOutputFile,
-                                          decoderConfig.crcInitValue,
-                                          frameToFile);
-        if (result != VK_SUCCESS) {
-            fprintf(stderr, "Error creating output file %s\n", decoderConfig.outputFileName.c_str());
-            return -1;
-        }
-    }
 
     VkSharedBaseObj<VulkanVideoDecoder> vulkanVideoDecoder;
     result = CreateVulkanVideoDecoder(VK_NULL_HANDLE,
                                       VK_NULL_HANDLE,
                                       VK_NULL_HANDLE,
-                                      videoStreamDemuxer,
-                                      frameToFile,
+                                      nullptr,
+                                      nullptr,
                                       nullptr,
                                       argc, argv,
                                       vulkanVideoDecoder);

@@ -50,6 +50,8 @@ set(LIBVKVIDEODECODER_SRC
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanCommandBufferPool.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanCommandBufferPool.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/VideoStreamDemuxer.h
+    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/VideoStreamDemuxer.cpp
+    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/ElementaryStream.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoParser/VulkanVideoParser.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.h
@@ -57,7 +59,11 @@ set(LIBVKVIDEODECODER_SRC
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkParserVideoPictureParameters.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VkVideoFrameToFile.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/nvVkFormats.cpp
     )
+
+
 
 set(definitions
     PRIVATE -DVK_NO_PROTOTYPES
@@ -95,6 +101,17 @@ if(WIN32)
 
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     list(APPEND libraries PRIVATE -ldl -lrt -lpthread)
+endif()
+
+# Conditionally include FFmpegDemuxer.cpp
+if(FFMPEG_AVAILABLE)
+    list(APPEND LIBVKVIDEODECODER_SRC ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/FFmpegDemuxer.cpp)
+    list(APPEND definitions PRIVATE -DFFMPEG_DEMUXER_SUPPORT)
+    if(WIN32)
+        list(APPEND libraries PUBLIC ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB})
+    else()
+        list(APPEND libraries PRIVATE -lavcodec -lavutil -lavformat)
+    endif()
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/..)
