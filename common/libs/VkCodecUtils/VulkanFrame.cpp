@@ -499,8 +499,6 @@ VkResult VulkanFrame<FrameDataType>::DrawFrame( int32_t            renderIndex,
                                          pPerDrawContext->frameBuffer.GetFbImage(),
                                          pPerDrawContext->frameBuffer.GetFrameBuffer(), &m_scissor,
                                          pPerDrawContext->gfxPipeline.getPipeline(),
-                                         pPerDrawContext->descriptorSetLayoutBinding,
-                                         pPerDrawContext->samplerYcbcrConversion,
                                          m_videoRenderer->m_vertexBuffer);
 
     if (dumpDebug) {
