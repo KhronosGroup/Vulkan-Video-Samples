@@ -658,8 +658,6 @@ public:
                                  int32_t displayWidth, int32_t displayHeight,
                                  VkImage displayImage, VkFramebuffer framebuffer, VkRect2D* pRenderArea,
                                  VkPipeline pipeline,
-                                 const VulkanDescriptorSetLayout& descriptorSetLayoutBinding,
-                                 const VulkanSamplerYcbcrConversion& samplerYcbcrConversion,
                                  const VulkanVertexBuffer& vertexBuffer);
 
     const VulkanDeviceContext* m_vkDevCtx;
