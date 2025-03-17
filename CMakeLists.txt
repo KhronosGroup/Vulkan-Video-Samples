@@ -4,11 +4,6 @@ if(POLICY CMP0148)
 endif()
 project(vulkan_video_codec LANGUAGES CXX C)
 
-# Set installation paths explicitly
-set(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT TRUE)
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install/${CMAKE_BUILD_TYPE}" CACHE PATH "Installation prefix" FORCE)
-endif()
 
 # Common includes and options
 include(CheckCXXCompilerFlag)
