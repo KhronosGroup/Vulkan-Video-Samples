@@ -136,19 +136,6 @@ int main(int argc, const char** argv)
     }
 
     VkSharedBaseObj<VkVideoFrameOutput> frameToFile;
-    if (!decoderConfig.outputFileName.empty()) {
-        const char* crcOutputFile = decoderConfig.outputcrcPerFrame ? decoderConfig.crcOutputFileName.c_str() : nullptr;
-        result = VkVideoFrameOutput::Create(decoderConfig.outputFileName.c_str(),
-                                          decoderConfig.outputy4m,
-                                          decoderConfig.outputcrcPerFrame,
-                                          crcOutputFile,
-                                          decoderConfig.crcInitValue,
-                                          frameToFile);
-        if (result != VK_SUCCESS) {
-            fprintf(stderr, "Error creating output file %s\n", decoderConfig.outputFileName.c_str());
-            return -1;
-        }
-    }
 
     VkSharedBaseObj<VulkanVideoDecoder> vulkanVideoDecoder;
     result = CreateVulkanVideoDecoder(VK_NULL_HANDLE,
