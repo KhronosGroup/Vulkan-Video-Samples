@@ -58,8 +58,6 @@ set(sources
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/FrameProcessor.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanVideoDisplayQueue.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanVideoDisplayQueue.h
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanVideoProcessor.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanVideoProcessor.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFrame.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFrame.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/pattern.cpp
@@ -82,33 +80,15 @@ set(sources
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/nvVkFormats.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VkVideoFrameToFile.cpp
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/VideoStreamDemuxer.cpp
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/VideoStreamDemuxer.h
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/ElementaryStream.cpp
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.cpp
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoParser/VulkanVideoParser.cpp
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkVideoDecoder.h
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkParserVideoPictureParameters.h
-    ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkVideoDecoder/VkParserVideoPictureParameters.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.cpp
     )
 
-# Conditionally include FFmpegDemuxer.cpp
-if(FFMPEG_AVAILABLE)
-    list(APPEND sources ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VkDecoderUtils/FFmpegDemuxer.cpp)
-endif()
 
 set(definitions
     PRIVATE -DVK_NO_PROTOTYPES
     PRIVATE -DGLM_FORCE_RADIANS
     PRIVATE -DVIDEO_DISPLAY_QUEUE_SUPPORT)
-
-# Conditionally include FFMPEG_DEMUXER_SUPPORT
-if(FFMPEG_AVAILABLE)
-    list(APPEND definitions PRIVATE -DFFMPEG_DEMUXER_SUPPORT)
-endif()
 
 set(includes
     PRIVATE ${VK_VIDEO_ENCODER_LIBS_SOURCE_ROOT}
@@ -129,10 +109,9 @@ link_directories(
 if(WIN32)
     find_library(SHADERC_LIB_WITH_PATH NAMES ${SHADERC_LIB_SHARED} PATHS ${VULKAN_LIB_DIR} ${VULKAN_LIB_DIR}../bin)
     message(STATUS "SHADERC_LIB_SHARED PATH: ${SHADERC_LIB_WITH_PATH}" )
-    list(APPEND libraries PRIVATE ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB} ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB_SHARED})
+    list(APPEND libraries PRIVATE ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB_SHARED})
 else()
     list(APPEND libraries PRIVATE -lX11)
-    list(APPEND libraries PRIVATE -lavcodec -lavutil -lavformat)
     list(APPEND libraries PRIVATE -L${SHADERC_LIB_SHARED_DIR} -l${SHADERC_LIB_SHARED})
     list(APPEND libraries PRIVATE -L${CMAKE_INSTALL_LIBDIR} -l${VULKAN_VIDEO_PARSER_LIB})
     list(APPEND libraries PRIVATE -L${LIBNVPARSER_BINARY_ROOT} -l${VULKAN_VIDEO_PARSER_LIB})

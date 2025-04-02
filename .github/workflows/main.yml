@@ -17,7 +17,7 @@ jobs:
   vk_video_samples-linux:
     strategy:
       matrix:
-        platform: [linux-x86_64, linux-x86]
+        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86]
     runs-on: ubuntu-22.04
 
     env:
@@ -45,6 +45,11 @@ jobs:
           sudo apt install libxrandr-dev
           sudo apt install libvulkan-dev
 
+      - name: Install FFmpeg
+        if: matrix.platform == 'linux-x86_64-ffmpeg'
+        run: |
+          sudo apt install --assume-yes libavformat-dev
+
       - name: Install i386 dependencies
         if: matrix.platform == 'linux-x86'
         run: |
@@ -58,20 +63,26 @@ jobs:
           sudo apt install libxrandr-dev:i386
           sudo apt install libvulkan-dev:i386
 
-      - name: Build
+      - name: Build debug
         shell: bash
         run: |
-          mkdir build
-          cd build
+          mkdir BUILD_DEBUG
+          cd BUILD_DEBUG
           cmake -DCMAKE_BUILD_TYPE=Debug ..
           cmake --build . --parallel $BUILD_JOBS --config Debug
 
-
+      - name: Build release
+        shell: bash
+        run: |
+          mkdir BUILD_RELEASE
+          cd BUILD_RELEASE
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . --parallel $BUILD_JOBS --config Release
 
   vk_video_samples-win:
     strategy:
       matrix:
-        platform: [windows-x64]
+        platform: [windows-x64, windows-x64-ffmpeg]
     runs-on: windows-latest
 
     steps:
@@ -93,6 +104,7 @@ jobs:
           python-version: "3.10"
 
       - name: Install FFmpeg
+        if: matrix.platform == 'windows-x64-ffmpeg'
         run: |
           # Define the custom installation location
           $currentDir = pwd
@@ -116,9 +128,16 @@ jobs:
           Get-ChildItem -Path $tempExtractPath\ffmpeg-master-latest-win64-gpl-shared | Where-Object { $_.PSIsContainer } | Copy-Item -Destination $finalDestination -Force -Recurse
           echo "$finalDestination\bin" | Out-File -Encoding ASCII -Append $env:GITHUB_PATH
 
-      - name: Build
+      - name: Build Debug
         run: |
-          mkdir build
-          cd build
+          mkdir BUILD_DEBUG
+          cd BUILD_DEBUG
           cmake -DCMAKE_BUILD_TYPE=Debug ..
           cmake --build . --parallel $BUILD_JOBS --config Debug
+
+      - name: Build Release
+        run: |
+            mkdir BUILD_RELEASE
+            cd BUILD_RELEASE
+            cmake -DCMAKE_BUILD_TYPE=Release ..
+            cmake --build . --parallel $BUILD_JOBS --config Release
