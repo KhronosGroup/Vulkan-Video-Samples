@@ -111,13 +111,13 @@ protected:
         , m_verbose(verbose)
     {
         if (m_verbose) {
-            std::cout << "The clock resolution of high_resolution_clock is: "
+            LOG_S_DEBUG << "The clock resolution of high_resolution_clock is: "
                     << (double) std::chrono::high_resolution_clock::period::num /
                                    std::chrono::high_resolution_clock::period::den << std::endl;
-            std::cout << "The clock resolution of steady_clock is: "
+            LOG_S_DEBUG << "The clock resolution of steady_clock is: "
                     << (double) std::chrono::steady_clock::period::num /
                                    std::chrono::steady_clock::period::den << std::endl;
-            std::cout << "The clock resolution of system_clock is: "
+            LOG_S_DEBUG << "The clock resolution of system_clock is: "
                     << (double) std::chrono::system_clock::period::num /
                                    std::chrono::system_clock::period::den << std::endl;
         }

@@ -161,7 +161,7 @@ public:
             VkResult result = vk::WaitAndResetFence(m_vkDevCtx, *m_vkDevCtx, cmdBufferCompleteFence, resetAfterWait,
                                                     fenceName, fenceWaitTimeoutNsec, fenceTotalWaitTimeoutNsec);
             if (result != VK_SUCCESS) {
-                fprintf(stderr, "\nERROR: WaitAndResetFence() for %s with result: 0x%x\n", fenceName, result);
+                LOG_ERROR ("\nERROR: WaitAndResetFence() for %s with result: 0x%x\n", fenceName, result);
                 assert(result == VK_SUCCESS);
             }
 

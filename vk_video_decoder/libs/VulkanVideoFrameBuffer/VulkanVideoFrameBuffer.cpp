@@ -393,7 +393,7 @@ public:
         m_displayFrames.push((uint8_t)picId);
 
         if (m_debug) {
-            std::cout << "==> Queue Display Picture picIdx: " << (uint32_t)picId
+            LOG_S_DEBUG << "==> Queue Display Picture picIdx: " << (uint32_t)picId
                       << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[picId].m_displayOrder << "\tdecodeOrder: " << m_perFrameDecodeImageSet[picId].m_decodeOrder
                       << "\ttimestamp " << m_perFrameDecodeImageSet[picId].m_timestamp << std::endl;
         }
@@ -438,7 +438,7 @@ public:
         m_perFrameDecodeImageSet[picId].filterPoolNode = const_cast<VkVideoRefCountBase*>(pReferencedObjectsInfo->pFilterPoolNode);
 
         if (m_debug) {
-            std::cout << "==> Queue Decode Picture picIdx: " << (uint32_t)picId
+            LOG_S_DEBUG << "==> Queue Decode Picture picIdx: " << (uint32_t)picId
                       << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[picId].m_displayOrder << "\tdecodeOrder: " << m_perFrameDecodeImageSet[picId].m_decodeOrder
                       << std::endl;
         }
@@ -548,7 +548,7 @@ public:
         }
 
         if (m_debug) {
-            std::cout << "<<<<<<<<<<< Dequeue from Display: " << pictureIndex << " out of "
+            LOG_S_DEBUG << "<<<<<<<<<<< Dequeue from Display: " << pictureIndex << " out of "
                       << numberofPendingFrames << " ===========" << std::endl;
         }
         return numberofPendingFrames;
@@ -700,7 +700,7 @@ public:
             m_perFrameDecodeImageSet[foundPicId].m_picIdx = foundPicId;
 
             if (m_debug) {
-                std::cout << "==> ReservePictureBuffer picIdx: " << (uint32_t)foundPicId << " of " << numAvailablePictures
+                LOG_S_DEBUG << "==> ReservePictureBuffer picIdx: " << (uint32_t)foundPicId << " of " << numAvailablePictures
                           << "\t\tdisplayOrder: " << m_perFrameDecodeImageSet[foundPicId].m_decodeOrder << "\tdecodeOrder: "
                           << m_perFrameDecodeImageSet[foundPicId].m_decodeOrder
                           << "\ttimestamp " << m_perFrameDecodeImageSet[foundPicId].m_timestamp << std::endl;
@@ -777,7 +777,7 @@ VkResult NvPerFrameDecodeResources::CreateImage( const VulkanDeviceContext* vkDe
     VkResult result = VK_SUCCESS;
 
     if (false) {
-        std::cout << "Create FB Image: " << (int)pImageSpec->imageTypeIdx << " : " << imageIndex
+        LOG_S_DEBUG << "Create FB Image: " << (int)pImageSpec->imageTypeIdx << " : " << imageIndex
                                                                << ", extent: " << pImageSpec->createInfo.extent.width << " x "
                                                                << pImageSpec->createInfo.extent.height << ", format "
                                                                << pImageSpec->createInfo.format
@@ -954,7 +954,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
         if (reconfigureImages || updateFrameBufferGeometry) {
 
             if (false) {
-                std::cout << "Reconfigure FB: " << (int)imageTypeIdx << ", extent: " << m_imageSpecs[imageTypeIdx].createInfo.extent.width << " x "
+                LOG_S_DEBUG << "Reconfigure FB: " << (int)imageTypeIdx << ", extent: " << m_imageSpecs[imageTypeIdx].createInfo.extent.width << " x "
                                                                        << m_imageSpecs[imageTypeIdx].createInfo.extent.height << " to "
                                                                        << imageSpecs[imageTypeIdx].createInfo.extent.width << " x "
                                                                        << imageSpecs[imageTypeIdx].createInfo.extent.height
