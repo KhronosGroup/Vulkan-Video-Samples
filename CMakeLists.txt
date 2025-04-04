@@ -47,7 +47,8 @@ set(MAJOR "1")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
 
 # Include common modules
-include(FindVulkanAndDependencies)
+include(FindVulkanSDK)
+include(FindShaderc)
 
 ############ VULKAN_FFMPEG_LIB_PATH ######################################
 if (DEFINED ENV{VULKAN_FFMPEG_LIB_DIR_PATH})

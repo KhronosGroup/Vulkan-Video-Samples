@@ -31,8 +31,6 @@ if (USE_CCACHE)
     endif(CCACHE_FOUND)
 endif()
 
-# Handle Vulkan and shaderc dependencies
-include(FindVulkanAndDependencies)
 
 ############ LINUX LIBRARY includes ######################################
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
