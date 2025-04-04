@@ -31,8 +31,11 @@
 #include "VkVideoEncoder/VkVideoGopStructure.h"
 #include "VkVideoCore/VkVideoCoreProfile.h"
 #include "VkVideoCore/VulkanVideoCapabilities.h"
-#include "VkCodecUtils/VulkanFilterYuvCompute.h"
-
+#ifdef SHADERC_SUPPORT
+#   include "VkCodecUtils/VulkanFilterYuvCompute.h"
+#else
+#   include "VkCodecUtils/VulkanFilter.h"
+#endif
 struct EncoderConfigH264;
 struct EncoderConfigH265;
 struct EncoderConfigAV1;
@@ -744,9 +747,9 @@ public:
     EncoderInputFileHandler inputFileHandler;
     EncoderOutputFileHandler outputFileHandler;
     EncoderQpMapFileHandler qpMapFileHandler;
-
+#ifdef SHADERC_SUPPORT
     VulkanFilterYuvCompute::FilterType filterType;
-
+#endif
     uint32_t validate : 1;
     uint32_t validateVerbose : 1;
     uint32_t verbose : 1;
@@ -839,7 +842,9 @@ public:
     , max_dec_frame_buffering()
     , chroma_sample_loc_type()
     , inputFileHandler()
+#ifdef SHADERC_SUPPORT
     , filterType(VulkanFilterYuvCompute::YCBCRCOPY)
+#endif
     , validate(false)
     , validateVerbose(false)
     , verbose(false)

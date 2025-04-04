@@ -48,8 +48,6 @@ set(LIBVKVIDEOENCODER_SRC
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/HelpersDispatchTable.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceContext.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceContext.h
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanShaderCompiler.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanShaderCompiler.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceMemoryImpl.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanDeviceMemoryImpl.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VkBufferResource.cpp
@@ -72,12 +70,8 @@ set(LIBVKVIDEOENCODER_SRC
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanVideoSessionParameters.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/pattern.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/pattern.h
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanComputePipeline.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanComputePipeline.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFilter.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFilter.h
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFilterYuvCompute.cpp
-    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFilterYuvCompute.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanSamplerYcbcrConversion.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanSamplerYcbcrConversion.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFenceSet.cpp
@@ -90,6 +84,22 @@ set(LIBVKVIDEOENCODER_SRC
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.cpp
 )
 
+set(LIBVKVIDEOENCODER_DEFINITIONS
+    PRIVATE VK_VIDEO_ENCODER_IMPLEMENTATION
+    PUBLIC VK_VIDEO_ENCODER_SHAREDLIB)
+
+if(USE_SHADERC)
+list(APPEND LIBVKVIDEOENCODER_SRC
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanShaderCompiler.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanShaderCompiler.h
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFilterYuvCompute.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanFilterYuvCompute.h
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanComputePipeline.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanComputePipeline.h
+)
+list(APPEND LIBVKVIDEOENCODER_DEFINITIONS PRIVATE -DSHADERC_SUPPORT)
+endif()
+
 include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/../")
 include_directories(BEFORE ${VULKAN_VIDEO_ENCODER_INCLUDE}/../libs)
 include_directories(BEFORE ${VULKAN_VIDEO_ENCODER_INCLUDE})
@@ -99,16 +109,22 @@ link_directories(
     ${VULKAN_LIB_DIR}
     )
 
+set(LIBVKVIDEOENCODER_DEPENDENCIES GenerateDispatchTables ${VULKAN_VIDEO_PARSER_LIB})
 add_library(${VULKAN_VIDEO_ENCODER_LIB} SHARED ${LIBVKVIDEOENCODER_SRC})
-# Link the libraries
-target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${SHADERC_LIB_SHARED})
-# Ensure the library depends on the generation of these files
-add_dependencies(${VULKAN_VIDEO_ENCODER_LIB} GenerateDispatchTables ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB})
+
+if(USE_SHADERC)
+    # Link the libraries
+    target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${SHADERC_LIB_SHARED})
+    # Ensure the library depends on the generation of these files
+    list(APPEND LIBVKVIDEOENCODER_DEPENDENCIES ${SHADERC_LIB})
+endif()
+
+add_dependencies(${VULKAN_VIDEO_ENCODER_LIB} ${LIBVKVIDEOENCODER_DEPENDENCIES})
+
 
 target_include_directories(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${VULKAN_VIDEO_ENCODER_INCLUDE} ${VULKAN_VIDEO_ENCODER_INCLUDE}/../NvVideoParser PRIVATE include)
 target_compile_definitions(${VULKAN_VIDEO_ENCODER_LIB}
-    PRIVATE VK_VIDEO_ENCODER_IMPLEMENTATION
-    PUBLIC VK_VIDEO_ENCODER_SHAREDLIB
+    ${LIBVKVIDEOENCODER_DEFINITIONS}
 )
 
 find_package(Threads)
@@ -125,10 +141,12 @@ if(WIN32)
 endif()
 
 add_library(${VULKAN_VIDEO_ENCODER_STATIC_LIB} STATIC ${LIBVKVIDEOENCODER_SRC})
-# Link the libraries
-target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_LIB_SHARED})
+if(USE_SHADERC)
+    # Link the libraries
+    target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_LIB_SHARED})
+endif()
 # Ensure the library depends on the generation of these files
-add_dependencies(${VULKAN_VIDEO_ENCODER_STATIC_LIB} GenerateDispatchTables ${VULKAN_VIDEO_PARSER_LIB} ${SHADERC_LIB})
+add_dependencies(${VULKAN_VIDEO_ENCODER_STATIC_LIB} ${LIBVKVIDEOENCODER_DEPENDENCIES})
 target_include_directories(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${VULKAN_VIDEO_ENCODER_INCLUDE} ${VULKAN_VIDEO_ENCODER_INCLUDE}/../NvVideoParser PRIVATE include)
 
 install(TARGETS ${VULKAN_VIDEO_ENCODER_LIB} ${VULKAN_VIDEO_ENCODER_STATIC_LIB}
