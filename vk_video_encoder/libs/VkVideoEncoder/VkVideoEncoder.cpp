@@ -999,7 +999,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             }
         }
     }
-
+#ifdef SHADERC_SUPPORT
     if (encoderConfig->enablePreprocessComputeFilter) {
 
         const VkSamplerYcbcrRange ycbcrRange = VK_SAMPLER_YCBCR_RANGE_ITU_FULL; // FIXME
@@ -1046,7 +1046,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                 &samplerInfo,
                                                 m_inputComputeFilter);
     }
-
+#endif
     if ((result == VK_SUCCESS) && (m_inputComputeFilter != nullptr) ) {
 
         m_inputCommandBufferPool = m_inputComputeFilter;
