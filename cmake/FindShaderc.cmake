@@ -1,8 +1,9 @@
 # Now check if we need to build shaderc and its dependencies
 set(USE_SYSTEM_SHADERC ON CACHE BOOL "Use system installed shaderc" FORCE)
 option(USE_SYSTEM_SHADERC "Use system installed shaderc" ON)
+set(USE_SHADERC ON CACHE BOOL "Find shaderc either from the system or build it" FORCE)
 
-if(USE_SYSTEM_VULKAN AND USE_SYSTEM_SHADERC)
+if( USE_SYSTEM_SHADERC)
     if(WIN32)
         # Try to find shaderc in Vulkan SDK Bin directory
         if(DEFINED ENV{VULKAN_SDK})
