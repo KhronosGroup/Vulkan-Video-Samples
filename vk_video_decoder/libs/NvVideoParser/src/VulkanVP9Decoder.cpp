@@ -246,9 +246,9 @@ uint32_t VulkanVP9Decoder::UpdateForwardProbability(vp9_prob_update_s *pProbSetu
         pProbSetup->transform_mode = ONLY_4X4;
     else
     {
-        pProbSetup->transform_mode = vp9_read_literal( 2);
+        pProbSetup->transform_mode = (char)vp9_read_literal( 2);
         if (pProbSetup->transform_mode == ALLOW_32X32)
-            pProbSetup->transform_mode += vp9_read_literal( 1);
+            pProbSetup->transform_mode += (char)vp9_read_literal( 1);
         if (pProbSetup->transform_mode == TX_MODE_SELECT)
         {
              for (i = 0; i < TX_SIZE_CONTEXTS; ++i)
@@ -345,10 +345,10 @@ uint32_t VulkanVP9Decoder::UpdateForwardProbability(vp9_prob_update_s *pProbSetu
         // Compound prediction mode probabilities
         if (pProbSetup->allow_comp_inter_inter) {
             tmp = vp9_read_literal( 1);
-            pProbSetup->comp_pred_mode = tmp;
+            pProbSetup->comp_pred_mode = (char)tmp;
             if(tmp) {
                 tmp = vp9_read_literal( 1);
-                pProbSetup->comp_pred_mode += tmp;
+                pProbSetup->comp_pred_mode += (char)tmp;
                 if (pProbSetup->comp_pred_mode == HYBRID_PREDICTION)
                 {
                     for (i = 0; i < COMP_INTER_CONTEXTS; i++)
@@ -431,9 +431,9 @@ void VulkanVP9Decoder::update_nmv( vp9_prob *const p, const vp9_prob upd_p)
     uint32_t tmp = vp9_read( upd_p);
     if (tmp) {
 #if 1 //def LOW_PRECISION_MV_UPDATE
-        *p = (vp9_read_literal( 7) << 1) | 1;
+        *p = (vp9_prob)(vp9_read_literal( 7) << 1) | 1;
 #else
-        *p = vp9_read_literal( 8);
+        *p = (vp9_prob)vp9_read_literal( 8);
 #endif
     }
 }
@@ -611,7 +611,7 @@ int32_t VulkanVP9Decoder::inv_remap_prob(int32_t v, int32_t m)
 
 vp9_prob VulkanVP9Decoder::vp9hwdReadProbDiffUpdate( uint8_t oldp)
 {
-    int32_t p;
+    vp9_prob p;
     int32_t delp = vp9hwdDecodeSubExp( 4, 255 );
     p = (vp9_prob)inv_remap_prob(delp, oldp);
     return p;
@@ -623,7 +623,7 @@ vp9_prob VulkanVP9Decoder::vp9hwdReadProbDiffUpdate( uint8_t oldp)
 // this function assumes prob1 and prob2 are already within [1,255] range
 vp9_prob VulkanVP9Decoder::weighted_prob(int32_t prob1, int32_t prob2, int32_t factor)
 {
-    return ROUND_POWER_OF_TWO(prob1 * (256 - factor) + prob2 * factor, 8);
+    return (vp9_prob)ROUND_POWER_OF_TWO(prob1 * (256 - factor) + prob2 * factor, 8);
 }
 
 vp9_prob VulkanVP9Decoder::clip_prob(uint32_t p)
@@ -839,14 +839,14 @@ void VulkanVP9Decoder::adaptModeProbs(vp9_prob_update_s *pProbSetup)
     uint32_t i, j;
 
     for (i = 0; i < INTRA_INTER_CONTEXTS; i++)
-        pProbSetup->pProbTab->a.intra_inter_prob[i] = update_mode_ct2(m_PrevCtx.intra_inter_prob[i], pProbSetup->pCtxCounters->intra_inter_count[i]);
+        pProbSetup->pProbTab->a.intra_inter_prob[i] = (uint8_t)update_mode_ct2(m_PrevCtx.intra_inter_prob[i], pProbSetup->pCtxCounters->intra_inter_count[i]);
     for (i = 0; i < COMP_INTER_CONTEXTS; i++)
-        pProbSetup->pProbTab->a.comp_inter_prob[i] = update_mode_ct2(m_PrevCtx.comp_inter_prob[i], pProbSetup->pCtxCounters->comp_inter_count[i]);
+        pProbSetup->pProbTab->a.comp_inter_prob[i] = (uint8_t)update_mode_ct2(m_PrevCtx.comp_inter_prob[i], pProbSetup->pCtxCounters->comp_inter_count[i]);
     for (i = 0; i < REF_CONTEXTS; i++)
-        pProbSetup->pProbTab->a.comp_ref_prob[i] = update_mode_ct2(m_PrevCtx.comp_ref_prob[i], pProbSetup->pCtxCounters->comp_ref_count[i]);
+        pProbSetup->pProbTab->a.comp_ref_prob[i] = (uint8_t)update_mode_ct2(m_PrevCtx.comp_ref_prob[i], pProbSetup->pCtxCounters->comp_ref_count[i]);
     for (i = 0; i < REF_CONTEXTS; i++)
         for (j = 0; j < 2; j++)
-            pProbSetup->pProbTab->a.single_ref_prob[i][j] = update_mode_ct2(m_PrevCtx.single_ref_prob[i][j], pProbSetup->pCtxCounters->single_ref_count[i][j]);
+            pProbSetup->pProbTab->a.single_ref_prob[i][j] = (uint8_t)update_mode_ct2(m_PrevCtx.single_ref_prob[i][j], pProbSetup->pCtxCounters->single_ref_count[i][j]);
 
     for (i = 0; i < BLOCK_SIZE_GROUPS; ++i)
     {
@@ -927,7 +927,7 @@ void VulkanVP9Decoder::adaptModeProbs(vp9_prob_update_s *pProbSetup)
         }
     }
     for (i = 0; i < MBSKIP_CONTEXTS; ++i)
-        pProbSetup->pProbTab->a.mbskip_probs[i] = update_mode_ct2(m_PrevCtx.mbskip_probs[i],pProbSetup->pCtxCounters->mbskip_count[i]);
+        pProbSetup->pProbTab->a.mbskip_probs[i] = (uint8_t)update_mode_ct2(m_PrevCtx.mbskip_probs[i],pProbSetup->pCtxCounters->mbskip_count[i]);
 }
 
 void VulkanVP9Decoder::adaptModeContext(vp9_prob_update_s *pProbSetup)
