@@ -71,7 +71,7 @@ public:
     int32_t GetPresentQueueFamilyIdx() const { return m_presentQueueFamily; }
     VkQueue GetPresentQueue() const { return m_presentQueue; }
     int32_t GetTransferQueueFamilyIdx() const { return m_transferQueueFamily; }
-    VkQueue GetTransferQueue() const { return m_trasferQueue; }
+    VkQueue GetTransferQueue() const { return m_transferQueue; }
     int32_t GetVideoDecodeQueueFamilyIdx() const { return m_videoDecodeQueueFamily; }
     int32_t GetVideoDecodeDefaultQueueIndex() const { return m_videoDecodeDefaultQueueIndex; }
     int32_t GetVideoDecodeNumQueues() const { return m_videoDecodeNumQueues; }
@@ -108,7 +108,7 @@ public:
                 m_mutex = &devCtx->m_computeQueueMutex;
                 break;
             case TRANSFER:
-                m_queue = &devCtx->m_trasferQueue;
+                m_queue = &devCtx->m_transferQueue;
                 m_mutex = &devCtx->m_transferQueueMutex;
                 break;
             case DECODE:
@@ -310,7 +310,7 @@ private:
     VkDevice                m_device;
     VkQueue                 m_gfxQueue;
     VkQueue                 m_computeQueue;
-    VkQueue                 m_trasferQueue;
+    VkQueue                 m_transferQueue;
     VkQueue                 m_presentQueue;
     std::vector<VkQueue>    m_videoDecodeQueues;
     std::vector<VkQueue>    m_videoEncodeQueues;

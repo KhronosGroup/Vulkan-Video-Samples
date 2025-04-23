@@ -809,7 +809,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
         GetDeviceQueue(m_device, GetPresentQueueFamilyIdx(), 0, &m_presentQueue);
     }
     if (createTransferQueue) {
-        GetDeviceQueue(m_device, GetTransferQueueFamilyIdx(), 0, &m_trasferQueue);
+        GetDeviceQueue(m_device, GetTransferQueueFamilyIdx(), 0, &m_transferQueue);
     }
     if (numDecodeQueues) {
         assert(GetVideoDecodeQueueFamilyIdx() != -1);
@@ -859,7 +859,7 @@ VulkanDeviceContext::VulkanDeviceContext()
     , m_device()
     , m_gfxQueue()
     , m_computeQueue()
-    , m_trasferQueue()
+    , m_transferQueue()
     , m_presentQueue()
     , m_debugReport()
     , m_reqInstanceLayers()
