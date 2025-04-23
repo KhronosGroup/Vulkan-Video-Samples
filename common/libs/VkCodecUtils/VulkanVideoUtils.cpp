@@ -205,12 +205,6 @@ int32_t ImageObject::GetImageSubresourceAndLayout(VkSubresourceLayout layouts[3]
 
 VkResult ImageObject::FillImageWithPattern(int pattern)
 {
-    const VkImageSubresource subres = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
-
-    VkSubresourceLayout layout;
-
-    m_vkDevCtx->GetImageSubresourceLayout(*m_vkDevCtx, image, &subres, &layout);
-
     uint8_t* mappedHostPtr = MapHostPtr();
     VkDeviceMemory devMemory = m_imageResource->GetDeviceMemory();
 
@@ -228,6 +222,10 @@ VkResult ImageObject::FillImageWithPattern(int pattern)
         VkFillYuv vkFillYuv;
         vkFillYuv.fillVkImage(m_vkDevCtx, image, &imageData, devMemory, mappedHostPtr, &ycbcrConversionInfo);
     } else {
+        const VkImageSubresource subres = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
+        VkSubresourceLayout layout;
+        m_vkDevCtx->GetImageSubresourceLayout(*m_vkDevCtx, image, &subres, &layout);
+
         generateColorPatternRgba8888((ColorPattern)pattern, (uint8_t *)mappedHostPtr,
                                  imageWidth, imageHeight,
                                  (uint32_t)layout.rowPitch);
