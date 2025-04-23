@@ -117,7 +117,7 @@ void Shell::CreateContext() {
     assert((m_ctx.devCtx->GetVideoDecodeNumQueues() > 0) ||
             m_ctx.devCtx->GetVideoEncodeNumQueues() > 0);
 
-    CreateBackBuffers();
+
 
     // initialize ctx_.{surface,format} before attach_shell
     CreateSwapchain();
@@ -142,16 +142,16 @@ void Shell::DestroyContext() {
     m_ctx.devCtx = nullptr;
 }
 
-void Shell::CreateBackBuffers() {
+void Shell::CreateBackBuffers(int bufferCount) {
 
     // BackBuffer is used to track which swapchain image and its associated
     // sync primitives are busy.  Having more BackBuffer's than swapchain
     // images may allows us to replace CPU wait on present_fence by GPU wait
     // on acquire_semaphore.
-    const int count = m_settings.m_backBufferCount + 1;
-    m_ctx.backBuffers.resize(count);
-    for (auto &backBuffers : m_ctx.backBuffers) {
-        AssertSuccess(backBuffers.Create(m_ctx.devCtx));
+    // FIXME: Mesa drivers needs bufferCount + 2 when other drivers require only bufferCount + 1.
+    m_ctx.backBuffers.resize(bufferCount + 2);
+    for (auto &backBuffer : m_ctx.backBuffers) {
+        AssertSuccess(backBuffer.Create(m_ctx.devCtx));
     }
 
     for (size_t i = 0; i < m_ctx.backBuffers.size(); i++) {
@@ -177,6 +177,8 @@ void Shell::DestroyBackBuffers() {
 }
 
 void Shell::CreateSwapchain() {
+    VkSurfaceCapabilitiesKHR caps;
+
     m_ctx.surface = CreateSurface(m_ctx.devCtx->getInstance());
     assert(m_ctx.surface);
 
@@ -187,6 +189,8 @@ void Shell::CreateSwapchain() {
                                                              m_ctx.surface, &supported));
     // this should be guaranteed by the platform-specific PhysDeviceCanPresent() call
     assert(supported);
+
+    AssertSuccess(m_ctx.devCtx->GetPhysicalDeviceSurfaceCapabilitiesKHR(m_ctx.devCtx->getPhysicalDevice(), m_ctx.surface, &caps));
 
     std::vector<VkSurfaceFormatKHR> formats;
     vk::get(m_ctx.devCtx, m_ctx.devCtx->getPhysicalDevice(), m_ctx.surface, formats);
@@ -201,6 +205,15 @@ void Shell::CreateSwapchain() {
     m_ctx.swapchain = VK_NULL_HANDLE;
     m_ctx.extent.width = (uint32_t)-1;
     m_ctx.extent.height = (uint32_t)-1;
+
+    uint32_t image_count = m_settings.m_backBufferCount;
+    if (image_count < caps.minImageCount) {
+        image_count = caps.minImageCount;
+    }
+    if ((caps.maxImageCount > 0) && (image_count > caps.maxImageCount)) {
+        image_count = caps.maxImageCount;
+    }
+    CreateBackBuffers(image_count);
 }
 
 void Shell::DestroySwapchain() {

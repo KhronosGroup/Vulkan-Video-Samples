@@ -226,7 +226,7 @@ protected:
 private:
 
     // called by create_context
-    void CreateBackBuffers();
+    void CreateBackBuffers(int bufferCount);
     void DestroyBackBuffers();
     virtual VkSurfaceKHR CreateSurface(VkInstance instance) = 0;
     void CreateSwapchain();
