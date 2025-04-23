@@ -237,8 +237,8 @@ private:
         , m_numBitstreamBuffersToPreallocate(numBitstreamBuffersToPreallocate)
         , m_maxStreamBufferSize()
         , m_filterType(filterType)
+        , m_transferCommandPool()
     {
-
         assert(m_vkDevCtx->GetVideoDecodeQueueFamilyIdx() != -1);
         assert(m_vkDevCtx->GetVideoDecodeNumQueues() > 0);
 
@@ -278,6 +278,30 @@ private:
             std::cout << "\t Enabling HW Load Balancing for device with "
                       << m_vkDevCtx->GetVideoDecodeNumQueues() << " queues" << std::endl;
         }
+
+        if (m_vkDevCtx->GetTransferQueue() != VkQueue()) {
+            VkCommandPoolCreateInfo cmdPoolInfo = {};
+            cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+            cmdPoolInfo.queueFamilyIndex = m_vkDevCtx->GetTransferQueueFamilyIdx();
+            VkResult result = m_vkDevCtx->CreateCommandPool(*m_vkDevCtx, &cmdPoolInfo, nullptr, &m_transferCommandPool);
+            assert(result == VK_SUCCESS);
+            if (result != VK_SUCCESS) {
+                fprintf(stderr, "\nERROR: CreateCommandPool() result: 0x%x\n", result);
+            }
+
+            VkCommandBufferAllocateInfo cmdInfo = {};
+            cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            cmdInfo.commandBufferCount = 1;
+            cmdInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            cmdInfo.commandPool = m_transferCommandPool;
+
+            m_transferCommandBuffers.resize(1);
+            result = m_vkDevCtx->AllocateCommandBuffers(*m_vkDevCtx, &cmdInfo, &m_transferCommandBuffers[0]);
+            if (result != VK_SUCCESS) {
+                fprintf(stderr, "\nERROR: AllocateCommandBuffers() result: 0x%x\n", result);
+            }
+       }
 
     }
 
@@ -339,4 +363,7 @@ private:
     VkDeviceSize   m_maxStreamBufferSize;
     VulkanFilterYuvCompute::FilterType m_filterType;
     VkSharedBaseObj<VulkanFilter> m_yuvFilter;
+    VkCommandPool m_transferCommandPool;
+    std::vector<VkCommandBuffer> m_transferCommandBuffers;
+
 };
