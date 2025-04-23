@@ -186,7 +186,7 @@ int VulkanFrame<FrameDataType>::AttachSwapchain(const Shell& sh)
     const uint32_t queueFamilyIndices = m_videoRenderer->m_vkDevCtx->GetGfxQueueFamilyIdx();
     imageCreateInfo.pQueueFamilyIndices = &queueFamilyIndices;
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-    imageCreateInfo.flags = 0;
+    imageCreateInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
     m_videoRenderer->m_testFrameImage.CreateImage(m_videoRenderer->m_vkDevCtx, &imageCreateInfo,
                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
                                                   1 /* ColorPatternColorBars */);
