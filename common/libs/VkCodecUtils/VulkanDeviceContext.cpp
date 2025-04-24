@@ -585,6 +585,13 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const uint8_t
                 if (dumpQueues) std::cout << "\t Found compute queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
             }
 
+            if ((requestQueueTypes & VK_QUEUE_TRANSFER_BIT) && (transferQueueFamily < 0) &&
+                    (queueFamilyFlags & VK_QUEUE_TRANSFER_BIT)) {
+                transferQueueFamily = i;
+                foundQueueTypes |= queueFamilyFlags;
+                if (dumpQueues) std::cout << "\t Found transfer queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
+            }
+
             // present queue must support the surface
             if ((pWsiDisplay != nullptr) &&
                     (presentQueueFamily < 0) && pWsiDisplay->PhysDeviceCanPresent(physicalDevice, i)) {
