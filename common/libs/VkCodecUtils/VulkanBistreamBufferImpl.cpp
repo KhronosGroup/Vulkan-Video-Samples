@@ -231,7 +231,7 @@ VkDeviceSize VulkanBitstreamBufferImpl::Resize(VkDeviceSize newSize, VkDeviceSiz
         return m_bufferSize;
     }
 
-    std::cout << " ======= Req resize old " << m_bufferSize << " -> new " << newSize << " ====== " << std::endl;
+    LOG_S_INFO << " ======= Req resize old " << m_bufferSize << " -> new " << newSize << " ====== " << std::endl;
 
     VkBuffer        newBuffer = VK_NULL_HANDLE;
     VkDeviceSize    newBufferOffset = 0;

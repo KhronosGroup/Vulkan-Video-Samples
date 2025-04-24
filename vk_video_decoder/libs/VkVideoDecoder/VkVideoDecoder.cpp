@@ -103,7 +103,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                         1};
     }
 
-    std::cout << "Video Input Information" << std::endl
+    LOG_S_INFO << "Video Input Information" << std::endl
               << "\tCodec        : " << GetVideoCodecString(pVideoFormat->codec) << std::endl
               << "\tFrame rate   : " << pVideoFormat->frame_rate.numerator << "/" << pVideoFormat->frame_rate.denominator << " = "
               << ((pVideoFormat->frame_rate.denominator != 0) ? (1.0 * pVideoFormat->frame_rate.numerator / pVideoFormat->frame_rate.denominator) : 0.0) << " fps" << std::endl
@@ -130,13 +130,13 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     assert(videoCodecs != VK_VIDEO_CODEC_OPERATION_NONE_KHR);
 
     if (m_dumpDecodeData) {
-        std::cout << "\t" << std::hex << videoCodecs << " HW codec types are available: " << std::dec << std::endl;
+        LOG_S_DEBUG << "\t" << std::hex << videoCodecs << " HW codec types are available: " << std::dec << std::endl;
     }
 
     VkVideoCodecOperationFlagBitsKHR videoCodec = pVideoFormat->codec;
 
     if (m_dumpDecodeData) {
-        std::cout << "\tcodec " << VkVideoCoreProfile::CodecToName(videoCodec) << std::endl;
+        LOG_S_DEBUG << "\tcodec " << VkVideoCoreProfile::CodecToName(videoCodec) << std::endl;
     }
 
     VkVideoCoreProfile videoProfile(videoCodec, pVideoFormat->chromaSubsampling, pVideoFormat->lumaBitDepth, pVideoFormat->chromaBitDepth,
@@ -144,7 +144,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
                                                        m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        videoCodec)) {
-        std::cout << "*** The video codec " << VkVideoCoreProfile::CodecToName(videoCodec) << " is not supported! ***" << std::endl;
+        LOG_S_ERROR << "*** The video codec " << VkVideoCoreProfile::CodecToName(videoCodec) << " is not supported! ***" << std::endl;
         assert(!"The video codec is not supported");
         return -1;
     }
@@ -158,7 +158,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         }
     }
 
-    std::cout << "Video Decoding Params:" << std::endl
+    LOG_S_INFO << "Video Decoding Params:" << std::endl
               << "\tNum Surfaces : " << numDecodeSurfaces << std::endl
               << "\tResize       : " << m_codedExtent.width << " x " << m_codedExtent.height << std::endl;
 
@@ -176,7 +176,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                                           videoCapabilities,
                                                                           videoDecodeCapabilities);
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get Video Capabilities :" << result << " ***" << std::endl;
+        LOG_S_ERROR << "*** Could not get Video Capabilities :" << result << " ***" << std::endl;
         assert(!"Could not get Video Capabilities!");
         return -1;
     }
@@ -189,7 +189,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                                outImageFormat,
                                                                dpbImageFormat);
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get supported video formats :" << result << " ***" << std::endl;
+        LOG_S_ERROR << "*** Could not get supported video formats :" << result << " ***" << std::endl;
         assert(!"Could not get supported video formats!");
         return -1;
     }
@@ -537,11 +537,11 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
     assert((uint32_t)ret == numDecodeSurfaces);
     if ((uint32_t)ret != numDecodeSurfaces) {
-        fprintf(stderr, "\nERROR: InitImagePool() ret(%d) != m_numDecodeSurfaces(%d)\n", ret, numDecodeSurfaces);
+        LOG_ERROR("\nERROR: InitImagePool() ret(%d) != m_numDecodeSurfaces(%d)\n", ret, numDecodeSurfaces);
     }
 
     if (m_dumpDecodeData) {
-        std::cout << "Allocating Video Device Memory" << std::endl
+        LOG_S_DEBUG << "Allocating Video Device Memory" << std::endl
                   << "Allocating " << numDecodeSurfaces << " Num Decode Surfaces and "
                   << maxDpbSlotCount << " Video Device Memory Images for DPB " << std::endl
                   << imageExtent.width << " x " << imageExtent.height << std::endl;
@@ -576,7 +576,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                     nullptr, 0, bitstreamBuffer);
             assert(result == VK_SUCCESS);
             if (result != VK_SUCCESS) {
-                fprintf(stderr, "\nERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
+                LOG_ERROR("\nERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
                 break;
             }
 
@@ -691,7 +691,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
     int32_t picNumInDecodeOrder = (int32_t)(uint32_t)m_decodePicCount;
     if (m_dumpDecodeData) {
-        std::cout << "currPicIdx: " << currPicIdx << ", currentVideoQueueIndx: " << m_currentVideoQueueIndx << ", decodePicCount: " << m_decodePicCount << std::endl;
+        LOG_S_DEBUG << "currPicIdx: " << currPicIdx << ", currentVideoQueueIndx: " << m_currentVideoQueueIndx << ", decodePicCount: " << m_decodePicCount << std::endl;
     }
     m_videoFrameBuffer->SetPicNumInDecodeOrder(currPicIdx, picNumInDecodeOrder);
 
@@ -700,7 +700,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     assert(retPicIdx == currPicIdx);
 
     if (retPicIdx != currPicIdx) {
-        fprintf(stderr, "\nERROR: DecodePictureWithParameters() retPicIdx(%d) != currPicIdx(%d)\n", retPicIdx, currPicIdx);
+        LOG_ERROR("\nERROR: DecodePictureWithParameters() retPicIdx(%d) != currPicIdx(%d)\n", retPicIdx, currPicIdx);
     }
 
     assert(pCurrFrameDecParams->bitstreamData->GetMaxSize() >= pCurrFrameDecParams->bitstreamDataLen);
@@ -841,7 +841,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     }
 
     if (m_dumpDecodeData) {
-        std::cout << "currPicIdx: " << currPicIdx << ", OutInfo: " << pOutputPictureResource->codedExtent.width << " x "
+        LOG_S_DEBUG << "currPicIdx: " << currPicIdx << ", OutInfo: " << pOutputPictureResource->codedExtent.width << " x "
                                                                    << pOutputPictureResource->codedExtent.height << " with layout "
                                                                    << ((pOutputPictureResourceInfo->currentImageLayout == VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR) ||
                                                                            (pOutputPictureResourceInfo->currentImageLayout == VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR) ? "OUT" : "INVALID")
@@ -917,7 +917,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
             }
 
             if (m_dumpDecodeData) {
-                std::cout << "\tdpb: " << (int)pCurrFrameDecParams->pGopReferenceImagesIndexes[resId]
+                LOG_S_DEBUG << "\tdpb: " << (int)pCurrFrameDecParams->pGopReferenceImagesIndexes[resId]
                                        << ", DpbInfo: " << pOutputPictureResource->codedExtent.width << " x "
                                        << pOutputPictureResource->codedExtent.height << " with layout "
                                        << ((pictureResourcesInfo[resId].currentImageLayout == VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR) ? "DPB" : "INVALID")
@@ -1006,7 +1006,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         decodeBeginInfo.videoSessionParameters = *pOwnerPictureParameters;
 
         if (m_dumpDecodeData) {
-            std::cout << "Using object " << decodeBeginInfo.videoSessionParameters <<
+            LOG_S_DEBUG << "Using object " << decodeBeginInfo.videoSessionParameters <<
                  " with ID: (" << pOwnerPictureParameters->GetId() << ")" <<
                  " for SPS: " <<  spsId << ", PPS: " << ppsId << std::endl;
         }
@@ -1169,7 +1169,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         if (m_dumpDecodeData) {
             uint64_t  currSemValue = 0;
             VkResult semResult = m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, &currSemValue);
-            std::cout << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
+            LOG_S_DEBUG << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
         }
 
         waitSemaphores[waitSemaphoreCount] = m_hwLoadBalancingTimelineSemaphore;
@@ -1189,7 +1189,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         timelineSemaphoreInfos.signalSemaphoreValueCount = signalSemaphoreCount;
         timelineSemaphoreInfos.pSignalSemaphoreValues = signalTlSemaphoresValues;
         if (m_dumpDecodeData) {
-            std::cout << "\t Wait for: " << (waitSemaphoreCount ? waitTlSemaphoresValues[waitSemaphoreCount - 1] : 0) <<
+            LOG_S_DEBUG << "\t Wait for: " << (waitSemaphoreCount ? waitTlSemaphoresValues[waitSemaphoreCount - 1] : 0) <<
                              ", signal at " << signalTlSemaphoresValues[signalSemaphoreCount - 1] << std::endl;
         }
     }
@@ -1210,22 +1210,22 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
     if (m_dumpDecodeData) {
         if (m_hwLoadBalancingTimelineSemaphore != VK_NULL_HANDLE) {
-            std::cout << "\t\t waitSemaphoreValueCount: " << timelineSemaphoreInfos.waitSemaphoreValueCount << std::endl;
-            std::cout << "\t pWaitSemaphoreValues: " << timelineSemaphoreInfos.pWaitSemaphoreValues[0] << ", " <<
+            LOG_S_DEBUG << "\t\t waitSemaphoreValueCount: " << timelineSemaphoreInfos.waitSemaphoreValueCount << std::endl;
+            LOG_S_DEBUG << "\t pWaitSemaphoreValues: " << timelineSemaphoreInfos.pWaitSemaphoreValues[0] << ", " <<
                                                 timelineSemaphoreInfos.pWaitSemaphoreValues[1] << ", " <<
                                                 timelineSemaphoreInfos.pWaitSemaphoreValues[2] << std::endl;
-            std::cout << "\t\t signalSemaphoreValueCount: " << timelineSemaphoreInfos.signalSemaphoreValueCount << std::endl;
-            std::cout << "\t pSignalSemaphoreValues: " << timelineSemaphoreInfos.pSignalSemaphoreValues[0] << ", " <<
+            LOG_S_DEBUG << "\t\t signalSemaphoreValueCount: " << timelineSemaphoreInfos.signalSemaphoreValueCount << std::endl;
+            LOG_S_DEBUG << "\t pSignalSemaphoreValues: " << timelineSemaphoreInfos.pSignalSemaphoreValues[0] << ", " <<
                                                 timelineSemaphoreInfos.pSignalSemaphoreValues[1] << ", " <<
                                                 timelineSemaphoreInfos.pSignalSemaphoreValues[2] << std::endl;
         }
 
-        std::cout << "\t waitSemaphoreCount: " << submitInfo.waitSemaphoreCount << std::endl;
-        std::cout << "\t\t pWaitSemaphores: " << submitInfo.pWaitSemaphores[0] << ", " <<
+        LOG_S_DEBUG << "\t waitSemaphoreCount: " << submitInfo.waitSemaphoreCount << std::endl;
+        LOG_S_DEBUG << "\t\t pWaitSemaphores: " << submitInfo.pWaitSemaphores[0] << ", " <<
                                                  submitInfo.pWaitSemaphores[1] << ", " <<
                                                  submitInfo.pWaitSemaphores[2] << std::endl;
-        std::cout << "\t signalSemaphoreCount: " << submitInfo.signalSemaphoreCount << std::endl;
-        std::cout << "\t\t pSignalSemaphores: " << submitInfo.pSignalSemaphores[0] << ", " <<
+        LOG_S_DEBUG << "\t signalSemaphoreCount: " << submitInfo.signalSemaphoreCount << std::endl;
+        LOG_S_DEBUG << "\t\t pSignalSemaphores: " << submitInfo.pSignalSemaphores[0] << ", " <<
                                              submitInfo.pSignalSemaphores[1] << ", " <<
                                              submitInfo.pSignalSemaphores[2] << std::endl << std::endl;
     }
@@ -1239,8 +1239,8 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     }
 
     if (m_dumpDecodeData) {
-        std::cout << "\t +++++++++++++++++++++++++++< " << currPicIdx << " >++++++++++++++++++++++++++++++" << std::endl;
-        std::cout << "\t => Decode Submitted for CurrPicIdx: " << currPicIdx << std::endl
+        LOG_S_DEBUG << "\t +++++++++++++++++++++++++++< " << currPicIdx << " >++++++++++++++++++++++++++++++" << std::endl;
+        LOG_S_DEBUG << "\t => Decode Submitted for CurrPicIdx: " << currPicIdx << std::endl
                   << "\t\tm_nPicNumInDecodeOrder: " << picNumInDecodeOrder << "\t\tframeCompleteFence " << videoDecodeCompleteFence
                   << "\t\tvideoDecodeCompleteSemaphore " << videoDecodeCompleteSemaphore << "\t\tdstImageView "
                   << pCurrFrameDecParams->decodeFrameInfo.dstPictureResource.imageViewBinding << std::endl;
@@ -1264,18 +1264,18 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     if (m_dumpDecodeData && (m_hwLoadBalancingTimelineSemaphore != VK_NULL_HANDLE)) { // For TL semaphore debug
        uint64_t  currSemValue = 0;
        VkResult semResult = m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, &currSemValue);
-       std::cout << "\t TL semaphore value ater submit: " << currSemValue << ", status: " << semResult << std::endl;
+       LOG_S_DEBUG << "\t TL semaphore value ater submit: " << currSemValue << ", status: " << semResult << std::endl;
 
        const bool waitOnTlSemaphore = false;
        if (waitOnTlSemaphore) {
            uint64_t value = m_decodePicCount;
            VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, nullptr, VK_SEMAPHORE_WAIT_ANY_BIT, 1,
                                         &m_hwLoadBalancingTimelineSemaphore, &value };
-           std::cout << "\t TL semaphore wait for value: " << value << std::endl;
+           LOG_S_DEBUG << "\t TL semaphore wait for value: " << value << std::endl;
            semResult = m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, gLongTimeout);
 
            semResult = m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, &currSemValue);
-           std::cout << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
+           LOG_S_DEBUG << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
        }
     }
 
@@ -1303,8 +1303,8 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         assert(decodeStatus == VK_QUERY_RESULT_STATUS_COMPLETE_KHR);
 
         if (m_dumpDecodeData) {
-            std::cout << "\t +++++++++++++++++++++++++++< " << currPicIdx << " >++++++++++++++++++++++++++++++" << std::endl;
-            std::cout << "\t => Decode Status for CurrPicIdx: " << currPicIdx << std::endl
+            LOG_S_DEBUG << "\t +++++++++++++++++++++++++++< " << currPicIdx << " >++++++++++++++++++++++++++++++" << std::endl;
+            LOG_S_DEBUG << "\t => Decode Status for CurrPicIdx: " << currPicIdx << std::endl
                       << "\t\tdecodeStatus: " << decodeStatus << std::endl;
         }
     }
@@ -1368,7 +1368,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         result = filterCmdBuffer->EndCommandBufferRecording(cmdBuf);
         assert(result == VK_SUCCESS);
 
-        if (false) std::cout << currPicIdx << " : OUT view: " << outputImageView->GetImageView() << ", signalSem: " <<  frameCompleteSemaphore << std::endl << std::flush;
+        if (false) LOG_S_DEBUG << currPicIdx << " : OUT view: " << outputImageView->GetImageView() << ", signalSem: " <<  frameCompleteSemaphore << std::endl << std::flush;
         assert(videoDecodeCompleteSemaphore != frameCompleteSemaphore);
         result = m_yuvFilter->SubmitCommandBuffer(1, filterCmdBuffer->GetCommandBuffer(),
                                                   1, &videoDecodeCompleteSemaphore,
@@ -1414,11 +1414,11 @@ VkDeviceSize VkVideoDecoder::GetBitstreamBuffer(VkDeviceSize size,
                 pInitializeBufferMemory, initializeBufferMemorySize, newBitstreamBuffer);
         assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
-            fprintf(stderr, "\nERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
+            LOG_ERROR("ERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
             return 0;
         }
         if (debugBitstreamBufferDumpAlloc) {
-            std::cout << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
+            LOG_S_DEBUG << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
                              newSize/1024 << " KB, " << newSize/1024/1024 << " MB" << std::endl;
         }
         if (enablePool) {
@@ -1444,18 +1444,18 @@ VkDeviceSize VkVideoDecoder::GetBitstreamBuffer(VkDeviceSize size,
         newBitstreamBuffer->MemsetData(0x0, copySize, newSize - copySize);
 #endif
         if (debugBitstreamBufferDumpAlloc) {
-            std::cout << "\t\tFrom bitstream buffer pool with size " << newSize << " B, " <<
+            LOG_S_DEBUG << "\t\tFrom bitstream buffer pool with size " << newSize << " B, " <<
                              newSize/1024 << " KB, " << newSize/1024/1024 << " MB" << std::endl;
 
-            std::cout << "\t\t\t FreeNodes " << m_decodeFramesData.GetBitstreamBuffersQueue().GetFreeNodesNumber();
-            std::cout << " of MaxNodes " << m_decodeFramesData.GetBitstreamBuffersQueue().GetMaxNodes();
-            std::cout << ", AvailableNodes " << m_decodeFramesData.GetBitstreamBuffersQueue().GetAvailableNodesNumber();
-            std::cout << std::endl;
+            LOG_S_DEBUG << "\t\t\t FreeNodes " << m_decodeFramesData.GetBitstreamBuffersQueue().GetFreeNodesNumber();
+            LOG_S_DEBUG << " of MaxNodes " << m_decodeFramesData.GetBitstreamBuffersQueue().GetMaxNodes();
+            LOG_S_DEBUG << ", AvailableNodes " << m_decodeFramesData.GetBitstreamBuffersQueue().GetAvailableNodesNumber();
+            LOG_S_DEBUG << std::endl;
         }
     }
     bitstreamBuffer = newBitstreamBuffer;
     if (newSize > m_maxStreamBufferSize) {
-        std::cout << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
+        LOG_S_DEBUG << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
                              newSize/1024 << " KB, " << newSize/1024/1024 << " MB" << std::endl;
         m_maxStreamBufferSize = newSize;
     }

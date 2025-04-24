@@ -20,6 +20,7 @@
 #include "VkCodecUtils/VulkanVideoEncodeDisplayQueue.h"
 #include "VkCodecUtils/VulkanEncoderFrameProcessor.h"
 #include "VkShell/Shell.h"
+#include "Logger.h"
 
 int main(int argc, char** argv)
 {
@@ -104,7 +105,7 @@ int main(int argc, char** argv)
     VkResult result = vkDevCtxt.InitVulkanDevice(encoderConfig->appName.c_str(), VK_NULL_HANDLE,
                                                  encoderConfig->verbose);
     if (result != VK_SUCCESS) {
-        printf("Could not initialize the Vulkan device!\n");
+        LOG_ERROR("Could not initialize the Vulkan device!\n");
         return -1;
     }
 
@@ -154,6 +155,7 @@ int main(int argc, char** argv)
     VkSharedBaseObj<FrameProcessor> frameProcessor;
     result = CreateEncoderFrameProcessor(&vkDevCtxt, frameProcessor);
     if (result != VK_SUCCESS) {
+        LOG_ERROR("Could not create the encoder frame processor!\n");
         return -1;
     }
 
@@ -287,7 +289,7 @@ int main(int argc, char** argv)
     for(; curFrameIndex < encoderConfig->numFrames; curFrameIndex++) {
 
         if (encoderConfig->verboseFrameStruct) {
-            std::cout << "####################################################################################" << std::endl
+            LOG_S_DEBUG << "####################################################################################" << std::endl
                       << "Start processing current input frame index: " << curFrameIndex << std::endl;
         }
 
@@ -297,18 +299,18 @@ int main(int argc, char** argv)
         // load frame data from the file
         result = encoder->LoadNextFrame(encodeFrameInfo);
         if (result != VK_SUCCESS) {
-            std::cout << "ERROR processing input frame index: " << curFrameIndex << std::endl;
+            LOG_S_ERROR << "ERROR processing input frame index: " << curFrameIndex << std::endl;
             break;
         }
 
         if (encoderConfig->verboseFrameStruct) {
-            std::cout << "End processing current input frame index: " << curFrameIndex << std::endl;
+            LOG_S_DEBUG << "End processing current input frame index: " << curFrameIndex << std::endl;
         }
     }
 
     encoder->WaitForThreadsToComplete();
 
-    std::cout << "Done processing " << curFrameIndex << " input frames!" << std::endl
+    LOG_S_INFO << "Done processing " << curFrameIndex << " input frames!" << std::endl
               << "Encoded file's location is at " << encoderConfig->outputFileHandler.GetFileName()
               << std::endl;
     return 0;

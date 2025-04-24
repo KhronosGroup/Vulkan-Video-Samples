@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <iostream>
 #include "HelpersDispatchTable.h"
+#include "Logger.h"
 
 namespace vk {
 
@@ -240,7 +241,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
 
         result = vkIf->WaitForFences(device, 1, &fence, true, fenceWaitTimeout);
         if (result != VK_SUCCESS) {
-            fprintf(stderr, "\t **** WARNING: fence  %s(%llu) is not done after %llu nSec with result 0x%x ****\n",
+            LOG_ERROR("\t **** ERROR: fence  %s(%llu) is not done after %llu nSec with result 0x%x ****\n",
                             fenceName, (long long unsigned int)fence, (long long unsigned int)fenceWaitTimeout, result);
             assert(!"Fence is not signaled yet after more than 100 mSec wait");
         }
@@ -253,7 +254,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
     }
 
     if (result != VK_SUCCESS) {
-        fprintf(stderr, "\t **** ERROR: fence  %s(%llu) is not done after %llu nSec with result 0x%x ****\n",
+        LOG_ERROR("\t **** ERROR: fence  %s(%llu) is not done after %llu nSec with result 0x%x ****\n",
                         fenceName, (long long unsigned int)fence, (long long unsigned int)fenceTotalWaitTimeout, vkIf->GetFenceStatus(device, fence));
         assert(!"Fence is not signaled yet after more than 100 mSec wait");
     }
@@ -261,7 +262,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
     if (resetAfterWait) {
         result = vkIf->ResetFences(device, 1, &fence);
         if (result != VK_SUCCESS) {
-            fprintf(stderr, "\nERROR: ResetFences() result: 0x%x\n", result);
+            LOG_ERROR("\nERROR: ResetFences() result: 0x%x\n", result);
             assert(result == VK_SUCCESS);
         }
 
@@ -282,7 +283,7 @@ inline VkResult WaitAndGetStatus(const VkInterfaceFunctions* vkIf, VkDevice devi
     do {
         result = WaitAndResetFence(vkIf, device, fence, resetAfterWait, fenceName, fenceWaitTimeout, fenceTotalWaitTimeout);
         if (result != VK_SUCCESS) {
-            std::cout << "WaitForFences timeout " << fenceWaitTimeout
+            LOG_S_WARN << "WaitForFences timeout " << fenceWaitTimeout
                     << " result " << result << " retry " << retryCount << std::endl << std::flush;
 
             VkQueryResultStatusKHR decodeStatus = VK_QUERY_RESULT_STATUS_NOT_READY_KHR;
@@ -295,19 +296,19 @@ inline VkResult WaitAndGetStatus(const VkInterfaceFunctions* vkIf, VkDevice devi
                                                      sizeof(decodeStatus),
                                                      VK_QUERY_RESULT_WITH_STATUS_BIT_KHR);
 
-            printf("\nERROR: GetQueryPoolResults() result: 0x%x\n", queryResult);
-            std::cout << "\t +++++++++++++++++++++++++++< " << pictureIndex
+            LOG_ERROR("\nERROR: GetQueryPoolResults() result: 0x%x\n", queryResult);
+            LOG_S_WARN << "\t +++++++++++++++++++++++++++< " << pictureIndex
                     << " >++++++++++++++++++++++++++++++" << std::endl;
-            std::cout << "\t => Decode Status for CurrPicIdx: " << pictureIndex << std::endl
+            LOG_S_WARN << "\t => Decode Status for CurrPicIdx: " << pictureIndex << std::endl
                     << "\t\tdecodeStatus: " << decodeStatus << std::endl;
 
             if (queryResult == VK_ERROR_DEVICE_LOST) {
-                std::cout << "\t Dropping frame" << std::endl;
+                LOG_S_WARN << "\t Dropping frame" << std::endl;
                 break;
             }
 
             if ((queryResult == VK_SUCCESS) && (decodeStatus == VK_QUERY_RESULT_STATUS_ERROR_KHR)) {
-                std::cout << "\t Decoding of the frame failed." << std::endl;
+                LOG_S_ERROR << "\t Decoding of the frame failed." << std::endl;
                 break;
             }
         }
