@@ -26,6 +26,7 @@
 
 #include "vulkan/vulkan.h"
 #include "nvidia_utils/vulkan/ycbcr_utils.h"
+#include "Logger.h"
 
 typedef enum StdChromaFormatIdc {
     chroma_format_idc_monochrome  = STD_VIDEO_H264_CHROMA_FORMAT_IDC_MONOCHROME,
@@ -621,38 +622,38 @@ public:
     {
         // formatProfile info based on supported chroma_format_idc
         if (pVideoProfile->chromaSubsampling & VK_VIDEO_CHROMA_SUBSAMPLING_MONOCHROME_BIT_KHR) {
-            std::cout << "MONO, ";
+            LOG_S_DEBUG << "MONO, ";
         }
         if (pVideoProfile->chromaSubsampling & VK_VIDEO_CHROMA_SUBSAMPLING_420_BIT_KHR) {
-            std::cout << " 420, ";
+            LOG_S_DEBUG << " 420, ";
         }
         if (pVideoProfile->chromaSubsampling & VK_VIDEO_CHROMA_SUBSAMPLING_422_BIT_KHR) {
-            std::cout << " 422, ";
+            LOG_S_DEBUG << " 422, ";
         }
         if (pVideoProfile->chromaSubsampling & VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
-            std::cout << " 444, ";
+            LOG_S_DEBUG << " 444, ";
         }
 
         // Profile info based on max bit_depth_luma_minus8
         if (pVideoProfile->lumaBitDepth & VK_VIDEO_COMPONENT_BIT_DEPTH_8_BIT_KHR) {
-            std::cout << "LUMA:   8-bit, ";
+            LOG_S_DEBUG << "LUMA:   8-bit, ";
         }
         if (pVideoProfile->lumaBitDepth & VK_VIDEO_COMPONENT_BIT_DEPTH_10_BIT_KHR) {
-            std::cout << "LUMA:  10-bit, ";
+            LOG_S_DEBUG << "LUMA:  10-bit, ";
         }
         if (pVideoProfile->lumaBitDepth & VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR) {
-            std::cout << "LUMA:  12-bit, ";
+            LOG_S_DEBUG << "LUMA:  12-bit, ";
         }
 
         // Profile info based on max bit_depth_chroma_minus8
         if (pVideoProfile->chromaBitDepth & VK_VIDEO_COMPONENT_BIT_DEPTH_8_BIT_KHR) {
-            std::cout << "CHROMA: 8-bit, ";
+            LOG_S_DEBUG << "CHROMA: 8-bit, ";
         }
         if (pVideoProfile->chromaBitDepth & VK_VIDEO_COMPONENT_BIT_DEPTH_10_BIT_KHR) {
-            std::cout << "CHROMA:10-bit, ";
+            LOG_S_DEBUG << "CHROMA:10-bit, ";
         }
         if (pVideoProfile->chromaBitDepth & VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR) {
-            std::cout << "CHROMA:12-bit,";
+            LOG_S_DEBUG << "CHROMA:12-bit,";
         }
     }
 
@@ -660,19 +661,19 @@ public:
     {
         switch (pH264Profiles->stdProfileIdc) {
         case STD_VIDEO_H264_PROFILE_IDC_BASELINE:
-            std::cout << "BASELINE, ";
+            LOG_S_DEBUG << "BASELINE, ";
             break;
         case STD_VIDEO_H264_PROFILE_IDC_MAIN:
-            std::cout << "MAIN, ";
+            LOG_S_DEBUG << "MAIN, ";
             break;
         case STD_VIDEO_H264_PROFILE_IDC_HIGH:
-            std::cout << "HIGH, ";
+            LOG_S_DEBUG << "HIGH, ";
             break;
         case STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE:
-            std::cout << "HIGH_444_PREDICTIVE, ";
+            LOG_S_DEBUG << "HIGH_444_PREDICTIVE, ";
             break;
         default:
-            std::cout << "UNKNOWN PROFILE, ";
+            LOG_S_DEBUG << "UNKNOWN PROFILE, ";
             break;
         }
     }
@@ -681,22 +682,22 @@ public:
     {
         switch (pH265Profiles->stdProfileIdc) {
         case STD_VIDEO_H265_PROFILE_IDC_MAIN:
-            std::cout << "MAIN, ";
+            LOG_S_DEBUG << "MAIN, ";
             break;
         case STD_VIDEO_H265_PROFILE_IDC_MAIN_10:
-            std::cout << "MAIN_10, ";
+            LOG_S_DEBUG << "MAIN_10, ";
             break;
         case STD_VIDEO_H265_PROFILE_IDC_MAIN_STILL_PICTURE:
-            std::cout << "MAIN_STILL_PICTURE, ";
+            LOG_S_DEBUG << "MAIN_STILL_PICTURE, ";
             break;
         case STD_VIDEO_H265_PROFILE_IDC_FORMAT_RANGE_EXTENSIONS:
-            std::cout << "FORMAT_RANGE_EXTENSIONS, ";
+            LOG_S_DEBUG << "FORMAT_RANGE_EXTENSIONS, ";
             break;
         case STD_VIDEO_H265_PROFILE_IDC_SCC_EXTENSIONS:
-            std::cout << "SCC_EXTENSIONS, ";
+            LOG_S_DEBUG << "SCC_EXTENSIONS, ";
             break;
         default:
-            std::cout << "UNKNOWN PROFILE, ";
+            LOG_S_DEBUG << "UNKNOWN PROFILE, ";
             break;
         }
     }

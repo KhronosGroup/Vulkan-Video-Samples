@@ -36,6 +36,8 @@
 #else
 #   include "VkCodecUtils/VulkanFilter.h"
 #endif
+#include "Logger.h"
+
 struct EncoderConfigH264;
 struct EncoderConfigH265;
 struct EncoderConfigAV1;
@@ -119,13 +121,13 @@ public:
     bool VerifyInputs()
     {
         if ((width == 0) || (height == 0)) {
-            fprintf(stderr, "Invalid input width (%d) and/or height(%d) parameters!", width, height);
+            LOG_S_ERROR << "Invalid input width" << width << " and/or height" << height << " parameters!" << std::endl;
             return false;
         }
 
         uint32_t bytesPerPixel = (bpp + 7) / 8;
         if ((bytesPerPixel < 1) || (bytesPerPixel > 2)) {
-            fprintf(stderr, "Invalid input bpp (%d) parameter!", bpp);
+            LOG_S_ERROR << "Invalid input bpp parameter: " << bpp << std::endl;
             return false;
         }
 
@@ -176,7 +178,7 @@ public:
                                                         (numPlanes == 2));
 
         if (vkFormat == VK_FORMAT_UNDEFINED) {
-            fprintf(stderr, "Invalid input parameters!");
+            LOG_S_ERROR << "Invalid input parameters!" << std::endl;
             return false;
         }
 
@@ -192,7 +194,6 @@ public:
     , m_fileHandle()
     , m_Y4MHeaderOffset(0)
     , m_memMapedFile()
-    , m_verbose(verbose)
     {
 
     }
@@ -207,8 +208,8 @@ public:
         m_memMapedFile.unmap();
 
         if (m_fileHandle != nullptr) {
-            if (fclose(m_fileHandle)) {
-                fprintf(stderr, "Failed to close input file %s", m_fileName);
+            if(fclose(m_fileHandle)) {
+                LOG_S_ERROR << "Failed to close input file " << m_fileName << std::endl;
             }
 
             m_fileHandle = nullptr;
@@ -265,7 +266,7 @@ public:
 
         const uint64_t mappedLength = (uint64_t)m_memMapedFile.mapped_length();
         if (mappedLength < offset) {
-            printf("File overflow at fileOffset %lld\n", (long long unsigned int)offset);
+            LOG_S_ERROR << "File overflow at fileOffset " << offset << std::endl;
             assert(!"Input file overflow");
             return nullptr;
         }
@@ -428,22 +429,19 @@ private:
     {
         m_fileHandle = fopen(m_fileName, "rb");
         if (m_fileHandle == nullptr) {
-            fprintf(stderr, "Failed to open input file %s", m_fileName);
+            LOG_S_ERROR << "Failed to open input file " << m_fileName << std::endl;
             return 0;
         }
 
         std::error_code error;
         m_memMapedFile.map(m_fileName, 0, mio::map_entire_file, error);
         if (error) {
-            fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
-            std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
+            LOG_S_ERROR << "Failed to map the input file: " << m_fileName << " with error msg: " << errmsg << std::endl;
             return error.value();
         }
 
-        if (m_verbose) {
-            printf("Input file size is: %zd\n", m_memMapedFile.length());
-        }
+        LOG_DEBUG_CONFIG ("Input file size is: %zd\n", m_memMapedFile.length());
 
         return m_memMapedFile.length();
     }
@@ -457,7 +455,6 @@ private:
     FILE* m_fileHandle;
     uint64_t m_Y4MHeaderOffset;
     mio::basic_mmap<mio::access_mode::read, uint8_t> m_memMapedFile;
-    uint32_t m_verbose : 1;
 };
 
 class EncoderOutputFileHandler
@@ -484,7 +481,7 @@ public:
 
         if (m_fileHandle != nullptr) {
             if(fclose(m_fileHandle)) {
-                fprintf(stderr, "Failed to close output file %s", m_fileName);
+                LOG_S_ERROR << "Failed to close output file " << m_fileName << std::endl;
             }
 
             m_fileHandle = nullptr;
@@ -530,7 +527,7 @@ private:
     {
         m_fileHandle = fopen(m_fileName, "wb");
         if (m_fileHandle == nullptr) {
-            fprintf(stderr, "Failed to open output file %s", m_fileName);
+            LOG_S_ERROR << "Failed to open output file " << m_fileName << std::endl;
             return 0;
         }
 
@@ -555,7 +552,6 @@ public:
     : m_fileName{}
     , m_fileHandle()
     , m_memMapedFile()
-    , m_verbose(verbose)
     {
 
     }
@@ -571,7 +567,7 @@ public:
 
         if (m_fileHandle != nullptr) {
             if(fclose(m_fileHandle)) {
-                fprintf(stderr, "Failed to close input file %s", m_fileName);
+                LOG_S_ERROR << "Failed to close input file " << m_fileName << std::endl;
             }
 
             m_fileHandle = nullptr;
@@ -612,7 +608,7 @@ public:
 
         const uint64_t mappedLength = (uint64_t)m_memMapedFile.mapped_length();
         if (mappedLength < fileOffset) {
-            printf("File overflow at fileOffset %llu\n",  (unsigned long long int)fileOffset);
+            LOG_S_ERROR << "File overflow at fileOffset " << fileOffset << std::endl;
             assert(!"Input file overflow");
             return nullptr;
         }
@@ -624,22 +620,19 @@ private:
     {
         m_fileHandle = fopen(m_fileName, "rb");
         if (m_fileHandle == nullptr) {
-            fprintf(stderr, "Failed to open input file %s", m_fileName);
+            LOG_S_ERROR << "Failed to open input file " << m_fileName << std::endl;
             return 0;
         }
 
         std::error_code error;
         m_memMapedFile.map(m_fileName, 0, mio::map_entire_file, error);
         if (error) {
-            fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
-            std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
+            LOG_S_ERROR << "Failed to map input file " << m_fileName << " error: " << errmsg.c_str() << std::endl;
             return error.value();
         }
 
-        if (m_verbose) {
-            printf("Input file size is: %zd\n", m_memMapedFile.length());
-        }
+        LOG_DEBUG_CONFIG ("Input file size is: %zd\n", m_memMapedFile.length());
 
         return m_memMapedFile.length();
     }
@@ -652,7 +645,6 @@ private:
     char  m_fileName[256];
     FILE* m_fileHandle;
     mio::basic_mmap<mio::access_mode::read, uint8_t> m_memMapedFile;
-    uint32_t m_verbose : 1;
 };
 
 struct EncoderConfig : public VkVideoRefCountBase {

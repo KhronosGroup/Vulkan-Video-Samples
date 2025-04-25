@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "VkCodecUtils/VkVideoRefCountBase.h"
+#include "Logger.h"
 
 class Shell;
 
@@ -108,19 +109,18 @@ protected:
         , m_profileFramesCount(0)
         , m_displayTimePeriodMilliseconds(1000)
         , start_time (std::chrono::steady_clock::now())
-        , m_verbose(verbose)
     {
-        if (m_verbose) {
-            std::cout << "The clock resolution of high_resolution_clock is: "
-                    << (double) std::chrono::high_resolution_clock::period::num /
-                                   std::chrono::high_resolution_clock::period::den << std::endl;
-            std::cout << "The clock resolution of steady_clock is: "
-                    << (double) std::chrono::steady_clock::period::num /
-                                   std::chrono::steady_clock::period::den << std::endl;
-            std::cout << "The clock resolution of system_clock is: "
-                    << (double) std::chrono::system_clock::period::num /
-                                   std::chrono::system_clock::period::den << std::endl;
-        }
+
+        LOG_S_DEBUG << "The clock resolution of high_resolution_clock is: "
+                << (double) std::chrono::high_resolution_clock::period::num /
+                                std::chrono::high_resolution_clock::period::den << std::endl;
+        LOG_S_DEBUG << "The clock resolution of steady_clock is: "
+                << (double) std::chrono::steady_clock::period::num /
+                                std::chrono::steady_clock::period::den << std::endl;
+        LOG_S_DEBUG << "The clock resolution of system_clock is: "
+                << (double) std::chrono::system_clock::period::num /
+                                std::chrono::system_clock::period::den << std::endl;
+
     }
 
 protected:
@@ -128,7 +128,6 @@ protected:
     int64_t m_profileFramesCount;
     const int64_t m_displayTimePeriodMilliseconds;
     std::chrono::time_point<std::chrono::steady_clock> start_time;
-    uint32_t m_verbose: 1;
 };
 
 #endif  // FRAMEPROCESSOR_H
