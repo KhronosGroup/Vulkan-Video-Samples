@@ -46,7 +46,7 @@ include_directories(BEFORE ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT})
 
 add_library(${VULKAN_VIDEO_PARSER_LIB} SHARED ${LIBNVPARSER})
 
-if ((CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "^ARM64"))
+if ((CMAKE_GENERATOR_PLATFORM MATCHES "^aarch64") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^arm64") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^ARM64"))
   MESSAGE(STATUS "Parser optimization for ARM64 ${CMAKE_SYSTEM_PROCESSOR}")
   if(WIN32)
     MESSAGE(STATUS "Parser optimizations selected for WIN32 armv8.0 and armv8.0+sve")
@@ -73,7 +73,7 @@ if ((CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64") OR (CMAKE_SYSTEM_PROCESSOR MATCH
     MESSAGE(STATUS "Parser optimizations linking ARM64 next_start_code_c next_start_code_neon next_start_code_sve")
     target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c, next_start_code_neon, and next_start_code_sve)
   endif()
-elseif ((CMAKE_SYSTEM_PROCESSOR MATCHES "^arm") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "^ARM"))
+elseif ((CMAKE_GENERATOR_PLATFORM MATCHES "^arm") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^ARM"))
   MESSAGE(STATUS "Parser optimization for ARM ${CMAKE_SYSTEM_PROCESSOR}")
   if(WIN32)
     MESSAGE(STATUS "Parser optimizations selected for WIN32 VFPv4")
