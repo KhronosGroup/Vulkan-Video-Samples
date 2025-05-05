@@ -82,15 +82,25 @@ jobs:
   vk_video_samples-win:
     strategy:
       matrix:
-        platform: [windows-x64, windows-x64-ffmpeg]
+        platform: [windows-x64, windows-x64-ffmpeg, win-arm64]
+        include:
+          - platform: windows-x64
+            arch: x64
+            cmake_arch: x64
+          - platform: windows-x64-ffmpeg
+            arch: x64
+            cmake_arch: x64
+          - platform: win-arm64
+            arch: arm64
+            cmake_arch: ARM64
     runs-on: windows-latest
 
     steps:
-      - name: Set up X86 MSVC environment
-        if: matrix.platform == 'windows-x86'
+      - name: Set up MSVC environment
+        if: matrix.arch != 'x64'
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: "x86"
+          arch: ${{ matrix.arch }}
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -132,12 +142,12 @@ jobs:
         run: |
           mkdir BUILD_DEBUG
           cd BUILD_DEBUG
-          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          cmake -DCMAKE_GENERATOR_PLATFORM=${{ matrix.cmake_arch }} -DCMAKE_BUILD_TYPE=Debug ..
           cmake --build . --parallel $BUILD_JOBS --config Debug
 
       - name: Build Release
         run: |
             mkdir BUILD_RELEASE
             cd BUILD_RELEASE
-            cmake -DCMAKE_BUILD_TYPE=Release ..
+            cmake -DCMAKE_GENERATOR_PLATFORM=${{ matrix.cmake_arch }} -DCMAKE_BUILD_TYPE=Release ..
             cmake --build . --parallel $BUILD_JOBS --config Release
