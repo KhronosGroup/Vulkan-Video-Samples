@@ -48,11 +48,9 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     const int32_t numDecodeImagesToPreallocate = programConfig.numDecodeImagesToPreallocate;
     const int32_t numBitstreamBuffersToPreallocate = std::max(programConfig.numBitstreamBuffersToPreallocate, 4);
     const bool enableHwLoadBalancing = programConfig.enableHwLoadBalancing;
-    const bool enablePostProcessFilter = (programConfig.enablePostProcessFilter >= 0);
     const bool enableDisplayPresent = (programConfig.noPresent == 0);
-    const  VulkanFilterYuvCompute::FilterType postProcessFilterType = enablePostProcessFilter ?
-            (VulkanFilterYuvCompute::FilterType)programConfig.enablePostProcessFilter :
-                                                      VulkanFilterYuvCompute::YCBCRCOPY;
+    const  VulkanFilterYuvCompute::FilterType postProcessFilterType =
+        (VulkanFilterYuvCompute::FilterType)programConfig.postProcessFilterType;
     const bool verbose = false;
 
     if (vkDevCtx->GetVideoDecodeQueue(videoQueueIndx) == VkQueue()) {
@@ -94,7 +92,7 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
         enableDecoderFeatures |= VkVideoDecoder::ENABLE_HW_LOAD_BALANCING;
     }
 
-    if (enablePostProcessFilter) {
+    if (postProcessFilterType) {
         enableDecoderFeatures |= VkVideoDecoder::ENABLE_POST_PROCESS_FILTER;
     }
 

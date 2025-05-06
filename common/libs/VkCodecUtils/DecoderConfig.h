@@ -68,7 +68,7 @@ struct DecoderConfig {
         gpuIndex = -1;
         forceParserType = VK_VIDEO_CODEC_OPERATION_NONE_KHR;
         decoderQueueSize = 5;
-        enablePostProcessFilter = -1,
+        postProcessFilterType = 0, //FilterType::DISABLED
         enableStreamDemuxing = true;
         deviceId = (uint32_t)-1;
         directMode = false;
@@ -216,10 +216,11 @@ struct DecoderConfig {
                     backBufferCount = std::atoi(args[0]);
                     return true;
                 }},
-            {"--enablePostProcessFilter", nullptr, 1, "Enables post processing by running "
-                "a compute shader on the decode output",
+            {"--postProcessFilterType", nullptr, 1, "Enables post processing by running "
+                "a compute shader on the decode output. Possible values are 0(DISABLED, "
+                "1(YCBCRCOPY), 2(YCBCRCLEAR), 3(YCBCR2RGBA), 4(RGBA2YCBCR). Default value 0(DISABLED).",
                 [this](const char **args, const ProgramArgs &a) {
-                    enablePostProcessFilter = std::atoi(args[0]);
+                    postProcessFilterType = std::atoi(args[0]);
                     return true;
                 }},
             {"--loop", nullptr, 1,
@@ -451,7 +452,7 @@ struct DecoderConfig {
     std::vector<uint32_t> crcInitValue;
     uint32_t deviceId;
     uint32_t decoderQueueSize;
-    int32_t enablePostProcessFilter;
+    int32_t postProcessFilterType;
     uint32_t enableStreamDemuxing : 1;
     uint32_t directMode : 1;
     uint32_t vsync : 1;

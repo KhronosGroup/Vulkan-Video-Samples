@@ -31,7 +31,7 @@ class VulkanFilterYuvCompute : public VulkanFilter
 {
 public:
 
-    enum FilterType { YCBCRCOPY, YCBCRCLEAR, YCBCR2RGBA, RGBA2YCBCR };
+    enum FilterType { DISABLED, YCBCRCOPY, YCBCRCLEAR, YCBCR2RGBA, RGBA2YCBCR };
 
     static VkResult Create(const VulkanDeviceContext* vkDevCtx,
                            uint32_t queueFamilyIndex,

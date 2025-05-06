@@ -67,7 +67,7 @@ int main(int argc, const char **argv) {
     }
 
     VkQueueFlags requestVideoComputeQueueMask = 0;
-    if (decoderConfig.enablePostProcessFilter != -1) {
+    if (decoderConfig.postProcessFilterType) {
         requestVideoComputeQueueMask = VK_QUEUE_COMPUTE_BIT;
     }
 
