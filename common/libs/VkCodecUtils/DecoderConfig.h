@@ -217,7 +217,8 @@ struct DecoderConfig {
                     return true;
                 }},
             {"--enablePostProcessFilter", nullptr, 1, "Enables post processing by running "
-                "a compute shader on the decode output",
+                "a compute shader on the decode output. Possible values are "
+                "0(YCBCRCOPY), 1(YCBCRCLEAR), 2(YCBCR2RGBA), 3(RGBA2YCBCR). Default value -1(DISABLED).",
                 [this](const char **args, const ProgramArgs &a) {
                     enablePostProcessFilter = std::atoi(args[0]);
                     return true;
