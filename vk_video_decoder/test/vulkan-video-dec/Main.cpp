@@ -80,7 +80,7 @@ int main(int argc, const char** argv)
     }
 
     VkQueueFlags requestVideoComputeQueueMask = 0;
-    if (decoderConfig.enablePostProcessFilter != -1) {
+    if (decoderConfig.postProcessFilterType) {
         requestVideoComputeQueueMask = VK_QUEUE_COMPUTE_BIT;
     }
 
@@ -132,7 +132,7 @@ int main(int argc, const char** argv)
         vkDevCtxt.CreateVulkanDevice(numDecodeQueues,
                                      decoderConfig.enableVideoEncoder ? 1 : 0, // num encode queues
                                      videoCodecs,
-                                     false, //  createTransferQueue
+                                     ((vkDevCtxt.GetVideoDecodeQueueFlag() & VK_QUEUE_TRANSFER_BIT) == 0), //  createTransferQueue
                                      true,  // createGraphicsQueue
                                      true,  // createDisplayQueue
                                      requestVideoComputeQueueMask != 0  // createComputeQueue

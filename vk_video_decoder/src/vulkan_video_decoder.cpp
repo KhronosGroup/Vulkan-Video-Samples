@@ -168,7 +168,7 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
     }
 
     VkQueueFlags requestVideoComputeQueueMask = 0;
-    if (m_decoderConfig.enablePostProcessFilter != -1) {
+    if (m_decoderConfig.postProcessFilterType) {
         requestVideoComputeQueueMask = VK_QUEUE_COMPUTE_BIT;
     }
 
