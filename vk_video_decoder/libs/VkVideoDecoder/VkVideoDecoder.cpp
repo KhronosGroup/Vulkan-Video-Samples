@@ -403,16 +403,18 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
         if (needNewFilter) {
             result = VulkanFilterYuvCompute::Create(m_vkDevCtx,
-                                                    m_vkDevCtx->GetComputeQueueFamilyIdx(),
-                                                    0,
-                                                    m_filterType,
-                                                    numDecodeSurfaces + 1,
-                                                    inputFormat,
-                                                    outputFormat,
-                                                    &ycbcrConversionCreateInfo,
-                                                    &ycbcrPrimariesConstants,
-                                                    &samplerInfo,
-                                                    m_yuvFilter);
+                                                m_vkDevCtx->GetComputeQueueFamilyIdx(),
+                                                0,
+                                                m_filterType,
+                                                numDecodeSurfaces + 1,
+                                                inputFormat,
+                                                outputFormat,
+                                                false, // inputEnableMsbToLsbShift
+                                                false, // outputEnableLsbToMsbShift
+                                                &ycbcrConversionCreateInfo,
+                                                &ycbcrPrimariesConstants,
+                                                &samplerInfo,
+                                                m_yuvFilter);
         }
         if (result == VK_SUCCESS) {
 
