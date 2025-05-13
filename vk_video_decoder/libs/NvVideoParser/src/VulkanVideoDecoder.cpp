@@ -737,7 +737,7 @@ VkResult CreateVulkanVideoDecodeParser(VkVideoCodecOperationFlagBitsKHR videoCod
                     VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION, VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_EXTENSION_NAME);
              return VK_ERROR_INCOMPATIBLE_DRIVER;
         }
-        nvVideoDecodeParser =  VkSharedBaseObj<VulkanAV1Decoder>(new VulkanAV1Decoder(videoCodecOperation));
+        nvVideoDecodeParser =  VkSharedBaseObj<VulkanAV1Decoder>(new VulkanAV1Decoder(videoCodecOperation, pParserPictureData->isAnnexB));
         break;
 #ifdef ENABLE_VP9_DECODER
     case VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR:
