@@ -39,11 +39,17 @@
 typedef void (*nvParserLogFuncType)(const char* format, ...);
 
 class VulkanVideoDecodeParser;
+#ifdef __cplusplus
+extern "C" {
+#endif
 NVPARSER_EXPORT
 VkResult CreateVulkanVideoDecodeParser(VkVideoCodecOperationFlagBitsKHR videoCodecOperation,
                                        const VkExtensionProperties* pStdExtensionVersion,
                                        nvParserLogFuncType pParserLogFunc, int logLevel,
                                        const VkParserInitDecodeParameters* pParserPictureData,
                                        VkSharedBaseObj<VulkanVideoDecodeParser>& nvVideoDecodeParser);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _NVVULKANVIDEOPARSER_H_ */
