@@ -98,7 +98,7 @@ public:
     std::vector<VkMemoryPropertyFlags>    m_memFlags;
 
     std::vector<FrameDataType>            m_frameData;
-    int                                   m_frameDataIndex;
+    uint32_t                              m_frameDataIndex;
 
     VkExtent2D                            m_extent;
     VkViewport                            m_viewport;
