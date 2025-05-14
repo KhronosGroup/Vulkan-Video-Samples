@@ -71,7 +71,7 @@ if ((CMAKE_GENERATOR_PLATFORM MATCHES "^aarch64") OR (CMAKE_GENERATOR_PLATFORM M
     set_target_properties(next_start_code_sve PROPERTIES COMPILE_FLAGS ${SVE_CPU_FEATURE} )
     target_include_directories(next_start_code_sve PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
     MESSAGE(STATUS "Parser optimizations linking ARM64 next_start_code_c next_start_code_neon next_start_code_sve")
-    target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c, next_start_code_neon, and next_start_code_sve)
+    target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_neon next_start_code_sve)
   endif()
 elseif ((CMAKE_GENERATOR_PLATFORM MATCHES "^arm") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^ARM"))
   MESSAGE(STATUS "Parser optimization for ARM ${CMAKE_SYSTEM_PROCESSOR}")
