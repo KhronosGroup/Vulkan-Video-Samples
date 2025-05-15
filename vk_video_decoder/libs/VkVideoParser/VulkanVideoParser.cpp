@@ -939,6 +939,7 @@ VkResult VulkanVideoParser::Initialize(
     nvdp.referenceClockRate = m_clockRate;
     nvdp.errorThreshold = errorThreshold;
     nvdp.outOfBandPictureParameters = outOfBandPictureParameters;
+    nvdp.isAnnexB = false;
 
     static const VkExtensionProperties h264StdExtensionVersion = { VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_EXTENSION_NAME, VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_SPEC_VERSION };
     static const VkExtensionProperties h265StdExtensionVersion = { VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_EXTENSION_NAME, VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_SPEC_VERSION };
