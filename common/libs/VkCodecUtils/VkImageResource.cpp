@@ -18,6 +18,7 @@
 #include "VkCodecUtils/HelpersDispatchTable.h"
 #include "VkCodecUtils/Helpers.h"
 #include "VkCodecUtils/VulkanDeviceContext.h"
+#include "VkCodecUtils/VulkanSamplerYcbcrConversion.h"
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
 #include "VkImageResource.h"
 
@@ -190,16 +191,58 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
                             VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
     viewInfo.subresourceRange = imageSubresourceRange;
     viewInfo.flags = 0;
+
+    const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(viewInfo.format);
+    VkSamplerYcbcrConversionInfo ycbcrInfo = {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO
+    };
+
+    VulkanSamplerYcbcrConversion  samplerYcbcrConversion;
+
+    if (mpInfo && (imageResource->GetImageCreateInfo().usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+#if 0
+        const VkSamplerCreateInfo defaultSamplerInfo = {
+            VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, NULL, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST,
+            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+            // mipLodBias  anisotropyEnable  maxAnisotropy  compareEnable      compareOp         minLod  maxLod          borderColor
+            // unnormalizedCoordinates
+            0.0, false, 0.00, false, VK_COMPARE_OP_NEVER, 0.0, 16.0, VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, false
+        };
+#endif
+
+        const VkSamplerYcbcrConversionCreateInfo defaultSamplerYcbcrConversionCreateInfo = {
+            VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+            NULL,
+            imageResource->GetImageCreateInfo().format,
+            VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709,
+            VK_SAMPLER_YCBCR_RANGE_ITU_NARROW,
+            { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY },
+            VK_CHROMA_LOCATION_MIDPOINT,
+            VK_CHROMA_LOCATION_MIDPOINT,
+            VK_FILTER_LINEAR,
+            false
+        };
+
+        VkResult result = samplerYcbcrConversion.CreateVulkanSampler(vkDevCtx, NULL, &defaultSamplerYcbcrConversionCreateInfo);
+        if (result != VK_SUCCESS) {
+            return result;
+        }
+
+        ycbcrInfo.conversion = samplerYcbcrConversion.GetSamplerYcbcrConversion();
+        viewInfo.pNext = &ycbcrInfo;
+    }
+
     VkResult result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
     if (result != VK_SUCCESS) {
         return result;
     }
     numViews++;
 
-    const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(viewInfo.format);
     if (mpInfo) {
         uint32_t numPlanes = 0;
         // Create separate image views for Y and CbCr planes
+        viewInfo.pNext = NULL;
         viewInfo.format = mpInfo->vkPlaneFormat[numPlanes];  // For the Y plane
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
         result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
