@@ -59,12 +59,12 @@ if(USE_SYSTEM_SHADERC AND shaderc_FOUND)
 else()
     set(SHADERC_LIB ${SHADERC_LIB_SHARED} CACHE PATH "The name of the shaderc library target decoder/encoder are using." FORCE)
     message(STATUS "Building shaderc and dependencies from source")
-
+    set(VULKAN_SDK_VERSION vulkan-sdk-1.4.313)
     # Fetch SPIRV-Headers first (needed by SPIRV-Tools)
     FetchContent_Declare(
         spirv-headers
         GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Headers.git
-        GIT_TAG main
+        GIT_TAG ${VULKAN_SDK_VERSION}
     )
     FetchContent_MakeAvailable(spirv-headers)
 
@@ -72,7 +72,7 @@ else()
     FetchContent_Declare(
         spirv-tools
         GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Tools.git
-        GIT_TAG main
+        GIT_TAG ${VULKAN_SDK_VERSION}
     )
     FetchContent_GetProperties(spirv-tools)
     if(NOT spirv-tools_POPULATED)
@@ -96,7 +96,7 @@ else()
     FetchContent_Declare(
         glslang
         GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
-        GIT_TAG main
+        GIT_TAG ${VULKAN_SDK_VERSION}
     )
     FetchContent_GetProperties(glslang)
     if(NOT glslang_POPULATED)
