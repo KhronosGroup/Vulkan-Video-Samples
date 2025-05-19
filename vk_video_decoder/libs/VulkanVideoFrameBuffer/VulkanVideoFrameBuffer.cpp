@@ -974,6 +974,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
         m_imageSpecs[imageTypeIdx].createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         m_imageSpecs[imageTypeIdx].createInfo.pNext = m_videoProfile.GetProfileListInfo();
         m_imageSpecs[imageTypeIdx].createInfo.queueFamilyIndexCount = 1;
+        m_imageSpecs[imageTypeIdx].createInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
         m_imageSpecs[imageTypeIdx].createInfo.pQueueFamilyIndices = &m_queueFamilyIndex;
         m_imageSpecs[imageTypeIdx].usesImageViewArray = usesImageViewArray;
         m_imageSpecs[imageTypeIdx].usesImageArray = usesImageArray;
