@@ -29,6 +29,7 @@
 #include <iomanip>
 #include <sstream>
 #include "vulkan_interfaces.h"
+#include "VkVSVersion.h"
 
 struct DecoderConfig {
 
@@ -83,6 +84,7 @@ struct DecoderConfig {
 
     using ProgramArgs = std::vector<ArgSpec>;
     static bool showHelp(const char ** argv, const ProgramArgs &spec) {
+        std::cout << "Version: " << VKVS_VERSION_STRING << std::endl;
         std::cout << argv[0] << std::endl;
         for ( auto& flag : spec ) {
             std::stringstream ss;
@@ -110,6 +112,12 @@ struct DecoderConfig {
                     int rtn = showHelp(argv, a);
                     exit(EXIT_SUCCESS);
                     return rtn;
+                }},
+            {"--version", "-v", 0, "Show the version",
+                [argv](const char **, const ProgramArgs &a) {
+                    fprintf(stdout, "%s\n", VKVS_VERSION_STRING);
+                    exit(EXIT_SUCCESS);
+                    return true;
                 }},
             {"--disableStrDemux", nullptr, 0, "Disable stream demuxing",
                 [this](const char **, const ProgramArgs &a) {

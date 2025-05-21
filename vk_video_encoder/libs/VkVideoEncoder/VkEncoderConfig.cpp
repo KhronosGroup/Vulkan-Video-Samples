@@ -18,11 +18,14 @@
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkEncoderConfigH265.h"
 #include "VkVideoEncoder/VkEncoderConfigAV1.h"
+#include "VkVSVersion.h"
 
 void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
 {
     fprintf(stderr,
+    "Version: " VKVS_VERSION_STRING "\n"\
     "Usage : EncodeApp \n\
+    -v, --version                   provides version information\n\
     -h, --help                      provides help\n\
     -i, --input                     .yuv Input YUV File Name (YUV420p 8bpp only) \n\
     -o, --output                    .264/5,ivf Output H264/5/AV1 File Name \n\
@@ -165,6 +168,9 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
         } else if (args[i] == "-h" || args[i] == "--help") {
             printHelp(codec);
             exit(EXIT_SUCCESS);
+        } else if (args[i] == "-v" || args[i] == "--version") {
+            fprintf(stderr, VKVS_VERSION_STRING"\n");
+            return 0;
         } else if (args[i] == "-c" || args[i] == "--codec") {
             std::string codec_ = args[i + 1];
             if (codec_ == "avc" || codec_== "h264") {
@@ -597,6 +603,10 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, char *argv[],
         } else if (args[i] == "--help" || args[i] == "-h") {
             printHelp(codec);
             exit(EXIT_SUCCESS);
+        }
+        else if (args[i] == "--version" || args[i] == "-v") {
+            fprintf(stderr, VKVS_VERSION_STRING"\n");
+            return VK_ERROR_INITIALIZATION_FAILED;
         }
     }
 
