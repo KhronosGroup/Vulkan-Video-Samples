@@ -163,7 +163,7 @@ int main(int argc, char** argv)
             return -1;
         }
 
-        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->GetDeviceUUID(),
+        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->deviceUUID,
                                               (VK_QUEUE_GRAPHICS_BIT |
                                               requestVideoComputeQueueMask |
                                               requestVideoEncodeQueueMask),
@@ -215,7 +215,7 @@ int main(int argc, char** argv)
     } else {
 
         // No display presentation and no decoder - just the encoder
-        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->GetDeviceUUID(),
+        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->deviceUUID,
                                               (requestVideoComputeQueueMask |
                                                requestVideoEncodeQueueMask  |
                                                VK_QUEUE_TRANSFER_BIT),
