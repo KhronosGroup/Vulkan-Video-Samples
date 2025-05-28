@@ -164,7 +164,7 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
             }
         } else if (args[i] == "-h" || args[i] == "--help") {
             printHelp(codec);
-            return -1;
+            exit(EXIT_SUCCESS);
         } else if (args[i] == "-c" || args[i] == "--codec") {
             std::string codec_ = args[i + 1];
             if (codec_ == "avc" || codec_== "h264") {
@@ -596,7 +596,7 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, char *argv[],
             }
         } else if (args[i] == "--help" || args[i] == "-h") {
             printHelp(codec);
-            return VK_ERROR_INITIALIZATION_FAILED;
+            exit(EXIT_SUCCESS);
         }
     }
 
