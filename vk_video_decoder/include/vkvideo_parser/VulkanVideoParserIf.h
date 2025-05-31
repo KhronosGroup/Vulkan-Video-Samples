@@ -524,6 +524,7 @@ typedef struct VkParserInitDecodeParameters {
 
     // If set, Picture Parameters are going to be provided via UpdatePictureParameters callback
     bool outOfBandPictureParameters;
+    bool isAnnexB;
 } VkParserInitDecodeParameters;
 
 // High-level interface to video decoder (Note that parsing and decoding

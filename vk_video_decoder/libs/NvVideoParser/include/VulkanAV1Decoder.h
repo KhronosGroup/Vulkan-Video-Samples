@@ -18,8 +18,6 @@
 #define _VULKANAV1DECODER_H_
 
 #include "VulkanVideoDecoder.h"
-#include "vk_video/vulkan_video_codec_av1std.h"
-#include "vk_video/vulkan_video_codec_av1std_decode.h"
 
 #include <array>
 #include <vector>
