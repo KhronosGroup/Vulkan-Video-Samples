@@ -118,6 +118,10 @@ if(TARGET vulkan)
     list(APPEND definitions PRIVATE -DUNINSTALLED_LOADER="$<TARGET_FILE:vulkan>")
 endif()
 
+if(USE_SHADERC)
+    list(APPEND definitions PRIVATE -DSHADERC_SUPPORT)
+endif()
+
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
     list(APPEND definitions PRIVATE -DWIN32_LEAN_AND_MEAN)
