@@ -304,7 +304,7 @@ endif()
 ############ VULKAN_VIDEO_PARSER_LIB ######################################
 
 ############ VULKAN_VIDEO_DECODER_LIB ######################################
-    if(BUILD_DECODER)
+if(BUILD_DECODER)
     if (DEFINED ENV{VULKAN_DECODER_APIS_INCLUDE_PATH})
         MESSAGE(STATUS "VULKAN_DECODER_APIS_INCLUDE_PATH ENV VAR is set to $ENV{VULKAN_DECODER_APIS_INCLUDE_PATH}")
         set(VULKAN_DECODER_APIS_INCLUDE  "$ENV{VULKAN_DECODER_APIS_INCLUDE_PATH}" CACHE PATH "Path to Vulkan Video decode include directory" FORCE)
