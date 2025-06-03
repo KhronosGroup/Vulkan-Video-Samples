@@ -114,7 +114,7 @@ add_library(${VULKAN_VIDEO_ENCODER_LIB} SHARED ${LIBVKVIDEOENCODER_SRC})
 
 if(USE_SHADERC)
     # Link the libraries
-    target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${SHADERC_LIB_SHARED})
+    target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${SHADERC_SHARED_LIBRARY})
     # Ensure the library depends on the generation of these files
     list(APPEND LIBVKVIDEOENCODER_DEPENDENCIES ${SHADERC_LIB})
 endif()
@@ -143,7 +143,7 @@ endif()
 add_library(${VULKAN_VIDEO_ENCODER_STATIC_LIB} STATIC ${LIBVKVIDEOENCODER_SRC})
 if(USE_SHADERC)
     # Link the libraries
-    target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_LIB_SHARED})
+    target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_SHARED_LIBRARY})
 endif()
 # Ensure the library depends on the generation of these files
 add_dependencies(${VULKAN_VIDEO_ENCODER_STATIC_LIB} ${LIBVKVIDEOENCODER_DEPENDENCIES})
