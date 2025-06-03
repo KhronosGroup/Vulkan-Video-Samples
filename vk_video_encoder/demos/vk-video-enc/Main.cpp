@@ -53,6 +53,7 @@ int main(int argc, char** argv)
         VK_KHR_VIDEO_QUEUE_EXTENSION_NAME,
         VK_KHR_VIDEO_ENCODE_QUEUE_EXTENSION_NAME,
         VK_KHR_VIDEO_MAINTENANCE_1_EXTENSION_NAME,
+        VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
         nullptr
     };
 
@@ -183,7 +184,7 @@ int main(int argc, char** argv)
             return -1;
         }
 
-        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->GetDeviceUUID(),
+        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->deviceUUID,
                                               (VK_QUEUE_GRAPHICS_BIT |
                                                       requestVideoComputeQueueMask |
                                                       requestVideoDecodeQueueMask  |
@@ -238,7 +239,7 @@ int main(int argc, char** argv)
     } else {
 
         // No display presentation and no decoder - just the encoder
-        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->GetDeviceUUID(),
+        result = vkDevCtxt.InitPhysicalDevice(encoderConfig->deviceId, encoderConfig->deviceUUID,
                                               (requestVideoComputeQueueMask |
                                                requestVideoDecodeQueueMask  |
                                                requestVideoEncodeQueueMask  |
@@ -246,7 +247,8 @@ int main(int argc, char** argv)
                                               nullptr,
                                               requestVideoDecodeQueueMask,
                                               (VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR |
-                                               VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR),
+                                               VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR |
+                                               VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR),
                                               requestVideoEncodeQueueMask,
                                               (VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR |
                                                VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
