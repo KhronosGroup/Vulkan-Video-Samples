@@ -18,4 +18,11 @@
 #ifndef VK_ENABLE_BETA_EXTENSIONS
 #define VK_ENABLE_BETA_EXTENSIONS 1
 #endif
+
+// This flag is defined in CTS.
+#ifdef DE_BUILD_VIDEO
+#include "vkDefs.hpp"
+using namespace vk;
+#else
 #include "vulkan/vulkan.h"
+#endif
