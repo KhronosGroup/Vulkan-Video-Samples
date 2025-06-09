@@ -22,8 +22,10 @@
 #include <array>
 #include <mutex>
 #include <vulkan_interfaces.h>
+#include "VkCodecUtils/Helpers.h"
 #include <VkCodecUtils/HelpersDispatchTable.h>
 #include "VkShell/VkWsiDisplay.h"
+#include "VkCodecUtils/VulkanSemaphoreDump.h"
 
 class VulkanDeviceContext : public vk::VkInterfaceFunctions {
 
@@ -82,6 +84,7 @@ public:
         return m_videoDecodeQueues[index];
     }
     int32_t GetVideoEncodeQueueFamilyIdx() const { return m_videoEncodeQueueFamily; }
+    int32_t GetVideoEncodeDefaultQueueIndex() const { return m_videoEncodeDefaultQueueIndex; }
     int32_t GetVideoEncodeNumQueues() const { return m_videoEncodeNumQueues; }
     VkQueue GetVideoEncodeQueue(int32_t index = 0) const {
         if ((size_t)index >= m_videoEncodeQueues.size()) {
@@ -157,11 +160,22 @@ public:
     };
 
     VkResult MultiThreadedQueueSubmit(const QueueFamilySubmitType submitType, const int32_t queueIndex,
-                                      uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) const
+                                      uint32_t submitCount, const VkSubmitInfo2KHR* pSubmits, VkFence fence,
+                                      const char* submissionName = nullptr,
+                                      uint64_t decodeEncodeOrder = UINT64_MAX,
+                                      uint64_t displayInputOrder = UINT64_MAX) const
     {
         MtQueueMutex queue(this, submitType, queueIndex);
         if (queue) {
-            return QueueSubmit(queue, submitCount, pSubmits, fence);
+
+            // Dump semaphore info for debugging
+            if (false) {
+                for (uint32_t i = 0; i < submitCount; i++) {
+                    VulkanSemaphoreDump::DumpSemaphoreInfo(pSubmits[i], submissionName, decodeEncodeOrder, displayInputOrder);
+                }
+            }
+
+            return QueueSubmit2KHR(queue, submitCount, pSubmits, fence);
         } else {
             return VK_ERROR_INITIALIZATION_FAILED;
         }
@@ -238,7 +252,7 @@ public:
                              uint64_t object, size_t location,
                              int32_t msg_code, const char *layer_prefix, const char *msg);
 
-    VkResult InitPhysicalDevice(int32_t deviceId = -1, const uint8_t* pDeviceUuid = nullptr,
+    VkResult InitPhysicalDevice(int32_t deviceId, const vk::DeviceUuidUtils& deviceUuid,
                                 const VkQueueFlags requestQueueTypes =  (VK_QUEUE_GRAPHICS_BIT |
                                                                    /*  VK_QUEUE_COMPUTE_BIT |  */
                                                                    /* VK_QUEUE_TRANSFER_BIT | */
@@ -298,6 +312,7 @@ private:
     int32_t  m_videoDecodeDefaultQueueIndex;
     int32_t  m_videoDecodeNumQueues;
     int32_t  m_videoEncodeQueueFamily;
+    int32_t  m_videoEncodeDefaultQueueIndex;
     int32_t  m_videoEncodeNumQueues;
     int32_t  m_videoDecodeEncodeComputeQueueFamily;
     int32_t  m_videoDecodeEncodeComputeNumQueues;

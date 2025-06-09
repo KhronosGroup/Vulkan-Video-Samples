@@ -106,6 +106,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
         VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
         VK_KHR_VIDEO_QUEUE_EXTENSION_NAME,
         VK_KHR_VIDEO_ENCODE_QUEUE_EXTENSION_NAME,
+        VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
         nullptr
     };
 
@@ -159,7 +160,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
     }
 
     // No display presentation and no decoder - just the encoder
-    result = m_vkDevCtxt.InitPhysicalDevice(m_encoderConfig->deviceId, m_encoderConfig->GetDeviceUUID(),
+    result = m_vkDevCtxt.InitPhysicalDevice(m_encoderConfig->deviceId, m_encoderConfig->deviceUUID,
                                             ( requestVideoComputeQueueMask |
                                               requestVideoDecodeQueueMask  |
                                               requestVideoEncodeQueueMask  |
@@ -167,7 +168,8 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
                                             nullptr,
                                             requestVideoDecodeQueueMask,
                                             (VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR |
-                                             VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR),
+                                             VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR |
+                                             VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR),
                                             requestVideoEncodeQueueMask,
                                             (VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR |
                                              VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
