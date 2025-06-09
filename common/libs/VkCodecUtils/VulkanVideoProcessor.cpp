@@ -145,12 +145,11 @@ VkResult VulkanVideoProcessor::Create(const DecoderConfig& settings, const Vulka
 
 VkVideoProfileInfoKHR VulkanVideoProcessor::GetVkProfile() const
 {
-
-    VkVideoProfileInfoKHR videoProfile({VK_STRUCTURE_TYPE_VIDEO_PROFILE_INFO_KHR, NULL,
+    VkVideoProfileInfoKHR videoProfile {VK_STRUCTURE_TYPE_VIDEO_PROFILE_INFO_KHR, NULL,
                                         m_videoStreamDemuxer->GetVideoCodec(),
                                         m_videoStreamDemuxer->GetChromaSubsampling(),
                                         m_videoStreamDemuxer->GetLumaBitDepth(),
-                                        m_videoStreamDemuxer->GetChromaBitDepth()});
+                                        m_videoStreamDemuxer->GetChromaBitDepth()};
 
     return videoProfile;
 }
@@ -180,10 +179,10 @@ VkFormat VulkanVideoProcessor::GetFrameImageFormat()  const
 
 VkExtent3D VulkanVideoProcessor::GetVideoExtent() const
 {
-    VkExtent3D extent ({ (uint32_t)m_videoStreamDemuxer->GetWidth(),
-                         (uint32_t)m_videoStreamDemuxer->GetHeight(),
-                         (uint32_t)1
-                       });
+    VkExtent3D extent { (uint32_t)m_videoStreamDemuxer->GetWidth(),
+                        (uint32_t)m_videoStreamDemuxer->GetHeight(),
+                        (uint32_t)1
+                      };
     return extent;
 }
 
