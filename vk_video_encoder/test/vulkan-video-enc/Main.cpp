@@ -18,7 +18,7 @@
 #include "vulkan_video_encoder.h"
 #include "VkVSCommon.h"
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
     std::cout << "Enter encoder test" << std::endl;
     VkSharedBaseObj<VulkanVideoEncoder> vulkanVideoEncoder;
