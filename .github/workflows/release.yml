@@ -21,7 +21,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Archive Linux zip results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         env:
           PLATFORM: linux-x86_64
         with:
@@ -36,13 +36,13 @@ jobs:
       - name: Upload linux release
         env:
           PLATFORM: linux-x86_64
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.REPO_NAME }}-${{ env.ref_name }}-${{ github.PLATFORM }}
           path: ${{ env.REPO_NAME }}-${{ env.ref_name }}-{{ github.PLATFORM }}.zip
 
       - name: Archive Windows zip results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         env:
           PLATFORM: windows-x64
         with:
@@ -55,7 +55,7 @@ jobs:
         run:
           mv $REPO_NAME-release-$PLATFORM.zip $REPO_NAME-${{ github.ref_name }}-$PLATFORM.zip
       - name: Upload Windows release
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         env:
           PLATFORM: windows-x64
         with:
