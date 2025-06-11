@@ -75,9 +75,28 @@ jobs:
         shell: bash
         run: |
           mkdir BUILD_RELEASE
-          cd BUILD_RELEASE
+          pushd BUILD_RELEASE
           cmake -DCMAKE_BUILD_TYPE=Release ..
           cmake --build . --parallel $BUILD_JOBS --config Release
+          mkdir -p release-artifacts
+          popd
+      - name: Build release
+        shell: bash
+        run: |
+          pushd BUILD_RELEASE
+          cmake --install . --prefix ./${{ env.REPO_NAME }}-release
+          popd
+      - name: Create zip
+        shell: bash
+        run: |
+          pushd BUILD_RELEASE
+          zip -r ../${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip ${{ env.REPO_NAME }}-release/
+          popd
+      - name: Upload linux release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}
+          path: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip
 
   vk_video_samples-win:
     strategy:
@@ -146,8 +165,28 @@ jobs:
           cmake --build . --parallel $BUILD_JOBS --config Debug
 
       - name: Build Release
+        shell: bash
         run: |
             mkdir BUILD_RELEASE
-            cd BUILD_RELEASE
+            pushd BUILD_RELEASE
             cmake -DCMAKE_GENERATOR_PLATFORM=${{ matrix.cmake_arch }} -DCMAKE_BUILD_TYPE=Release ..
             cmake --build . --parallel $BUILD_JOBS --config Release
+            mkdir release-artifacts
+      - name: Install Release
+        shell: bash
+        run: |
+            pushd BUILD_RELEASE
+            cmake --install . --prefix ./${{ env.REPO_NAME }}-release --config Release
+            popd
+
+      - name: Create zip
+        shell: bash
+        run: |
+            pushd BUILD_RELEASE
+            zip -r ../${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip ${{ env.REPO_NAME }}-release
+            popd
+      - name: Upload windows release
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}
+          path: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip
