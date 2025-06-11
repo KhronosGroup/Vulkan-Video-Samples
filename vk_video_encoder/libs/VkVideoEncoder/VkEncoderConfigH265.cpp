@@ -529,11 +529,7 @@ bool EncoderConfigH265::GetRateControlParameters(VkVideoEncodeRateControlInfoKHR
                                                  VkVideoEncodeH265RateControlInfoKHR *rcInfoH265,
                                                  VkVideoEncodeH265RateControlLayerInfoKHR *rcLayerInfoH265)
 {
-    if (rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR) {
-        rcInfo->rateControlMode = VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR;
-    } else {
-        rcInfo->rateControlMode = rateControlMode;
-    }
+    rcInfo->rateControlMode = rateControlMode;
 
     pRcLayerInfo->frameRateNumerator = frameRateNumerator;
     pRcLayerInfo->frameRateDenominator = frameRateDenominator;
