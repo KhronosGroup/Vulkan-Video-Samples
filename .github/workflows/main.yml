@@ -23,12 +23,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
       - name: Install clang-format
         run: |
           sudo apt update
           sudo apt install --assume-yes clang-format
 
-      - name: Check code formatting
+      - name: Run pre-commit
         run: |
           # Determine the base reference for comparison
           if [ "${{ github.event_name }}" == "pull_request" ]; then
@@ -37,33 +45,8 @@ jobs:
             BASE_REF="origin/main"
           fi
 
-          echo "Comparing against: $BASE_REF"
-
-          # Get files to check (same logic as check_code_format.sh)
-          FILES_TO_CHECK=$(git diff --name-only $BASE_REF | grep -v -E "^include/vulkan" | grep -E ".*\.(cpp|cc|c\+\+|cxx|c|h|hpp)$" || true)
-
-          if [ -z "$FILES_TO_CHECK" ]; then
-            echo "✅ No source code to check for formatting."
-            exit 0
-          fi
-
-          echo "Files to check:"
-          echo "$FILES_TO_CHECK"
-
-          # Run clang-format-diff.py (same as check_code_format.sh)
-          FORMAT_DIFF=$(git diff -U0 $BASE_REF -- $FILES_TO_CHECK | python3 ./scripts/clang-format-diff.py -p1 -style=file)
-
-          if [ -z "$FORMAT_DIFF" ]; then
-            echo "✅ All source code in commit is properly formatted."
-            exit 0
-          else
-            echo "❌ Found formatting errors!"
-            echo "$FORMAT_DIFF"
-            echo ""
-            echo "Please run the following command to fix formatting:"
-            echo "git diff -U0 $BASE_REF -- $FILES_TO_CHECK | python3 ./scripts/clang-format-diff.py -p1 -style=file -i"
-            exit 1
-          fi
+          echo "Running pre-commit from $BASE_REF to HEAD"
+          pre-commit run --from-ref $BASE_REF --to-ref HEAD
 
   Vulkan-Video-Samples-linux:
     strategy:
