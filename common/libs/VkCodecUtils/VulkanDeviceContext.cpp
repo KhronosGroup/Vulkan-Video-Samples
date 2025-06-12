@@ -585,6 +585,13 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const uint8_t
                 if (dumpQueues) std::cout << "\t Found compute queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
             }
 
+            if ((requestQueueTypes & VK_QUEUE_TRANSFER_BIT) && (transferQueueFamily < 0) &&
+                    (queueFamilyFlags & VK_QUEUE_TRANSFER_BIT)) {
+                transferQueueFamily = i;
+                foundQueueTypes |= queueFamilyFlags;
+                if (dumpQueues) std::cout << "\t Found transfer queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
+            }
+
             // present queue must support the surface
             if ((pWsiDisplay != nullptr) &&
                     (presentQueueFamily < 0) && pWsiDisplay->PhysDeviceCanPresent(physicalDevice, i)) {
@@ -809,7 +816,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
         GetDeviceQueue(m_device, GetPresentQueueFamilyIdx(), 0, &m_presentQueue);
     }
     if (createTransferQueue) {
-        GetDeviceQueue(m_device, GetTransferQueueFamilyIdx(), 0, &m_trasferQueue);
+        GetDeviceQueue(m_device, GetTransferQueueFamilyIdx(), 0, &m_transferQueue);
     }
     if (numDecodeQueues) {
         assert(GetVideoDecodeQueueFamilyIdx() != -1);
@@ -859,7 +866,7 @@ VulkanDeviceContext::VulkanDeviceContext()
     , m_device()
     , m_gfxQueue()
     , m_computeQueue()
-    , m_trasferQueue()
+    , m_transferQueue()
     , m_presentQueue()
     , m_debugReport()
     , m_reqInstanceLayers()
