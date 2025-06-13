@@ -328,6 +328,7 @@ public:
         const uint8_t* readImagePtr = srcImageDeviceMemory->GetReadOnlyDataPtr(imageOffset, maxSize);
         assert(readImagePtr != nullptr);
 
+        int32_t secondaryPlaneWidth = frameWidth;
         int32_t secondaryPlaneHeight = frameHeight;
         int32_t imageHeight = frameHeight;
         bool isUnnormalizedRgba = false;
@@ -335,8 +336,11 @@ public:
             isUnnormalizedRgba = true;
         }
 
+        if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledX) {
+            secondaryPlaneWidth = (secondaryPlaneWidth + 1) / 2;
+        }
         if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledY) {
-            secondaryPlaneHeight /= 2;
+            secondaryPlaneHeight = (secondaryPlaneHeight + 1) / 2;
         }
 
         VkImageSubresource subResource = {};
@@ -381,15 +385,9 @@ public:
         yuvPlaneLayouts[0].offset = 0;
         yuvPlaneLayouts[0].rowPitch = frameWidth * bytesPerPixel;
         yuvPlaneLayouts[1].offset = yuvPlaneLayouts[0].rowPitch * frameHeight;
-        yuvPlaneLayouts[1].rowPitch = frameWidth * bytesPerPixel;
-        if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledX) {
-            yuvPlaneLayouts[1].rowPitch /= 2;
-        }
+        yuvPlaneLayouts[1].rowPitch = secondaryPlaneWidth * bytesPerPixel;
         yuvPlaneLayouts[2].offset = yuvPlaneLayouts[1].offset + (yuvPlaneLayouts[1].rowPitch * secondaryPlaneHeight);
-        yuvPlaneLayouts[2].rowPitch = frameWidth * bytesPerPixel;
-        if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledX) {
-            yuvPlaneLayouts[2].rowPitch /= 2;
-        }
+        yuvPlaneLayouts[2].rowPitch = secondaryPlaneWidth * bytesPerPixel;
 
         // Copy the luma plane
         const uint32_t numCompatiblePlanes = 1;
@@ -410,7 +408,7 @@ public:
         for (uint32_t plane = numCompatiblePlanes; plane < numPlanes; plane++) {
             const uint32_t srcPlane = std::min(plane, mpInfo->planesLayout.numberOfExtraPlanes);
             uint8_t* pDst = pOutBuffer + yuvPlaneLayouts[plane].offset;
-            const int32_t planeWidth = mpInfo->planesLayout.secondaryPlaneSubsampledX ? frameWidth / 2 : frameWidth;
+            const int32_t planeWidth = mpInfo->planesLayout.secondaryPlaneSubsampledX ? (frameWidth + 1) / 2 : frameWidth;
 
             for (int32_t height = 0; height < secondaryPlaneHeight; height++) {
                 const uint8_t* pSrc;

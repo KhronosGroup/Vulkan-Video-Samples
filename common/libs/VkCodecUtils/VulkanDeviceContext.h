@@ -24,6 +24,7 @@
 #include <vulkan_interfaces.h>
 #include <VkCodecUtils/HelpersDispatchTable.h>
 #include "VkShell/VkWsiDisplay.h"
+#include "VkCodecUtils/VulkanSemaphoreDump.h"
 
 class VulkanDeviceContext : public vk::VkInterfaceFunctions {
 
@@ -49,6 +50,21 @@ public:
         MAX_QUEUE_INSTANCES = 8,
         MAX_QUEUE_FAMILIES = 6, // Gfx, Present, Compute, Transfer, Decode, Encode
     };
+
+    static const VkVideoCodecOperationFlagsKHR VIDEO_CODEC_OPERATIONS_DECODE =
+        VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR |
+        VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR |
+        VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR |
+        VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR;
+
+    static const VkVideoCodecOperationFlagsKHR VIDEO_CODEC_OPERATIONS_ENCODE =
+        VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR |
+        VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
+        VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR;
+
+    static const VkVideoCodecOperationFlagsKHR VIDEO_CODEC_OPERATIONS_ALL =
+        VIDEO_CODEC_OPERATIONS_DECODE |
+        VIDEO_CODEC_OPERATIONS_ENCODE;
 
     VulkanDeviceContext();
 
@@ -157,11 +173,22 @@ public:
     };
 
     VkResult MultiThreadedQueueSubmit(const QueueFamilySubmitType submitType, const int32_t queueIndex,
-                                      uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) const
+                                      uint32_t submitCount, const VkSubmitInfo2KHR* pSubmits, VkFence fence,
+                                      const char* submissionName = nullptr,
+                                      uint64_t decodeEncodeOrder = UINT64_MAX,
+                                      uint64_t displayInputOrder = UINT64_MAX) const
     {
         MtQueueMutex queue(this, submitType, queueIndex);
         if (queue) {
-            return QueueSubmit(queue, submitCount, pSubmits, fence);
+
+            // Dump semaphore info for debugging
+            if (false) {
+                for (uint32_t i = 0; i < submitCount; i++) {
+                    VulkanSemaphoreDump::DumpSemaphoreInfo(pSubmits[i], submissionName, decodeEncodeOrder, displayInputOrder);
+                }
+            }
+
+            return QueueSubmit2KHR(queue, submitCount, pSubmits, fence);
         } else {
             return VK_ERROR_INITIALIZATION_FAILED;
         }
@@ -218,6 +245,7 @@ public:
 
     VkResult InitVulkanDecoderDevice(const char * pAppName,
                                      VkInstance vkInstance = VK_NULL_HANDLE,
+                                     VkVideoCodecOperationFlagsKHR videoCodecs = VIDEO_CODEC_OPERATIONS_ALL,
                                      bool enableWsi = false,
                                      bool enableWsiDirectMode = false,
                                      bool enableValidation = false,
@@ -231,6 +259,7 @@ public:
     VkResult AddReqInstanceExtension(const char* requiredInstanceExtension, bool verbose = false);
     VkResult CheckAllInstanceExtensions(bool verbose = false);
     VkResult AddReqDeviceExtensions(const char* const* requiredDeviceExtensions, bool verbose = false);
+    VkResult AddReqDeviceExtension(const char* requiredDeviceExtension, bool verbose = false);
     VkResult AddOptDeviceExtensions(const char* const* optionalDeviceExtensions, bool verbose = false);
     bool HasAllDeviceExtensions(VkPhysicalDevice physDevice, const char* printMissingDeviceExt = nullptr);
 
@@ -248,26 +277,16 @@ public:
                                 const VkQueueFlags requestVideoDecodeQueueMask = VK_QUEUE_VIDEO_DECODE_BIT_KHR |
                                                                                  VK_QUEUE_TRANSFER_BIT,
                                 const VkVideoCodecOperationFlagsKHR requestVideoDecodeQueueOperations =
-                                                                  (VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR |
-                                                                   VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR |
-                                                                   VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR),
+                                                                  VIDEO_CODEC_OPERATIONS_DECODE,
                                 const VkQueueFlags requestVideoEncodeQueueMask = VK_QUEUE_VIDEO_ENCODE_BIT_KHR |
                                                                                  VK_QUEUE_TRANSFER_BIT,
                                 const VkVideoCodecOperationFlagsKHR requestVideoEncodeQueueOperations =
-                                                                  (VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR |
-                                                                   VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
-                                                                   VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR),
+                                                                  VIDEO_CODEC_OPERATIONS_ENCODE,
                                 VkPhysicalDevice vkPhysicalDevice = VK_NULL_HANDLE);
 
     VkResult CreateVulkanDevice(int32_t numDecodeQueues = 1,
                                 int32_t numEncodeQueues = 0,
-                                VkVideoCodecOperationFlagsKHR videoCodecs =
-                                        (VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR  |
-                                          VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR |
-                                          VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) |
-                                        (VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR  |
-                                          VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
-                                          VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR),
+                                VkVideoCodecOperationFlagsKHR videoCodecs = VIDEO_CODEC_OPERATIONS_ALL,
                                 bool createTransferQueue = false,
                                 bool createGraphicsQueue = false,
                                 bool createPresentQueue = false,
