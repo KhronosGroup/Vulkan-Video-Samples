@@ -1,4 +1,4 @@
-name: "vk_video_samples native build"
+name: "Vulkan-Video-Samples native build"
 run-name: Native build by ${{ github.actor }}
 on:
   workflow_dispatch:
@@ -10,11 +10,11 @@ on:
     branches:
       - main
 env:
-  REPO_NAME: vk_video_samples
+  REPO_NAME: Vulkan-Video-Samples
   BUILD_JOBS: 16
 
 jobs:
-  vk_video_samples-linux:
+  Vulkan-Video-Samples-linux:
     strategy:
       matrix:
         platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86]
@@ -98,7 +98,7 @@ jobs:
           name: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}
           path: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip
 
-  vk_video_samples-win:
+  Vulkan-Video-Samples-win:
     strategy:
       matrix:
         platform: [windows-x64, windows-x64-ffmpeg, win-arm64]

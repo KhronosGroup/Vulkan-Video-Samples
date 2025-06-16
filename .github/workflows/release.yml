@@ -7,8 +7,8 @@ on:
 
 name: Create Release
 env:
-  REPO_NAME: vk_video_samples
-  PRETTY_NAME: vk_video_samples
+  REPO_NAME: Vulkan-Video-Samples
+  PRETTY_NAME: Vulkan-Video-Samples
 jobs:
   build-release:
     name: Build release
