@@ -54,7 +54,7 @@ jobs:
           tag_name: release-${{ github.ref_name }}
           release_name: ${{ env.PRETTY_NAME }} ${{ github.ref_name }}
           body: |
-            ${{ env.PRETTY_NAME }}-${{ github.ref_name }} has been released. You can find details [here](https://github.com/dabrain34/${{ env.PRETTY_NAME }}/blob/main/Changelog.md)
+            ${{ env.PRETTY_NAME }}-${{ github.ref_name }} has been released. You can find details [here](https://github.com/KhronosGroup/${{ env.PRETTY_NAME }}/blob/main/Changelog.md)
           draft: false
           prerelease: false
 
