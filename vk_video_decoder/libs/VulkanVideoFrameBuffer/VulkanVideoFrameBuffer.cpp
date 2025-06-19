@@ -929,6 +929,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
                                        const std::array<VulkanVideoFrameBuffer::ImageSpec, DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES>& imageSpecs,
                                        uint32_t                 queueFamilyIndex)
 {
+    VkResult result = VK_SUCCESS;
     if (numImages > m_perFrameDecodeResources.size()) {
         assert(!"Number of requested images exceeds the max size of the image array");
         return -1;
@@ -937,7 +938,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
     m_vkDevCtx = vkDevCtx;
 
     for (uint32_t imageIndex = m_numImages; imageIndex < numImages; imageIndex++) {
-        VkResult result = m_perFrameDecodeResources[imageIndex].init(vkDevCtx);
+        result = m_perFrameDecodeResources[imageIndex].init(vkDevCtx);
         assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             return -1;
@@ -952,11 +953,17 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
     timelineCreateInfo.initialValue = 0ULL;
 
     VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
-    VkResult result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_frameCompleteSemaphore);
+    result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_frameCompleteSemaphore);
     assert(result == VK_SUCCESS);
+    if (result != VK_SUCCESS) {
+        return -1;
+    }
 
     result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_consumerCompleteSemaphore);
     assert(result == VK_SUCCESS);
+    if (result != VK_SUCCESS) {
+        return -1;
+    }
 
     m_videoProfile.InitFromProfile(pDecodeProfile);
 
