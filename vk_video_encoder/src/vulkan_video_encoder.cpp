@@ -152,7 +152,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
     }
 
     // No display presentation and no decoder - just the encoder
-    result = m_vkDevCtxt.InitPhysicalDevice(m_encoderConfig->deviceId, m_encoderConfig->GetDeviceUUID(),
+    result = m_vkDevCtxt.InitPhysicalDevice(m_encoderConfig->deviceId, m_encoderConfig->deviceUUID,
                                             ( requestVideoComputeQueueMask |
                                               requestVideoEncodeQueueMask  |
                                               VK_QUEUE_TRANSFER_BIT),

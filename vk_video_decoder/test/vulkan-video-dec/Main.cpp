@@ -107,7 +107,7 @@ int main(int argc, const char** argv)
             return -1;
         }
 
-        result = vkDevCtxt.InitPhysicalDevice(decoderConfig.deviceId, decoderConfig.GetDeviceUUID(),
+        result = vkDevCtxt.InitPhysicalDevice(decoderConfig.deviceId, decoderConfig.deviceUUID,
                                               (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT |
                                               requestVideoComputeQueueMask |
                                               requestVideoDecodeQueueMask),
@@ -172,7 +172,7 @@ int main(int argc, const char** argv)
 
     } else {
 
-        result = vkDevCtxt.InitPhysicalDevice(decoderConfig.deviceId, decoderConfig.GetDeviceUUID(),
+        result = vkDevCtxt.InitPhysicalDevice(decoderConfig.deviceId, decoderConfig.deviceUUID,
                                               (VK_QUEUE_TRANSFER_BIT        |
                                                requestVideoDecodeQueueMask  |
                                                requestVideoComputeQueueMask),

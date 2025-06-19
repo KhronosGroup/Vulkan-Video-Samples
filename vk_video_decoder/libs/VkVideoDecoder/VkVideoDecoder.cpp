@@ -320,6 +320,8 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                 numDecodeSurfaces + 1,
                                                 inputFormat,
                                                 outputFormat,
+                                                false, // inputEnableMsbToLsbShift
+                                                false, // outputEnableLsbToMsbShift
                                                 &ycbcrConversionCreateInfo,
                                                 &ycbcrPrimariesConstants,
                                                 &samplerInfo,
@@ -1198,7 +1200,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         waitSemaphoreInfos[waitSemaphoreCount].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].pNext = nullptr;
         waitSemaphoreInfos[waitSemaphoreCount].semaphore = m_hwLoadBalancingTimelineSemaphore;
-        waitSemaphoreInfos[waitSemaphoreCount].value = m_decodePicCount - 1; // wait for the previous value to be signaled
+        waitSemaphoreInfos[waitSemaphoreCount].value = m_decodePicCount; // wait for the current value to be signaled
         waitSemaphoreInfos[waitSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].deviceIndex = 0;
         waitSemaphoreCount++;
@@ -1206,13 +1208,10 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         signalSemaphoreInfos[signalSemaphoreCount].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
         signalSemaphoreInfos[signalSemaphoreCount].pNext = nullptr;
         signalSemaphoreInfos[signalSemaphoreCount].semaphore = m_hwLoadBalancingTimelineSemaphore;
-        signalSemaphoreInfos[signalSemaphoreCount].value = m_decodePicCount; // signal the current m_decodePicCount value
+        signalSemaphoreInfos[signalSemaphoreCount].value = m_decodePicCount + 1; // signal the future m_decodePicCount value
         signalSemaphoreInfos[signalSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
         signalSemaphoreInfos[signalSemaphoreCount].deviceIndex = 0;
         signalSemaphoreCount++;
-
-        assert(waitSemaphoreCount < waitSemaphoreMaxCount);
-        assert(signalSemaphoreCount < signalSemaphoreMaxCount);
     }
 
     assert(waitSemaphoreCount <= waitSemaphoreMaxCount);
@@ -1277,7 +1276,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
        const bool waitOnTlSemaphore = false;
        if (waitOnTlSemaphore) {
-           uint64_t value = m_decodePicCount;
+           uint64_t value = m_decodePicCount + 1; // wait on the future m_decodePicCount
            VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, nullptr, VK_SEMAPHORE_WAIT_ANY_BIT, 1,
                                         &m_hwLoadBalancingTimelineSemaphore, &value };
            std::cout << "\t TL semaphore wait for value: " << value << std::endl;
@@ -1476,8 +1475,10 @@ VkDeviceSize VkVideoDecoder::GetBitstreamBuffer(VkDeviceSize size,
     }
     bitstreamBuffer = newBitstreamBuffer;
     if (newSize > m_maxStreamBufferSize) {
-        std::cout << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
+        std::cout << "\nRe-allocated bitstream buffer with size " << newSize << " B, " <<
                              newSize/1024 << " KB, " << newSize/1024/1024 << " MB" << std::endl;
+        std::cout << "Previously set max bitstream buffer size was " << m_maxStreamBufferSize << " B, " <<
+                m_maxStreamBufferSize/1024 << " KB, " << m_maxStreamBufferSize/1024/1024 << " MB" << std::endl;
         m_maxStreamBufferSize = newSize;
     }
     return bitstreamBuffer->GetMaxSize();
