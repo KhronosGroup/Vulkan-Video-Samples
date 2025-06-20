@@ -125,7 +125,12 @@ VkResult EncoderConfigH265::InitDeviceCapabilities(const VulkanDeviceContext* vk
         rateControlMode = qualityLevelProperties.preferredRateControlMode;
     }
     if (gopStructure.GetGopFrameCount() == ZERO_GOP_FRAME_COUNT) {
-        gopStructure.SetGopFrameCount(h265QualityLevelProperties.preferredGopFrameCount);
+        if(h265QualityLevelProperties.preferredGopFrameCount == ZERO_GOP_FRAME_COUNT) {
+            std::cerr << "FIXME: the preferred GOP frame count supported by this device is 0. Using the maximum GOP frame count value." << std::endl;
+            gopStructure.SetGopFrameCount(UINT8_MAX);
+        } else {
+            gopStructure.SetGopFrameCount(h265QualityLevelProperties.preferredGopFrameCount);
+        }
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(h265QualityLevelProperties.preferredIdrPeriod);
