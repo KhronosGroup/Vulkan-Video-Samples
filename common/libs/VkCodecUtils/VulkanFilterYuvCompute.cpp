@@ -14,7 +14,6 @@
 * limitations under the License.
 */
 
-
 #include "VulkanFilterYuvCompute.h"
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
 
