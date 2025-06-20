@@ -14,8 +14,11 @@ Currently, the sample application supports Linux and Windows10 operating systems
 
 Features
 ========
-
-- [x] Extracts (DEMUX via FFMPEG) compressed video from .mp4, .mkv, .mov and others video containers using h.264 (AVC), h.265 (HEVC) or AV1 compression formats.
+- [x] Support for h.264 standard
+- [x] Support for h.265 standard
+- [x] Support for av1 standard
+- [x] Support for vp9 standard
+- [x] Extracts (DEMUX via FFMPEG) compressed video from .mp4, .mkv, .mov and others video containers.
 - [x] The HW video decoder processes textures to Vulkan Video Images that can be directly sampled from Vulkan Samplers (Textures).
 - [x] Converts the YCbCr (YUV) Images to RGB while sampling the decoded images using the [VK_KHR_sampler_ycbcr_conversion](https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_KHR_sampler_ycbcr_conversion.html)
 - [x] Displays the post-processed video frames using Vulkan WSI.
@@ -41,7 +44,6 @@ Currently, the sample application supports Linux and Windows operating systems.
 Features
 ========
 
-- [x] Video encoding using h.264 standard
 - [x] Support for all-Intra GOP structure
 - [x] Support for P frames
 - [x] Support for B frames
