@@ -125,7 +125,8 @@ VkResult EncoderConfigH265::InitDeviceCapabilities(const VulkanDeviceContext* vk
         rateControlMode = qualityLevelProperties.preferredRateControlMode;
     }
     if (gopStructure.GetGopFrameCount() == ZERO_GOP_FRAME_COUNT) {
-        gopStructure.SetGopFrameCount(h265QualityLevelProperties.preferredGopFrameCount);
+        gopStructure.SetGopFrameCount(h265QualityLevelProperties.preferredGopFrameCount ?
+            h265QualityLevelProperties.preferredGopFrameCount : UINT8_MAX);
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(h265QualityLevelProperties.preferredIdrPeriod);

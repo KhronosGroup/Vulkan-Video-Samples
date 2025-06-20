@@ -251,7 +251,8 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
         rateControlMode = qualityLevelProperties.preferredRateControlMode;
     }
     if (gopStructure.GetGopFrameCount() == ZERO_GOP_FRAME_COUNT) {
-        gopStructure.SetGopFrameCount(av1QualityLevelProperties.preferredGopFrameCount);
+        gopStructure.SetGopFrameCount(av1QualityLevelProperties.preferredGopFrameCount ?
+            av1QualityLevelProperties.preferredGopFrameCount : UINT8_MAX);
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(av1QualityLevelProperties.preferredKeyFramePeriod);
