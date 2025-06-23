@@ -47,7 +47,42 @@ include_directories(BEFORE ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT})
 add_library(${VULKAN_VIDEO_PARSER_LIB} SHARED ${LIBNVPARSER})
 add_library(${VULKAN_VIDEO_PARSER_STATIC_LIB} STATIC ${LIBNVPARSER})
 
-if ((CMAKE_GENERATOR_PLATFORM MATCHES "^aarch64") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^arm64") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^ARM64"))
+# Architecture detection for proper cross-compilation
+if(CMAKE_CROSSCOMPILING)
+  # When cross-compiling, CMAKE_SYSTEM_PROCESSOR contains the target architecture
+  set(TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+else()
+  # When not cross-compiling, use CMAKE_HOST_SYSTEM_PROCESSOR
+  set(TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
+endif()
+
+# Also check compiler-defined macros for better detection
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+  #if defined(__aarch64__) || defined(_M_ARM64)
+  int main() { return 0; }
+  #else
+  #error Not AArch64
+  #endif
+" IS_AARCH64)
+
+check_cxx_source_compiles("
+  #if defined(__arm__) || defined(_M_ARM)
+  int main() { return 0; }
+  #else
+  #error Not ARM
+  #endif
+" IS_ARM)
+
+check_cxx_source_compiles("
+  #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+  int main() { return 0; }
+  #else
+  #error Not x86
+  #endif
+" IS_X86)
+
+if (IS_AARCH64 OR (CMAKE_GENERATOR_PLATFORM MATCHES "^aarch64") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^arm64") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^ARM64"))
   MESSAGE(STATUS "Parser optimization for ARM64 ${CMAKE_SYSTEM_PROCESSOR}")
   if(WIN32)
     MESSAGE(STATUS "Parser optimizations selected for WIN32 armv8.0 and armv8.0+sve")
@@ -76,7 +111,7 @@ if ((CMAKE_GENERATOR_PLATFORM MATCHES "^aarch64") OR (CMAKE_GENERATOR_PLATFORM M
     target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_neon next_start_code_sve)
     target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_neon next_start_code_sve)
   endif()
-elseif ((CMAKE_GENERATOR_PLATFORM MATCHES "^arm") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^ARM"))
+elseif (IS_ARM OR (CMAKE_GENERATOR_PLATFORM MATCHES "^arm") OR (CMAKE_GENERATOR_PLATFORM MATCHES "^ARM"))
   MESSAGE(STATUS "Parser optimization for ARM ${CMAKE_SYSTEM_PROCESSOR}")
   if(WIN32)
     MESSAGE(STATUS "Parser optimizations selected for WIN32 VFPv4")
@@ -93,7 +128,7 @@ elseif ((CMAKE_GENERATOR_PLATFORM MATCHES "^arm") OR (CMAKE_GENERATOR_PLATFORM M
   MESSAGE(STATUS "Parser optimizations linking ARM next_start_code_c next_start_code_neon")
   target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_neon)
   target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_neon)
-else()
+elseif (IS_X86)
   MESSAGE(STATUS "Parser optimization for X86 ${CMAKE_SYSTEM_PROCESSOR}")
   if(WIN32)
     MESSAGE(STATUS "Parser optimizations selected for WIN32 SSE2 AVX2")
@@ -114,15 +149,38 @@ else()
   add_library(next_start_code_avx2 OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeAVX2.cpp include)
   set_target_properties(next_start_code_avx2 PROPERTIES COMPILE_FLAGS ${AVX2_CPU_FEATURE} )
   target_include_directories(next_start_code_avx2 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  add_library(next_start_code_avx512 OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeAVX512.cpp include)
-  MESSAGE(STATUS "Parser optimizations adding x86 NextStartCodeSSSE3.cpp NextStartCodeAVX2.cpp NextStartCodeAVX512.cpp")
+  # Check if compiler supports AVX512 before trying to use it
   if(NOT WIN32)
-    set_target_properties(next_start_code_avx512 PROPERTIES COMPILE_FLAGS ${AVX512_CPU_FEATURE} )
+    include(CheckCXXCompilerFlag)
+    check_cxx_compiler_flag("-mavx512f -mavx512bw" COMPILER_SUPPORTS_AVX512)
+    if(COMPILER_SUPPORTS_AVX512)
+      add_library(next_start_code_avx512 OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeAVX512.cpp include)
+      set_target_properties(next_start_code_avx512 PROPERTIES COMPILE_FLAGS ${AVX512_CPU_FEATURE} )
+      target_include_directories(next_start_code_avx512 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+      MESSAGE(STATUS "Parser optimizations linking x86 next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512")
+      target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512)
+      target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512)
+    else()
+      MESSAGE(STATUS "Compiler doesn't support AVX512, falling back to AVX2")
+      MESSAGE(STATUS "Parser optimizations linking x86 next_start_code_c next_start_code_ssse3 next_start_code_avx2")
+      target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2)
+      target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2)
+    endif()
+  else()
+    # Windows doesn't use AVX512 flags
+    add_library(next_start_code_avx512 OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeAVX512.cpp include)
+    target_include_directories(next_start_code_avx512 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    MESSAGE(STATUS "Parser optimizations linking x86 next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512")
+    target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512)
+    target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512)
   endif()
-  target_include_directories(next_start_code_avx512 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  MESSAGE(STATUS "Parser optimizations linking x86 next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512")
-  target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512)
-  target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512)
+else()
+  # Fallback for other architectures (RISC-V, PowerPC, etc.)
+  MESSAGE(STATUS "Parser optimization fallback for unknown architecture ${CMAKE_SYSTEM_PROCESSOR}")
+  add_library(next_start_code_c OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeC.cpp include)
+  target_include_directories(next_start_code_c PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c)
+  target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c)
 endif()
 
 target_include_directories(${VULKAN_VIDEO_PARSER_LIB} PUBLIC ${VULKAN_VIDEO_PARSER_INCLUDE} ${VULKAN_VIDEO_PARSER_INCLUDE}/../NvVideoParser PRIVATE include)
