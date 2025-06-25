@@ -1,6 +1,6 @@
 # Vulkan-Video-Samples
 
-This project contains two Vulkan Video samples applications which demonstrate video decoding and encoding, respectively. Instructions on how to build either the encoder or decoder sample are present within the root folder.
+This project contains two Vulkan Video sample applications which demonstrate video decoding and encoding, respectively. Instructions on how to build either the encoder or decoder sample are present within the root folder.
 
 ## VK_VIDEO_DECODE
 
