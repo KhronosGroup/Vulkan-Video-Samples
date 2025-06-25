@@ -47,16 +47,7 @@ include_directories(BEFORE ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT})
 add_library(${VULKAN_VIDEO_PARSER_LIB} SHARED ${LIBNVPARSER})
 add_library(${VULKAN_VIDEO_PARSER_STATIC_LIB} STATIC ${LIBNVPARSER})
 
-# Architecture detection for proper cross-compilation
-if(CMAKE_CROSSCOMPILING)
-  # When cross-compiling, CMAKE_SYSTEM_PROCESSOR contains the target architecture
-  set(TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
-else()
-  # When not cross-compiling, use CMAKE_HOST_SYSTEM_PROCESSOR
-  set(TARGET_ARCH ${CMAKE_SYSTEM_PROCESSOR})
-endif()
-
-# Also check compiler-defined macros for better detection
+# Check compiler-defined macros for architecture detection
 include(CheckCXXSourceCompiles)
 check_cxx_source_compiles("
   #if defined(__aarch64__) || defined(_M_ARM64)
@@ -175,8 +166,8 @@ elseif (IS_X86)
     target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_ssse3 next_start_code_avx2 next_start_code_avx512)
   endif()
 else()
-  # Fallback for other architectures (RISC-V, PowerPC, etc.)
-  MESSAGE(STATUS "Parser optimization fallback for unknown architecture ${CMAKE_SYSTEM_PROCESSOR}")
+  # Fallback for non-x86/ARM architectures (RISC-V, PowerPC, MIPS, etc.)
+  MESSAGE(STATUS "Parser optimization: Using generic C implementation for ${CMAKE_SYSTEM_PROCESSOR} architecture")
   add_library(next_start_code_c OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeC.cpp include)
   target_include_directories(next_start_code_c PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
   target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c)
