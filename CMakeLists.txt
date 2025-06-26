@@ -159,6 +159,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}
     ${VULKAN_HEADERS_INCLUDE_DIR}
+    ${SHADERC_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIR}
 )
 
