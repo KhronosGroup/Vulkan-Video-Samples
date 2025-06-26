@@ -174,8 +174,7 @@ else()
     endif()
 
     find_path(SHADERC_INCLUDE_DIR NAMES shaderc/shaderc.h PATHS "${CMAKE_BINARY_DIR}/_deps/shaderc-src/libshaderc/include" NO_DEFAULT_PATH)
-    message(STATUS "shaderc inlcude directory: " ${SHADERC_INCLUDE_DIR})
-    include_directories(${SHADERC_INCLUDE_DIR})
+    message(STATUS "shaderc include directory: " ${SHADERC_INCLUDE_DIR})
 
     # After all the FetchContent_MakeAvailable calls and dependencies setup, add:
     if(WIN32)
@@ -254,7 +253,6 @@ endif()
 if(SHADERC_INCLUDE_DIR AND SHADERC_LIBRARY)
     message(STATUS "Found Shaderc: ${SHADERC_LIBRARY}")
     message(STATUS "Shaderc include: ${SHADERC_INCLUDE_DIR}")
-    include_directories(${SHADERC_INCLUDE_DIR})
 else()
     message(FATAL_ERROR "Could not find or build Shaderc")
 endif()
