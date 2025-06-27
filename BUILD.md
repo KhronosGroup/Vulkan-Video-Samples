@@ -78,9 +78,9 @@ Windows 10 or Windows 11 with the following software packages:
 For Debug build:
 ```bash
 For X86_64 based platforms:
-  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=x64 -DCMAKE_INSTALL_PREFIX="$(PWD)/build/install/Debug" -DCMAKE_BUILD_TYPE=Debug
+  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=x64 -DCMAKE_INSTALL_PREFIX="./build/install/Debug" -DCMAKE_BUILD_TYPE=Debug
 For ARM64 based platforms:
-  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=ARM64 -DCMAKE_INSTALL_PREFIX="$(PWD)/build/install/Debug" -DCMAKE_BUILD_TYPE=Debug
+  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=ARM64 -DCMAKE_INSTALL_PREFIX="./build/install/Debug" -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --parallel 16 --config Debug
 cmake --build build --config Debug --target INSTALL
 ```
@@ -107,7 +107,7 @@ This repository has been tested on recent Ubuntu LTS versions. Minimum requireme
 Required packages:
 ```bash
 sudo apt-get install git cmake build-essential libx11-xcb-dev libxkbcommon-dev \
-    libmirclient-dev libwayland-dev libxrandr-dev libavcodec-dev \
+    libwayland-dev libxrandr-dev libavcodec-dev \
     libavformat-dev libavutil-dev ninja-build
 ```
 
