@@ -48,6 +48,12 @@ string(TOLOWER ${API_NAME} API_LOWERCASE)
 
 # Include common modules
 include(FindVulkanSDK)
+# Search for Vulkan SDK minimum version
+set (VULKAN_SDK_MIN_MAJOR_VERSION 1)
+set (VULKAN_SDK_MIN_MINOR_VERSION 3)
+set (VULKAN_SDK_MIN_PATCH_VERSION 317)
+FIND_VULKAN_SDK(${VULKAN_SDK_MIN_MAJOR_VERSION} ${VULKAN_SDK_MIN_MINOR_VERSION} ${VULKAN_SDK_MIN_PATCH_VERSION})
+
 include(FindShaderc)
 
 ############ VULKAN_FFMPEG_LIB_PATH ######################################
@@ -153,6 +159,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}
     ${VULKAN_HEADERS_INCLUDE_DIR}
+    ${SHADERC_INCLUDE_DIR}
     ${Vulkan_INCLUDE_DIR}
 )
 
