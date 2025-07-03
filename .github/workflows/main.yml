@@ -17,8 +17,8 @@ jobs:
   Vulkan-Video-Samples-linux:
     strategy:
       matrix:
-        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86]
-    runs-on: ubuntu-22.04
+        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, linux-cross-aarch64]
+    runs-on: ubuntu-24.04
 
     env:
       TERM: dumb
@@ -34,6 +34,15 @@ jobs:
           echo "CXX=c++ -m32" >> $GITHUB_ENV
           echo "ASM=as --32" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig/" >> $GITHUB_ENV
+
+      - name: Set aarch64 environment variables
+        if: matrix.platform == 'linux-cross-aarch64'
+        run: |
+          echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "CXX=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+          echo "AR=aarch64-linux-gnu-ar" >> $GITHUB_ENV
+          echo "STRIP=aarch64-linux-gnu-strip" >> $GITHUB_ENV
+          echo "PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig/:/usr/share/pkgconfig" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -63,12 +72,42 @@ jobs:
           sudo apt install libxrandr-dev:i386
           sudo apt install libvulkan-dev:i386
 
+      - name: Install aarch64 dependencies
+        if: matrix.platform == 'linux-cross-aarch64'
+        run: |
+          sudo tee /etc/apt/sources.list.d/ubuntu.sources > /dev/null <<EOF
+          Types: deb
+          URIs: http://azure.archive.ubuntu.com/ubuntu
+          Suites: noble noble-updates noble-security
+          Components: main restricted universe multiverse
+          Architectures: amd64 i386
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+          Types: deb
+          URIs: http://azure.ports.ubuntu.com/ubuntu-ports
+          Suites: noble noble-updates noble-security
+          Components: main restricted universe multiverse
+          Architectures: arm64
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
+          sudo dpkg --add-architecture arm64
+          sudo apt update
+          sudo apt install crossbuild-essential-arm64
+          sudo apt install libx11-dev:arm64 libwayland-dev:arm64
+          sudo apt install libavformat-dev:arm64
+          sudo apt install libxrandr-dev:arm64
+          sudo apt install libvulkan-dev:arm64
+
       - name: Build debug
         shell: bash
         run: |
           mkdir BUILD_DEBUG
           cd BUILD_DEBUG
-          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          if [ "${{ matrix.platform }}" = "linux-cross-aarch64" ]; then
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 ..
+          else
+            cmake -DCMAKE_BUILD_TYPE=Debug ..
+          fi
           cmake --build . --parallel $BUILD_JOBS --config Debug
 
       - name: Build release
@@ -76,11 +115,15 @@ jobs:
         run: |
           mkdir BUILD_RELEASE
           pushd BUILD_RELEASE
-          cmake -DCMAKE_BUILD_TYPE=Release ..
+          if [ "${{ matrix.platform }}" = "linux-cross-aarch64" ]; then
+            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 ..
+          else
+            cmake -DCMAKE_BUILD_TYPE=Release ..
+          fi
           cmake --build . --parallel $BUILD_JOBS --config Release
           mkdir -p release-artifacts
           popd
-      - name: Build release
+      - name: Install release
         shell: bash
         run: |
           pushd BUILD_RELEASE
