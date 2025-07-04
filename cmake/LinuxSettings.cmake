@@ -96,6 +96,13 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 ${COMMON_COMPILE_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_COMPILE_FLAGS} -std=c++11 -fno-rtti")
 
+    # ARM64 cross-compilation fixes
+    # Fix for "cast from 'void*' to 'uintptr_t' loses precision" error in std::align
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+        message(STATUS "Added -fpermissive flag for ARM64 cross-compilation precision loss fix")
+    endif()
+
     # Visibility flags
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
