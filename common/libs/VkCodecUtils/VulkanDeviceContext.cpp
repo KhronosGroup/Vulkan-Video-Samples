@@ -470,11 +470,11 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
         if (deviceUuid) {
             if (!deviceUuid.Compare( deviceVulkan11Properties.deviceUUID)) {
 
-                vk::DeviceUuidUtils deviceUuid(deviceVulkan11Properties.deviceUUID);
+                vk::DeviceUuidUtils currentDeviceUuid(deviceVulkan11Properties.deviceUUID);
                 std::cout << "*** Skipping vulkan physical device with NOT matching UUID: "
                           << "Device Name: " << devProp2.properties.deviceName << std::hex
                           << ", vendor ID: " << devProp2.properties.vendorID
-                          << ", device UUID: " << deviceUuid.ToString()
+                          << ", device UUID: " << currentDeviceUuid.ToString()
                           << ", and device ID: " << devProp2.properties.deviceID << std::dec
                           << ", Num Decode Queues: " << m_videoDecodeNumQueues
                           << ", Num Encode Queues: " << m_videoEncodeNumQueues
@@ -659,10 +659,10 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
 
                 if (true) {
 
-                    vk::DeviceUuidUtils deviceUuid(deviceVulkan11Properties.deviceUUID);
+                    vk::DeviceUuidUtils currentDeviceUuid(deviceVulkan11Properties.deviceUUID);
                     std::cout << "*** Selected Vulkan physical device with name: " << devProp2.properties.deviceName << std::hex
                               << ", vendor ID: " << devProp2.properties.vendorID
-                              << ", device UUID: " << deviceUuid.ToString()
+                              << ", device UUID: " << currentDeviceUuid.ToString()
                               << ", and device ID: " << devProp2.properties.deviceID << std::dec
                               << ", Num Decode Queues: " << m_videoDecodeNumQueues
                               << ", Num Encode Queues: " << m_videoEncodeNumQueues
