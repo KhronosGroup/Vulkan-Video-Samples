@@ -88,7 +88,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
     }
     virtual ~EncoderConfigAV1() {}
 
-    virtual int DoParseArguments(int argc, char* argv[]) override;
+    virtual int DoParseArguments(int argc, const char* argv[]) override;
 
     virtual VkResult InitializeParameters() override
     {
@@ -157,7 +157,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
             lTier = 0;
         }
 
-        uint32_t minCRBase = lTier ? levelLimits[lLevel].highCR : levelLimits[lLevel].mainCR;
+        double minCRBase = lTier ? levelLimits[lLevel].highCR : levelLimits[lLevel].mainCR;
         double speedAdj = decodeRate / levelLimits[lLevel].maxDisplayRate;
 
         return std::max(minCRBase * speedAdj, 0.8);
