@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #define VKVS_VERSION_MAJOR 0
-#define VKVS_VERSION_MINOR 1
+#define VKVS_VERSION_MINOR 3
 #define VKVS_VERSION_PATCH 0
 
 #define _STR(x) #x

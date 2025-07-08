@@ -56,6 +56,7 @@ Features
 - [x] Better Support for rate control
 - [x] Support for multi-threaded encoding
 - [x] Tested 10-bit encoding
+- [x] Support of intra-refresh extension for h264, h265 and AV1
 
 For instructions on how to build the sample decode application, please see [the build instructions.](https://github.com/KhronosGroup/Vulkan-Video-Samples/blob/main/BUILD.md)
 
