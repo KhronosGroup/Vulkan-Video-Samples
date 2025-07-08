@@ -1,4 +1,4 @@
-MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_version)
+MACRO(FIND_VULKAN_HEADERS VK_MINIMUM_MAJOR_VERSION VK_MINIMUM_MINOR_VERSION VK_MINIMUM_PATCH_VERSION)
     # Download and make the Vulkan Headers first before find_package because otherwise
     # it will fait with:
     # add_library cannot create ALIAS target "Vulkan::Headers" because another
@@ -10,10 +10,6 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
         GIT_TAG main
     )
     FetchContent_MakeAvailable(vulkan-headers)
-
-    set (VK_MINIMUM_MAJOR_VERSION ${minimum_major_version})
-    set (VK_MINIMUM_MINOR_VERSION ${minimum_minor_version})
-    set (VK_MINIMUM_PATCH_VERSION ${minimum_patch_version})
 
     # Find Vulkan SDK
     if(WIN32)
@@ -31,10 +27,8 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
 
             # Additional Vulkan-related variables
             set(VULKAN_LIBRARIES ${Vulkan_LIBRARIES})
-
+            message(STATUS "Vulkan SDK found")
             message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
-        else()
-            message(STATUS "Vulkan SDK not found. Will fetch and build required version.")
         endif()
     endif()
 
@@ -73,20 +67,26 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
         set(USE_SYSTEM_VULKAN OFF)
     endif()
 
-    # Optional: Find other dependencies like SPIRV-Tools if needed
+    if (NOT USE_SYSTEM_VULKAN)
+        # Set Vulkan headers path (we are using the downloaded headers)
+        message(STATUS "Vulkan SDK not found or version is too old. Will use Vulkan Headers from source")
+        set(VULKAN_HEADERS_INCLUDE_DIR ${vulkan-headers_SOURCE_DIR}/include CACHE PATH "Path to Vulkan include headers directory" FORCE)
+        message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+    endif()
+ENDMACRO(FIND_VULKAN_HEADERS)
 
-    if(USE_SYSTEM_VULKAN)
+
+MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_version)
+
+    FIND_VULKAN_HEADERS(${minimum_major_version} ${minimum_minor_version} ${minimum_patch_version})
+
+    if(USE_SYSTEM_VULKAN OR Vulkan_FOUND)
         # Use system Vulkan
         message(STATUS "Using system Vulkan SDK")
         get_filename_component(VULKAN_LIB_DIR "${Vulkan_LIBRARIES}" DIRECTORY)
     else()
-        # Fetch the latest Vulkan headers
-        message(STATUS "Building Vulkan components from source")
-
-        set(Vulkan_INCLUDE_DIR ${vulkan-headers_SOURCE_DIR}/include CACHE PATH "Path to Vulkan include headers directory" FORCE)
-        set(VULKAN_HEADERS_INCLUDE_DIR ${vulkan-headers_SOURCE_DIR}/include CACHE PATH "Path to Vulkan local include headers directory" FORCE)
         # Fetch and build our own Vulkan components
-        message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+        message(STATUS "Building Vulkan loader from source")
 
         # Set Vulkan Loader options to disable tests
         set(BUILD_TESTS OFF CACHE BOOL "Disable Vulkan-Loader tests" FORCE)
