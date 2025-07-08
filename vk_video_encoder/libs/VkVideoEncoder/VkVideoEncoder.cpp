@@ -646,7 +646,7 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
 
 VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConfig)
 {
-
+    VkResult result;
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
                                                        m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                        encoderConfig->codec)) {
@@ -800,7 +800,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     VkFormat supportedDpbFormats[8];
     VkFormat supportedInFormats[8];
     uint32_t formatCount = sizeof(supportedDpbFormats) / sizeof(supportedDpbFormats[0]);
-    VkResult result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
+    result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
                                                                VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR,
                                                                formatCount, supportedDpbFormats);
 
@@ -1032,7 +1032,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         createInfo.pNext = &timelineCreateInfo;
         createInfo.flags = 0;
 
-        VkResult result = m_vkDevCtx->CreateSemaphore(*m_vkDevCtx, &createInfo, NULL, &m_hwLoadBalancingTimelineSemaphore);
+        result = m_vkDevCtx->CreateSemaphore(*m_vkDevCtx, &createInfo, NULL, &m_hwLoadBalancingTimelineSemaphore);
         if (result == VK_SUCCESS) {
             m_currentVideoQueueIndx = 0; // start with index zero
         }

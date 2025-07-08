@@ -1019,10 +1019,10 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
 
         if (usesImageArray) {
             // Create an image that has the same number of layers as the DPB images required.
-            VkResult result = VkImageResource::Create(vkDevCtx,
-                                                      &m_imageSpecs[imageTypeIdx].createInfo,
-                                                      m_imageSpecs[imageTypeIdx].memoryProperty,
-                                                      m_imageSpecs[imageTypeIdx].imageArray);
+            result = VkImageResource::Create(vkDevCtx,
+                                             &m_imageSpecs[imageTypeIdx].createInfo,
+                                             m_imageSpecs[imageTypeIdx].memoryProperty,
+                                             m_imageSpecs[imageTypeIdx].imageArray);
             if (result != VK_SUCCESS) {
                 return -1;
             }
@@ -1035,9 +1035,9 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
             // Create an image view that has the same number of layers as the image.
             // In that scenario, while specifying the resource, the API must specifically choose the image layer.
             VkImageSubresourceRange subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, numImages };
-            VkResult result = VkImageResourceView::Create(vkDevCtx, m_imageSpecs[imageTypeIdx].imageArray,
-                                                          subresourceRange,
-                                                          m_imageSpecs[imageTypeIdx].imageViewArray);
+            result = VkImageResourceView::Create(vkDevCtx, m_imageSpecs[imageTypeIdx].imageArray,
+                                                 subresourceRange,
+                                                 m_imageSpecs[imageTypeIdx].imageViewArray);
 
             if (result != VK_SUCCESS) {
                 return -1;
@@ -1056,11 +1056,11 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
 
             } else if (!imageExist && !m_imageSpecs[imageTypeIdx].deferCreate) {
 
-                VkResult result = m_perFrameDecodeResources[imageIndex].CreateImage(vkDevCtx,
-                                                                                    &m_imageSpecs[imageTypeIdx],
-                                                                                    imageIndex,
-                                                                                    m_imageSpecs[imageTypeIdx].imageArray,
-                                                                                    m_imageSpecs[imageTypeIdx].imageViewArray);
+                result = m_perFrameDecodeResources[imageIndex].CreateImage(vkDevCtx,
+                                                                           &m_imageSpecs[imageTypeIdx],
+                                                                           imageIndex,
+                                                                           m_imageSpecs[imageTypeIdx].imageArray,
+                                                                           m_imageSpecs[imageTypeIdx].imageViewArray);
 
                 assert(result == VK_SUCCESS);
                 if (result != VK_SUCCESS) {
