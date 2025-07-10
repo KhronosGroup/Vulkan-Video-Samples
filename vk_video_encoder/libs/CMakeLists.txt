@@ -105,10 +105,6 @@ include_directories(BEFORE ${VULKAN_VIDEO_ENCODER_INCLUDE}/../libs)
 include_directories(BEFORE ${VULKAN_VIDEO_ENCODER_INCLUDE})
 include_directories(BEFORE ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT})
 
-link_directories(
-    ${VULKAN_LIB_DIR}
-    )
-
 set(LIBVKVIDEOENCODER_DEPENDENCIES GenerateDispatchTables ${VULKAN_VIDEO_PARSER_LIB})
 add_library(${VULKAN_VIDEO_ENCODER_LIB} SHARED ${LIBVKVIDEOENCODER_SRC})
 

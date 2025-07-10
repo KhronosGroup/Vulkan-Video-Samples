@@ -70,15 +70,11 @@ set(includes
 
 set(libraries PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
-# Extract the directory part of the Vulkan library path
-get_filename_component(VULKAN_LIB_DIR "${Vulkan_LIBRARIES}" DIRECTORY)
-
 link_directories(
     ${VULKAN_VIDEO_DEVICE_LIBS_PATH}
     ${VULKAN_VIDEO_DEC_LIBS_PATH}
     ${VULKAN_VIDEO_PARSER_LIB_PATH}
     ${LIBNVPARSER_BINARY_ROOT}
-    ${VULKAN_LIB_DIR}
     )
 
 if(WIN32)
