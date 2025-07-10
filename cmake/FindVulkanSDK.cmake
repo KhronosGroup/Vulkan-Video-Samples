@@ -54,11 +54,11 @@ MACRO(FIND_VULKAN_HEADERS VK_MINIMUM_MAJOR_VERSION VK_MINIMUM_MINOR_VERSION VK_M
         set(VK_PATCH_VERSION ${CMAKE_MATCH_1})
 
         # Extract major and minor version
-        file(STRINGS "${VULKAN_HEADERS_INCLUDE_DIR}/vulkan/vulkan_core.h" VK_VERSION_1_3_LINE
-            REGEX "^#define VK_API_VERSION_1_3")
-        if(VK_VERSION_1_3_LINE)
+        file(STRINGS "${VULKAN_HEADERS_INCLUDE_DIR}/vulkan/vulkan_core.h" VK_VERSION_1_4_LINE
+            REGEX "^#define VK_API_VERSION_1_4")
+        if(VK_VERSION_1_4_LINE)
             set(VK_MAJOR_VERSION 1)
-            set(VK_MINOR_VERSION 3)
+            set(VK_MINOR_VERSION 4)
         endif()
 
         # Compare versions
