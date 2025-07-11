@@ -90,7 +90,7 @@ MACRO(FIND_VULKAN_HEADERS VK_MINIMUM_MAJOR_VERSION VK_MINIMUM_MINOR_VERSION VK_M
         message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
     else()
         # System version is good, now call find_package to create targets
-        find_package(Vulkan REQUIRED)
+
         message(STATUS "Using system Vulkan SDK")
     endif()
 ENDMACRO(FIND_VULKAN_HEADERS)
@@ -100,11 +100,7 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
 
     FIND_VULKAN_HEADERS(${minimum_major_version} ${minimum_minor_version} ${minimum_patch_version})
 
-    if(USE_SYSTEM_VULKAN OR Vulkan_FOUND)
-        # Use system Vulkan
-        message(STATUS "Using system Vulkan SDK")
-        get_filename_component(VULKAN_LIB_DIR "${Vulkan_LIBRARIES}" DIRECTORY)
-    else()
+    if(NOT USE_SYSTEM_VULKAN)
         # Fetch and build our own Vulkan components
         message(STATUS "Building Vulkan loader from source")
 

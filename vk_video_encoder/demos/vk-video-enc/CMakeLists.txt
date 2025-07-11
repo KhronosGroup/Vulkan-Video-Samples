@@ -103,7 +103,6 @@ link_directories(
     ${VULKAN_VIDEO_DEC_LIBS_PATH}
     ${VULKAN_VIDEO_PARSER_LIB_PATH}
     ${LIBNVPARSER_BINARY_ROOT}
-    ${VULKAN_LIB_DIR}
     )
 
 if(WIN32)
