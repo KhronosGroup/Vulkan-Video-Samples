@@ -1,3 +1,6 @@
+v0.3.1:
+  - Common: better detection of vulkan SDK, new CMake macro for vulkan headers detection
+
 v0.3.0:
   - Encoder: add intra refresh support
   - Encoder: fix mesa driver support with preferredGopFrameCount equal to 0
