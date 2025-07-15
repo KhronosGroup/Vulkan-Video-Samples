@@ -7,7 +7,7 @@ extern "C" {
 
 #define VKVS_VERSION_MAJOR 0
 #define VKVS_VERSION_MINOR 3
-#define VKVS_VERSION_PATCH 0
+#define VKVS_VERSION_PATCH 1
 
 #define _STR(x) #x
 #define _VERSION_STRING(major,minor,patch) _STR(major) "." _STR(minor) "." _STR(patch)
