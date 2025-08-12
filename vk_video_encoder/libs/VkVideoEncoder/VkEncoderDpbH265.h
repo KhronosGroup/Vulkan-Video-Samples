@@ -88,7 +88,7 @@ public:
 
     void ReferencePictureListIntializationLx(int32_t refPicListLx[2][STD_VIDEO_H265_MAX_NUM_LIST_REF], int32_t refPicListSize[2], const StdVideoEncodeH265SliceSegmentHeader *slh);
 
-    uint32_t GetDirtyIntraRefreshRegions(int32_t dpbIdx);
+    uint32_t GetDirtyIntraRefreshRegions(uint32_t dpbIdx);
     void SetCurDirtyIntraRefreshRegions(uint32_t dirtyIntraRefreshRegions);
 
 private:
@@ -113,13 +113,13 @@ private:
 private:
     DpbEntryH265                   m_stDpb[STD_VIDEO_H265_MAX_DPB_SIZE];
     int8_t                         m_curDpbIndex;
-    int8_t                         m_dpbSize;
+    uint8_t                        m_dpbSize;
 
-    int8_t                         m_numPocStCurrBefore;
-    int8_t                         m_numPocStCurrAfter;
-    int8_t                         m_numPocStFoll;
-    int8_t                         m_numPocLtCurr;
-    int8_t                         m_numPocLtFoll;
+    uint8_t                        m_numPocStCurrBefore;
+    uint8_t                        m_numPocStCurrAfter;
+    uint8_t                        m_numPocStFoll;
+    uint8_t                        m_numPocLtCurr;
+    uint8_t                        m_numPocLtFoll;
 
     uint64_t                       m_lastIDRTimeStamp;
     int32_t                        m_picOrderCntCRA;

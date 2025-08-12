@@ -96,11 +96,11 @@ int EncoderConfigAV1::DoParseArguments(int argc, char* argv[])
                     READ_PARAM(i, lfConfig.flags.loop_filter_delta_update, bool);
                     if (lfConfig.flags.loop_filter_delta_update) {
                         READ_PARAM(i, lfConfig.update_ref_delta, uint8_t);
-                        for (int32_t j = 0; j < STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME; j++) {
+                        for (uint32_t j = 0; j < STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME; j++) {
                             READ_PARAM(i, lfConfig.loop_filter_ref_deltas[j], int8_t);
                         }
                         READ_PARAM(i, lfConfig.update_mode_delta, uint8_t);
-                        for (int32_t j = 0; j < STD_VIDEO_AV1_LOOP_FILTER_ADJUSTMENTS; j++) {
+                        for (uint32_t j = 0; j < STD_VIDEO_AV1_LOOP_FILTER_ADJUSTMENTS; j++) {
                             READ_PARAM(i, lfConfig.loop_filter_mode_deltas[j], int8_t);
                         }
                     }
@@ -115,7 +115,7 @@ int EncoderConfigAV1::DoParseArguments(int argc, char* argv[])
                 // parse CDEF params
                 READ_PARAM(i, cdefConfig.cdef_damping_minus_3, uint8_t);
                 READ_PARAM(i, cdefConfig.cdef_bits, uint8_t);
-                for (int32_t j = 0; j < (1 << cdefConfig.cdef_bits); j++) {
+                for (int8_t j = 0; j < (1 << cdefConfig.cdef_bits); j++) {
                     READ_PARAM(i, cdefConfig.cdef_y_pri_strength[j], uint8_t);
                     READ_PARAM(i, cdefConfig.cdef_y_sec_strength[j], uint8_t);
                     READ_PARAM(i, cdefConfig.cdef_uv_pri_strength[j], uint8_t);
@@ -131,10 +131,10 @@ int EncoderConfigAV1::DoParseArguments(int argc, char* argv[])
                 ++i;
                 customLrConfig = true;
                 // parse LR params
-                for (int32_t j = 0; j < STD_VIDEO_AV1_MAX_NUM_PLANES; j++) {
+                for (uint32_t j = 0; j < STD_VIDEO_AV1_MAX_NUM_PLANES; j++) {
                     READ_PARAM(i, lrConfig.FrameRestorationType[j], StdVideoAV1FrameRestorationType);
                 }
-                for (int32_t j = 0; j < STD_VIDEO_AV1_MAX_NUM_PLANES; j++) {
+                for (uint32_t j = 0; j < STD_VIDEO_AV1_MAX_NUM_PLANES; j++) {
                     READ_PARAM(i, lrConfig.LoopRestorationSize[j], uint16_t);
                 }
             }
