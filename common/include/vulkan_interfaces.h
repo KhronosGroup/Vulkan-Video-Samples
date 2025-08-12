@@ -19,10 +19,13 @@
 #define VK_ENABLE_BETA_EXTENSIONS 1
 #endif
 
-// This flag is defined in CTS.
+// This flag is defined in CTS to build the parser source files which are also in the vk namespace in external/vulkancts/modules/vulkan/video
 #ifdef DE_BUILD_VIDEO
 #include "vkDefs.hpp"
 using namespace vk;
+// This flag is defined in CTS to build VVS library and provide the vulkan definitions from CTS in vkVulkan_c.inl
+#elif defined(VVS_CTS_VULKAN_HEADER)
+#include "vkDefs.h"
 #else
 #include "vulkan/vulkan.h"
 #endif
