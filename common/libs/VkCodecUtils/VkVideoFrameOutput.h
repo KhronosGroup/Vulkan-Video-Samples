@@ -20,7 +20,6 @@
 #include <vector>
 #include <atomic>
 #include <cstdio>
-#include <vulkan/vulkan.h>
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 
 // Forward declarations

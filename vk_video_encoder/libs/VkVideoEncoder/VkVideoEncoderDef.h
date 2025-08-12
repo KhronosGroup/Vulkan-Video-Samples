@@ -18,11 +18,6 @@
 #define _VKVIDEOENCODERDEF_H_
 
 #include <limits.h>
-#include "vulkan/vulkan.h"
-#include "vk_video/vulkan_video_codec_h264std.h"
-#include "vk_video/vulkan_video_codec_h264std_encode.h"
-#include "vk_video/vulkan_video_codec_h265std.h"
-#include "vk_video/vulkan_video_codec_h265std_encode.h"
 
 #if !defined(VK_USE_PLATFORM_WIN32_KHR)
 #ifndef ARRAYSIZE

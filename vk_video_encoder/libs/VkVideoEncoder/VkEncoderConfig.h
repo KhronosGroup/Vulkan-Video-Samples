@@ -21,11 +21,6 @@
 #include <string.h>
 #include <atomic>
 #include "mio/mio.hpp"
-#include "vk_video/vulkan_video_codecs_common.h"
-#include "vk_video/vulkan_video_codec_h264std.h"
-#include "vk_video/vulkan_video_codec_h265std.h"
-#include "vk_video/vulkan_video_codec_av1std.h"
-#include "vulkan/vulkan.h"
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 #include "VkVideoEncoder/VkVideoEncoderDef.h"
 #include "VkVideoEncoder/VkVideoGopStructure.h"

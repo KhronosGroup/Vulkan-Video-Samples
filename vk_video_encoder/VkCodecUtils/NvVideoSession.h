@@ -19,7 +19,6 @@
 #include "nvvk/memorymanagement_vk.hpp"
 #include "nvvk/memallocator_vk.hpp"
 #include "nvvk/memallocator_dedicated_vk.hpp"
-#include "vulkan/vulkan.hpp"
 #include "nvvk/context_vk.hpp"
 
 class NvVideoSession {
