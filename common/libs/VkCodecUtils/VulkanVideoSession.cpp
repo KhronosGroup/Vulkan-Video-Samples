@@ -16,7 +16,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include "vk_video/vulkan_video_codecs_common.h"
 #include "VkCodecUtils/Helpers.h"
 #include "VkCodecUtils/HelpersDispatchTable.h"
 #include "VkCodecUtils/VulkanDeviceContext.h"

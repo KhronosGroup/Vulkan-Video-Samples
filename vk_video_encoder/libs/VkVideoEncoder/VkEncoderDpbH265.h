@@ -18,8 +18,6 @@
 #define NVENC_HEVC_DPB_H
 
 #include <stdint.h>
-#include "vk_video/vulkan_video_codec_h265std.h"
-#include "vk_video/vulkan_video_codec_h265std_encode.h"
 #include "VkCodecUtils/VulkanVideoImagePool.h"
 
 struct DpbEntryH265 {

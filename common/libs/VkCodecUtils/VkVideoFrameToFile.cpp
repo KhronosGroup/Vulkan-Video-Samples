@@ -16,7 +16,6 @@
 
 #include <cstring>
 #include <inttypes.h>
-#include <vulkan/vulkan.h>
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
 #include "VulkanDeviceContext.h"
 #include "VulkanDeviceMemoryImpl.h"

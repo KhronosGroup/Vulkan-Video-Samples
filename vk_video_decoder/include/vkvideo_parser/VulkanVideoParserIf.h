@@ -17,8 +17,6 @@
 #ifndef _VULKANVIDEOPARSER_IF_H_
 #define _VULKANVIDEOPARSER_IF_H_
 
-#include "vk_video/vulkan_video_codecs_common.h"
-
 #include "vkvideo_parser/PictureBufferBase.h"
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 #include "vkvideo_parser/StdVideoPictureParametersSet.h"
