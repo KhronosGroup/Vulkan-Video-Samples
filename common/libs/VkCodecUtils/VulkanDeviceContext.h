@@ -234,7 +234,7 @@ public:
 
     void PrintExtensions(bool deviceExt = false) const;
 
-#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+#ifndef _WIN32
     typedef void* VulkanLibraryHandleType;
 #else
     typedef HMODULE VulkanLibraryHandleType;
