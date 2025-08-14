@@ -899,11 +899,11 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                        pictureResourcesInfo,
                                                        VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR);
 
-        if (pCurrFrameDecParams->numGopReferenceSlots != dpbResourceIndex) {
+        if (dpbResourceIndex < 0 || pCurrFrameDecParams->numGopReferenceSlots != static_cast<uint32_t>(dpbResourceIndex)) {
             assert(!"GetImageResourcesByIndex has failed");
         }
 
-        for (int32_t resId = 0; resId < pCurrFrameDecParams->numGopReferenceSlots; resId++) {
+        for (uint32_t resId = 0; resId < pCurrFrameDecParams->numGopReferenceSlots; resId++) {
             // slotLayer requires NVIDIA specific extension VK_KHR_video_layers, not enabled, just yet.
             // pGopReferenceSlots[resId].slotLayerIndex = 0;
             // pictureResourcesInfo[resId].image can be a nullptr handle if the picture is not-existent.

@@ -53,7 +53,7 @@ struct VkParserPerFrameDecodeParameters {
     VkSharedBaseObj<VulkanBitstreamBuffer> bitstreamData; // bitstream data for this picture (slice-layer)
     VkVideoDecodeInfoKHR decodeFrameInfo;
     VkVideoPictureResourceInfoKHR dpbSetupPictureResource;
-    int32_t numGopReferenceSlots;
+    uint32_t numGopReferenceSlots;
     int8_t pGopReferenceImagesIndexes[MAX_DPB_REF_AND_SETUP_SLOTS];
     VkVideoPictureResourceInfoKHR pictureResources[MAX_DPB_REF_AND_SETUP_SLOTS];
 };
