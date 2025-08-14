@@ -26,6 +26,14 @@ using namespace vk;
 // This flag is defined in CTS to build VVS library and provide the vulkan definitions from CTS in vkVulkan_c.inl
 #elif defined(VVS_CTS_VULKAN_HEADER)
 #include "vkDefs.h"
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+// windows.h is included only by vulkan/vulkan.h.
+// In the case of CTS build using inl files, vkVulkan_c.inl does not include vulkan.h directly so
+// does not expose the windows includes necessary in VulkanDeviceContext.h for ie HMODULE.
+#include <windows.h>
+// Disable win32 surface as vkVulan_c.inl does not expose the win32 functions such as CreateWin32SurfaceKHR.
+#define VK_DISABLE_WIN32_SURFACE_KHR 1
+#endif
 #else
 #include "vulkan/vulkan.h"
 #endif

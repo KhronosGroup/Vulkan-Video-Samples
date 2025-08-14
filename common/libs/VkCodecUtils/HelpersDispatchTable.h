@@ -252,7 +252,7 @@ struct VkInterfaceFunctions {
     PFN_vkCreateAndroidSurfaceKHR CreateAndroidSurfaceKHR;
 #endif
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#if defined(VK_USE_PLATFORM_WIN32_KHR) && !defined(VK_DISABLE_WIN32_SURFACE_KHR)
 // VK_KHR_win32_surface
     PFN_vkCreateWin32SurfaceKHR CreateWin32SurfaceKHR;
     PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR GetPhysicalDeviceWin32PresentationSupportKHR;

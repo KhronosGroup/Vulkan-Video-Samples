@@ -77,10 +77,10 @@ void InitDispatchTableMiddle(VkInstance instance, bool include_bottom, VkInterfa
 #ifdef VK_USE_PLATFORM_ANDROID_KHR
     pVkFunctions->CreateAndroidSurfaceKHR = reinterpret_cast<PFN_vkCreateAndroidSurfaceKHR>(getInstanceProcAddrFunc(instance, "vkCreateAndroidSurfaceKHR"));
 #endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#if defined(VK_USE_PLATFORM_WIN32_KHR) && !defined(VK_DISABLE_WIN32_SURFACE_KHR)
     pVkFunctions->CreateWin32SurfaceKHR = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(getInstanceProcAddrFunc(instance, "vkCreateWin32SurfaceKHR"));
 #endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
+#if defined(VK_USE_PLATFORM_WIN32_KHR) && !defined(VK_DISABLE_WIN32_SURFACE_KHR)
     pVkFunctions->GetPhysicalDeviceWin32PresentationSupportKHR = reinterpret_cast<PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR>(getInstanceProcAddrFunc(instance, "vkGetPhysicalDeviceWin32PresentationSupportKHR"));
 #endif
     pVkFunctions->CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(getInstanceProcAddrFunc(instance, "vkCreateDebugReportCallbackEXT"));
