@@ -26,6 +26,10 @@ using namespace vk;
 // This flag is defined in CTS to build VVS library and provide the vulkan definitions from CTS in vkVulkan_c.inl
 #elif defined(VVS_CTS_VULKAN_HEADER)
 #include "vkDefs.h"
+// windows.h is included only by vulkan/vulkan.h.
+// In the case of CTS build using inl files, vkVulkan_c.inl does not include vulkan.h directly so
+// does not expose the windows includes necessary in VulkanDeviceContext.h for ie HMODULE.
+#include <windows.h>
 #else
 #include "vulkan/vulkan.h"
 #endif

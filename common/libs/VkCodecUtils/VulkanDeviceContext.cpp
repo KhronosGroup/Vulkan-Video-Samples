@@ -14,7 +14,7 @@
 * limitations under the License.
 */
 
-#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+#ifndef _WIN32
 #include <dlfcn.h>
 #endif
 
@@ -33,7 +33,7 @@
 #include "VkShell/Shell.h"
 #endif // VIDEO_DISPLAY_QUEUE_SUPPORT
 
-#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+#ifndef _WIN32
 PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &vulkanLibHandle,
                                                       const char * pCustomLoader)
 {
@@ -307,7 +307,7 @@ bool VulkanDeviceContext::HasAllDeviceExtensions(VkPhysicalDevice physDevice, co
     return hasAllRequiredExtensions;
 }
 
-#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+#ifndef _WIN32
 #include <link.h>
 static int DumpSoLibs()
 {
@@ -364,7 +364,7 @@ VkResult VulkanDeviceContext::InitVkInstance(const char * pAppName, VkInstance v
         m_importedInstanceHandle = true;
     }
 
-#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+#ifndef _WIN32
     // For debugging which .so libraries are loaded and in use
     if (false) {
         DumpSoLibs();
@@ -989,7 +989,7 @@ VulkanDeviceContext::~VulkanDeviceContext() {
 
     m_importedDeviceHandle = false;
 
-#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+#ifndef _WIN32
     dlclose(m_libHandle);
 #else // defined(VK_USE_PLATFORM_WIN32_KHR)
     FreeLibrary(m_libHandle);

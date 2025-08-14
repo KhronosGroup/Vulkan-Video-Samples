@@ -19,7 +19,7 @@
 
 #include <limits.h>
 
-#if !defined(VK_USE_PLATFORM_WIN32_KHR)
+#ifndef _WIN32
 #ifndef ARRAYSIZE
 #define ARRAYSIZE(a) ((sizeof(a) / sizeof(a[0])))
 #endif
