@@ -436,7 +436,8 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                                                  const VkVideoCodecOperationFlagsKHR requestVideoDecodeQueueOperations,
                                                  const VkQueueFlags requestVideoEncodeQueueMask,
                                                  const VkVideoCodecOperationFlagsKHR requestVideoEncodeQueueOperations,
-                                                 VkPhysicalDevice vkPhysicalDevice)
+                                                 VkPhysicalDevice vkPhysicalDevice,
+                                                 bool verbose)
 {
     std::vector<VkPhysicalDevice> availablePhysicalDevices;
     if (vkPhysicalDevice == VK_NULL_HANDLE) {
@@ -657,7 +658,7 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                     PrintExtensions(true);
                 }
 
-                if (true) {
+                if (verbose) {
 
                     vk::DeviceUuidUtils currentDeviceUuid(deviceVulkan11Properties.deviceUUID);
                     std::cout << "*** Selected Vulkan physical device with name: " << devProp2.properties.deviceName << std::hex

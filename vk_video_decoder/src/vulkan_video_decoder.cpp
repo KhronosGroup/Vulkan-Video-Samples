@@ -183,9 +183,10 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
                                             pWsiDisplay,
                                             requestVideoDecodeQueueMask,
                                             videoCodecOperation,
-                                              0,
+                                            0,
                                             VK_VIDEO_CODEC_OPERATION_NONE_KHR,
-                                            vkPhysicalDevice);
+                                            vkPhysicalDevice,
+                                            m_decoderConfig.verbose);
 
     if (result != VK_SUCCESS) {
 
