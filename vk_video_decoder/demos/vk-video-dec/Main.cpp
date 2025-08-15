@@ -103,7 +103,9 @@ int main(int argc, const char **argv)
                                               requestVideoDecodeQueueMask,
                                               videoCodecOperation,
                                               0,
-                                              VK_VIDEO_CODEC_OPERATION_NONE_KHR);
+                                              VK_VIDEO_CODEC_OPERATION_NONE_KHR,
+                                              VK_NULL_HANDLE,
+                                              decoderConfig.verbose);
         if (result != VK_SUCCESS) {
 
             assert(!"Can't initialize the Vulkan physical device!");
@@ -158,7 +160,12 @@ int main(int argc, const char **argv)
                                                requestVideoDecodeQueueMask  |
                                                requestVideoComputeQueueMask),
                                               nullptr,
-                                              requestVideoDecodeQueueMask);
+                                              requestVideoDecodeQueueMask,
+                                              videoCodecOperation,
+                                              0,
+                                              VK_VIDEO_CODEC_OPERATION_NONE_KHR,
+                                              VK_NULL_HANDLE,
+                                              decoderConfig.verbose);
         if (result != VK_SUCCESS) {
 
             assert(!"Can't initialize the Vulkan physical device!");

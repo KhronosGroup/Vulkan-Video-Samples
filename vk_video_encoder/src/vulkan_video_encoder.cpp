@@ -160,7 +160,9 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
                                             0,
                                             VK_VIDEO_CODEC_OPERATION_NONE_KHR,
                                             requestVideoEncodeQueueMask,
-                                            videoCodecOperation);
+                                            videoCodecOperation,
+                                            VK_NULL_HANDLE,
+                                            m_encoderConfig->verbose);
     if (result != VK_SUCCESS) {
 
         assert(!"Can't initialize the Vulkan physical device!");

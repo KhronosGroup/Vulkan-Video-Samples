@@ -173,7 +173,9 @@ int main(int argc, char** argv)
                                               requestVideoEncodeQueueMask,
                                               (VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR |
                                                VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR |
-                                               VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR));
+                                               VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR),
+                                              VK_NULL_HANDLE,
+                                              encoderConfig->verbose);
         if (result != VK_SUCCESS) {
 
             assert(!"Can't initialize the Vulkan physical device!");
@@ -223,7 +225,9 @@ int main(int argc, char** argv)
                                               0,
                                               VK_VIDEO_CODEC_OPERATION_NONE_KHR,
                                               requestVideoEncodeQueueMask,
-                                              encoderConfig->codec);
+                                              encoderConfig->codec,
+                                              VK_NULL_HANDLE,
+                                              encoderConfig->verbose);
         if (result != VK_SUCCESS) {
 
             assert(!"Can't initialize the Vulkan physical device!");
