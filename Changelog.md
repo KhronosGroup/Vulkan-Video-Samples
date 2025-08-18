@@ -1,3 +1,8 @@
+v0.3.2:
+  - Prepare VVS to be able to build inside CTS using the custom vulkan headers
+  - Use the version tag for vulkan headers instead of main
+  - Fix various warnings such as signed/unsigned comparison etc.
+
 v0.3.1:
   - Common: better detection of vulkan SDK, new CMake macro for vulkan headers detection
 
