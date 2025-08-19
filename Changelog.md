@@ -1,3 +1,6 @@
+v0.3.3:
+  - Fix CTS non win32 build
+
 v0.3.2:
   - Prepare VVS to be able to build inside CTS using the custom vulkan headers
   - Use the version tag for vulkan headers instead of main
