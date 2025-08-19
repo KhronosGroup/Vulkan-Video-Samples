@@ -29,7 +29,9 @@ using namespace vk;
 // windows.h is included only by vulkan/vulkan.h.
 // In the case of CTS build using inl files, vkVulkan_c.inl does not include vulkan.h directly so
 // does not expose the windows includes necessary in VulkanDeviceContext.h for ie HMODULE.
+#if defined(_WIN32)
 #include <windows.h>
+#endif
 #else
 #include "vulkan/vulkan.h"
 #endif
