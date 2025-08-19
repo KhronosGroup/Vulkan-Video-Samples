@@ -256,14 +256,14 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
             std::cerr << "FIXME: the preferred GOP frame count supported by this device is 0. Using the maximum GOP frame count value." << std::endl;
             gopStructure.SetGopFrameCount(UINT8_MAX);
         } else {
-            gopStructure.SetGopFrameCount(av1QualityLevelProperties.preferredGopFrameCount);
+            gopStructure.SetGopFrameCount((uint8_t)av1QualityLevelProperties.preferredGopFrameCount);
         }
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(av1QualityLevelProperties.preferredKeyFramePeriod);
     }
     if (gopStructure.GetConsecutiveBFrameCount() == CONSECUTIVE_B_FRAME_COUNT_MAX_VALUE) {
-        gopStructure.SetConsecutiveBFrameCount(av1QualityLevelProperties.preferredConsecutiveBipredictiveFrameCount);
+        gopStructure.SetConsecutiveBFrameCount((uint8_t)av1QualityLevelProperties.preferredConsecutiveBipredictiveFrameCount);
     }
     if (constQp.qpIntra == 0) {
         constQp.qpIntra = av1QualityLevelProperties.preferredConstantQIndex.intraQIndex;

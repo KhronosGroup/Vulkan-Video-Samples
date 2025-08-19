@@ -426,14 +426,14 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
             std::cerr << "FIXME: the preferred GOP frame count supported by this device is 0. Using the maximum GOP frame count value." << std::endl;
             gopStructure.SetGopFrameCount(UINT8_MAX);
         } else {
-            gopStructure.SetGopFrameCount(h264QualityLevelProperties.preferredGopFrameCount);
+            gopStructure.SetGopFrameCount((uint8_t)h264QualityLevelProperties.preferredGopFrameCount);
         }
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(h264QualityLevelProperties.preferredIdrPeriod);
     }
     if (gopStructure.GetConsecutiveBFrameCount() == CONSECUTIVE_B_FRAME_COUNT_MAX_VALUE) {
-        gopStructure.SetConsecutiveBFrameCount(h264QualityLevelProperties.preferredConsecutiveBFrameCount);
+        gopStructure.SetConsecutiveBFrameCount((uint8_t)h264QualityLevelProperties.preferredConsecutiveBFrameCount);
     }
     if (constQp.qpIntra == 0) {
         constQp.qpIntra = h264QualityLevelProperties.preferredConstantQp.qpI;
@@ -448,8 +448,8 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
         minQp = h264QualityLevelProperties.preferredConstantQp;
         maxQp = h264QualityLevelProperties.preferredConstantQp;
     }
-    numRefL0 = h264QualityLevelProperties.preferredMaxL0ReferenceCount;
-    numRefL1 = h264QualityLevelProperties.preferredMaxL1ReferenceCount;
+    numRefL0 = (uint8_t)h264QualityLevelProperties.preferredMaxL0ReferenceCount;
+    numRefL1 = (uint8_t)h264QualityLevelProperties.preferredMaxL1ReferenceCount;
     numRefFrames = numRefL0 + numRefL1;
     entropyCodingMode = h264QualityLevelProperties.preferredStdEntropyCodingModeFlag == VK_TRUE ? ENTROPY_CODING_MODE_CABAC : ENTROPY_CODING_MODE_CAVLC;
 
