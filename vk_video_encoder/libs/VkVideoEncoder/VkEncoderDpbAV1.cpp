@@ -300,7 +300,7 @@ int32_t VkEncDpbAV1::GetOverlayRefBufId(int32_t picOrderCntVal)
             continue;
         }
 
-        if ((GetRefCount(refBufDpbId) > 0) && (m_DPB[refBufDpbId].picOrderCntVal == static_cast<int32_t>(picOrderCntVal))) {
+        if ((picOrderCntVal >= 0) && (GetRefCount(refBufDpbId) > 0) && (m_DPB[refBufDpbId].picOrderCntVal == static_cast<uint32_t>(picOrderCntVal))) {
             // found valid match
             overlayRefBufId = refBufId;
             break;
