@@ -165,10 +165,10 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
 
     appName = args[0];
 
-    for (int32_t i = 1; i < argc; i++) {
+    for (size_t i = 1; i < args.size(); i++) {
 
         if (args[i] == "-i" || args[i] == "--input") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -185,7 +185,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
                 }
             }
         } else if (args[i] == "-o" || args[i] == "--output") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -237,17 +237,17 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             }
             i++; // Skip the next argument since it's the dpbMode value
         } else if (args[i] == "--inputWidth") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &input.width) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &input.width) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--inputHeight") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &input.height) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &input.height) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--inputNumPlanes") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &input.numPlanes) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &input.numPlanes) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -272,75 +272,75 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             }
             i++; // Skip the next argument since it's the chromeSubsampling value
         }  else if (args[i] == "--inputLumaPlanePitch") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%llu",
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%llu",
                     (long long unsigned int*)&input.planeLayouts[0].rowPitch) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         }  else if (args[i] == "--inputBpp") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%hhu", &input.bpp) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%hhu", &input.bpp) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         }  else if (args[i] == "--msbShift") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%hhu", &input.msbShift) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%hhu", &input.msbShift) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--startFrame") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &startFrame) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &startFrame) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--numFrames") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &numFrames) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &numFrames) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--encodeOffsetX") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &encodeOffsetX) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &encodeOffsetX) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--encodeOffsetY") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &encodeOffsetY) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &encodeOffsetY) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--encodeWidth") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &encodeWidth) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &encodeWidth) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--encodeHeight") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &encodeHeight) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &encodeHeight) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--encodeMaxWidth") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &encodeMaxWidth) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &encodeMaxWidth) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--encodeMaxHeight") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%u", &encodeMaxHeight) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%u", &encodeMaxHeight) != 1)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--minQp") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &minQp) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &minQp) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--maxQp") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &maxQp) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &maxQp) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         // GOP structure
         } else if (args[i] == "--gopFrameCount") {
             uint8_t gopFrameCount = EncoderConfig::DEFAULT_GOP_FRAME_COUNT;
-            if (++i >= argc || sscanf(args[i].c_str(), "%hhu", &gopFrameCount) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%hhu", &gopFrameCount) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -350,17 +350,17 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             }
         } else if (args[i] == "--idrPeriod") {
             int32_t idrPeriod = EncoderConfig::DEFAULT_GOP_IDR_PERIOD;
-            if (++i >= argc || sscanf(args[i].c_str(), "%d", &idrPeriod) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%d", &idrPeriod) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
-            gopStructure.SetIdrPeriod(idrPeriod);
+            gopStructure.SetIdrPeriod((uint32_t)idrPeriod);
             if (verbose) {
                 printf("Selected idrPeriod: %d\n", idrPeriod);
             }
         } else if (args[i] == "--consecutiveBFrameCount") {
             uint8_t consecutiveBFrameCount = EncoderConfig::DEFAULT_CONSECUTIVE_B_FRAME_COUNT;
-            if (++i >= argc || sscanf(args[i].c_str(), "%hhu", &consecutiveBFrameCount) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%hhu", &consecutiveBFrameCount) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -370,7 +370,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             }
         } else if (args[i] == "--temporalLayerCount") {
             uint8_t temporalLayerCount = EncoderConfig::DEFAULT_TEMPORAL_LAYER_COUNT;
-            if (++i >= argc || sscanf(args[i].c_str(), "%hhu", &temporalLayerCount) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%hhu", &temporalLayerCount) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -400,12 +400,12 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
         } else if (args[i] == "--closedGop") {
             gopStructure.SetClosedGop();
         } else if (args[i] == "--qualityLevel") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &qualityLevel) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &qualityLevel) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--tuningMode") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "Invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -425,8 +425,8 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
                 return -1;
             }
         } else if (args[i] == "--rateControlMode") {
-            if (++i >= argc) {
-                fprintf(stderr, "invalid parameter for %s\n", args[i-1].c_str());
+            if (++i >= args.size()) {
+                fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
             std::string rc = args[i];
@@ -445,37 +445,37 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             }
         }
         else if (args[i] == "--averageBitrate") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &averageBitrate) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &averageBitrate) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--maxBitrate") {
-                if (++i >= argc || sscanf(args[i].c_str(), "%u", &maxBitrate) != 1) {
+                if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &maxBitrate) != 1) {
                     fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                     return -1;
                 }
         } else if (args[i] == "--qpI") {
-                if (++i >= argc || sscanf(args[i].c_str(), "%u", &constQp.qpIntra) != 1) {
+                if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &constQp.qpIntra) != 1) {
                     fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                     return -1;
                 }
         } else if (args[i] == "--qpP") {
-                if (++i >= argc || sscanf(args[i].c_str(), "%u", &constQp.qpInterP) != 1) {
+                if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &constQp.qpInterP) != 1) {
                     fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                     return -1;
                 }
         } else if (args[i] == "--qpB") {
-                if (++i >= argc || sscanf(args[i].c_str(), "%u", &constQp.qpInterB) != 1) {
+                if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &constQp.qpInterB) != 1) {
                     fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                     return -1;
                 }
         } else if (args[i] == "--deviceID") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%x", &deviceId) != 1)) {
+            if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%x", &deviceId) != 1)) {
                  fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                  return -1;
              }
         } else if (args[i] == "--deviceUuid") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                return -1;
             }
@@ -488,7 +488,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
         } else if (args[i] == "--noDeviceFallback") {
             noDeviceFallback = true;
         } else if (args[i] == "--qpMap") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "Invalid paramter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -502,7 +502,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             }
             enableQpMap = true;
         } else if (args[i] == "--qpMapFileName") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "Invaid paramter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -524,7 +524,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             }
             enableOutOfOrderRecording = true;
         } else if (args[i] == "--intraRefreshCycleDuration") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &intraRefreshCycleDuration) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &intraRefreshCycleDuration) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -533,7 +533,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
                 printf("Selected intraRefreshCycleDuration: %d\n", intraRefreshCycleDuration);
             }
         } else if (args[i] == "--intraRefreshMode") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "Invalid paramter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -555,7 +555,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             if (verbose) {
                 fprintf(stdout, "Warning: %s should only be used for testing!\n", args[i].c_str());
             }
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &intraRefreshCycleRestartIndex) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &intraRefreshCycleRestartIndex) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -565,7 +565,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             if (verbose) {
                 fprintf(stdout, "Warning: %s should only be used for testing!\n", args[i].c_str());
             }
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &intraRefreshSkippedStartIndex) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &intraRefreshSkippedStartIndex) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -724,7 +724,7 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, const char *argv[],
     VkVideoCodecOperationFlagBitsKHR codec = VK_VIDEO_CODEC_OPERATION_NONE_KHR;
     std::vector<std::string> args(argv, argv + argc);
 
-    for (int32_t i = 1; i < argc; i++) {
+    for (size_t i = 1; i < args.size(); i++) {
 
         if (args[i] == "--codec" || args[i] == "-c") {
             std::string codecStr = args[i + 1];

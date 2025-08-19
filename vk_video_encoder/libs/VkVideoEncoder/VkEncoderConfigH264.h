@@ -163,8 +163,8 @@ struct EncoderConfigH264 : public EncoderConfig {
                                         uint32_t vbvBufferSize,
                                         double frameRate);
 
-    static void SetAspectRatio(StdVideoH264SequenceParameterSetVui *vui, int32_t width, int32_t height,
-                               int32_t darWidth, int32_t darHeight);
+    static void SetAspectRatio(StdVideoH264SequenceParameterSetVui *vui, uint32_t width, uint32_t height,
+                               uint32_t darWidth, uint32_t darHeight);
 
     virtual VkResult InitializeParameters() override
     {
@@ -190,7 +190,7 @@ struct EncoderConfigH264 : public EncoderConfig {
     virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_H264_PROFILE_IDC_HIGH; };
 
     // 1. First h.264 determine the number of the Dpb buffers required
-    virtual int8_t InitDpbCount() override;
+    virtual uint8_t InitDpbCount() override;
 
     // 2. First h.264 determine the rate control parameters
     virtual bool InitRateControl() override;

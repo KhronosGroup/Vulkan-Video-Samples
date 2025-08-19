@@ -175,10 +175,10 @@ VkResult VkVideoEncoderAV1::StartOfVideoCodingEncodeOrder(VkSharedBaseObj<VkVide
     if (!pFrameInfo->bShowExistingFrame) {
         encodeFrameInfo->frameEncodeEncodeOrderNum = m_encodeEncodeFrameNum++;
         if (m_encoderConfig->verboseFrameStruct) {
-            DumpStateInfo("start encoding AV1 regular frame", 2, encodeFrameInfo, frameIdx, ofTotalFrames);
+            DumpStateInfo("start encoding AV1 regular frame", 2, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
         }
     } else if (m_encoderConfig->verboseFrameStruct) {
-        DumpStateInfo("start encoding AV1 show existing", 2, encodeFrameInfo, frameIdx, ofTotalFrames);
+        DumpStateInfo("start encoding AV1 show existing", 2, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
     }
 
     return VK_SUCCESS;
@@ -190,7 +190,7 @@ VkResult VkVideoEncoderAV1::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
     VkVideoEncodeFrameInfoAV1* pFrameInfo = GetEncodeFrameInfoAV1(encodeFrameInfo);
 
     if (m_encoderConfig->verboseFrameStruct) {
-        DumpStateInfo("process DPB", 3, encodeFrameInfo, frameIdx, ofTotalFrames);
+        DumpStateInfo("process DPB", 3, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
     }
 
     uint32_t flags = 0;
@@ -207,7 +207,7 @@ VkResult VkVideoEncoderAV1::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
     StdVideoAV1ReferenceName refName = m_dpbAV1->AssignReferenceFrameType(pFrameInfo->gopPosition.pictureType, flags, pFrameInfo->bIsReference);
     InitializeFrameHeader(&m_stateAV1.m_sequenceHeader, pFrameInfo, refName);
     if (!pFrameInfo->bShowExistingFrame) {
-        m_dpbAV1->SetupReferenceFrameGroups(pFrameInfo->gopPosition.pictureType, pFrameInfo->stdPictureInfo.frame_type, pFrameInfo->picOrderCntVal);
+        m_dpbAV1->SetupReferenceFrameGroups(pFrameInfo->gopPosition.pictureType, pFrameInfo->stdPictureInfo.frame_type, (uint32_t)pFrameInfo->picOrderCntVal);
         // For B pictures, L1 must be non zero.  Switch to P picture if L1 is zero.
         if ((pFrameInfo->gopPosition.pictureType == VkVideoGopStructure::FRAME_TYPE_B) && (m_dpbAV1->GetNumRefsL1()  == 0)) {
             pFrameInfo->gopPosition.pictureType = VkVideoGopStructure::FRAME_TYPE_P;
@@ -218,7 +218,7 @@ VkResult VkVideoEncoderAV1::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
     VkVideoEncoderAV1FrameUpdateType frameUpdateType = m_dpbAV1->GetFrameUpdateType(refName, pFrameInfo->bOverlayFrame);
 
     int8_t dpbIndx = m_dpbAV1->DpbPictureStart(pFrameInfo->stdPictureInfo.frame_type, refName,
-                                               pFrameInfo->picOrderCntVal,
+                                               (uint32_t)pFrameInfo->picOrderCntVal,
                                                pFrameInfo->stdPictureInfo.current_frame_id,
                                                pFrameInfo->bShowExistingFrame, pFrameInfo->frameToShowBufId);
 
@@ -283,10 +283,10 @@ VkResult VkVideoEncoderAV1::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
     memset(pFrameInfo->pictureInfo.referenceNameSlotIndices, 0xff, sizeof(pFrameInfo->pictureInfo.referenceNameSlotIndices));
     bool primaryRefCdfOnly = true;
     for (uint32_t groupId = 0; groupId < 2; groupId++) {
-        for (int32_t i = 0; i < m_dpbAV1->GetNumRefsInGroup(groupId); i++) {
-            int32_t refNameMinus1 = m_dpbAV1->GetRefNameMinus1(groupId, i);
+        for (int32_t i = 0; i < (int32_t)m_dpbAV1->GetNumRefsInGroup((int32_t)groupId); i++) {
+            int32_t refNameMinus1 = (int32_t)m_dpbAV1->GetRefNameMinus1((int32_t)groupId, i);
 
-            int32_t dpbIdx = m_dpbAV1->GetDpbIdx(groupId, i);
+            int32_t dpbIdx = (int32_t)m_dpbAV1->GetDpbIdx((int32_t)groupId, i);
             assert(dpbIdx == m_dpbAV1->GetDpbIdx(refNameMinus1));
 
             assert(pFrameInfo->pictureInfo.referenceNameSlotIndices[refNameMinus1] == -1);
@@ -491,7 +491,7 @@ VkResult VkVideoEncoderAV1::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
         }
     }
 
-    encodeFrameInfo->picOrderCntVal = encodeFrameInfo->gopPosition.inputOrder;
+    encodeFrameInfo->picOrderCntVal = (int32_t)encodeFrameInfo->gopPosition.inputOrder;
 
     pFrameInfo->bIsKeyFrame = (encodeFrameInfo->gopPosition.pictureType == VkVideoGopStructure::FRAME_TYPE_IDR);
     pFrameInfo->bIsReference = m_encoderConfig->gopStructure.IsFrameReference(encodeFrameInfo->gopPosition);
@@ -643,10 +643,10 @@ void VkVideoEncoderAV1::InitializeFrameHeader(StdVideoAV1SequenceHeader* pSequen
         pFrameInfo->frameToShowBufId = m_dpbAV1->GetOverlayRefBufId(pFrameInfo->picOrderCntVal);
         assert(pFrameInfo->frameToShowBufId != VkEncDpbAV1::INVALID_IDX);
         // Re-initialize
-        int32_t refBufDpbId = m_dpbAV1->GetRefBufDpbId(pFrameInfo->frameToShowBufId);
+        int32_t refBufDpbId = (int32_t)m_dpbAV1->GetRefBufDpbId(pFrameInfo->frameToShowBufId);
         refName = m_dpbAV1->GetRefName(refBufDpbId);
         pStdPictureInfo->frame_type = m_dpbAV1->GetFrameType(refBufDpbId);
-        pStdPictureInfo->current_frame_id = m_dpbAV1->GetFrameId(refBufDpbId);
+        pStdPictureInfo->current_frame_id = (uint32_t)m_dpbAV1->GetFrameId(refBufDpbId);
     }
 
     pStdPictureInfo->flags.show_frame = (((refName == STD_VIDEO_AV1_REFERENCE_NAME_BWDREF_FRAME) ||
@@ -670,16 +670,16 @@ void VkVideoEncoderAV1::InitializeFrameHeader(StdVideoAV1SequenceHeader* pSequen
                         assert(0);
                         continue;
                     }
-                    int32_t deltaFrameIdMinus1 = ((pStdPictureInfo->current_frame_id - m_dpbAV1->GetFrameId(dpbIdx) + ( 1<< frameIdBits))) % (1 << frameIdBits) - 1;
+                    int32_t deltaFrameIdMinus1 = (int32_t)(((pStdPictureInfo->current_frame_id - (uint32_t)m_dpbAV1->GetFrameId(dpbIdx) + ( 1<< frameIdBits))) % (1 << frameIdBits) - 1);
                     assert((deltaFrameIdMinus1 >= 0) && (deltaFrameIdMinus1 < (1 << (pSequenceHdr->delta_frame_id_length_minus_2 + 2))));
-                    pStdPictureInfo->delta_frame_id_minus_1[ref - STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] =deltaFrameIdMinus1;
+                    pStdPictureInfo->delta_frame_id_minus_1[ref - STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] = (uint32_t)deltaFrameIdMinus1;
                 }
 
                 pStdPictureInfo->ref_frame_idx[ref - STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] = (int8_t)m_dpbAV1->GetRefBufId(ref);
             }
 
             for (uint32_t bufIdx = 0; bufIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; bufIdx++) {
-                int32_t dpbIdx = m_dpbAV1->GetRefBufDpbId(bufIdx);
+                int32_t dpbIdx = (int32_t)m_dpbAV1->GetRefBufDpbId((int32_t)bufIdx);
                 assert(dpbIdx != VkEncDpbAV1::INVALID_IDX);
                 pStdPictureInfo->ref_order_hint[bufIdx] = (uint8_t)m_dpbAV1->GetPicOrderCntVal(dpbIdx);
             }
@@ -809,7 +809,7 @@ VkResult VkVideoEncoderAV1::RecordVideoCodingCmd(VkSharedBaseObj<VkVideoEncodeFr
     VkVideoEncodeFrameInfoAV1* pFrameInfo = GetEncodeFrameInfoAV1(encodeFrameInfo);
     if (pFrameInfo->bShowExistingFrame) {
         if (m_encoderConfig->verboseFrameStruct) {
-            DumpStateInfo(" skip  recording", 4, encodeFrameInfo, frameIdx, ofTotalFrames);
+            DumpStateInfo(" skip  recording", 4, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
         }
         return VK_SUCCESS;
     }
@@ -822,7 +822,7 @@ VkResult VkVideoEncoderAV1::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeF
     VkVideoEncodeFrameInfoAV1* pFrameInfo = GetEncodeFrameInfoAV1(encodeFrameInfo);
     if (pFrameInfo->bShowExistingFrame) {
         if (m_encoderConfig->verboseFrameStruct) {
-            DumpStateInfo("skip  submit", 5, encodeFrameInfo, frameIdx, ofTotalFrames);
+            DumpStateInfo("skip  submit", 5, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
         }
         return VK_SUCCESS;
     }
@@ -908,11 +908,11 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
             mem_put_le16(header +  4, 0);
             mem_put_le16(header +  6, 32);
             mem_put_le32(header +  8, MAKE_FOURCC('A', 'V', '0', '1'));
-            mem_put_le16(header + 12, m_encoderConfig->encodeWidth);
-            mem_put_le16(header + 14, m_encoderConfig->encodeHeight);
-            mem_put_le32(header + 16, m_encoderConfig->frameRateNumerator);
-            mem_put_le32(header + 20, m_encoderConfig->frameRateDenominator);
-            mem_put_le32(header + 24, m_encoderConfig->numFrames);
+            mem_put_le16(header + 12, (int)m_encoderConfig->encodeWidth);
+            mem_put_le16(header + 14, (int)m_encoderConfig->encodeHeight);
+            mem_put_le32(header + 16, (int)m_encoderConfig->frameRateNumerator);
+            mem_put_le32(header + 20, (int)m_encoderConfig->frameRateDenominator);
+            mem_put_le32(header + 24, (int)m_encoderConfig->numFrames);
             mem_put_le32(header + 28, 0);
             fwrite(header, 1, sizeof(header), m_encoderConfig->outputFileHandler.GetFileHandle());
         }
@@ -943,7 +943,7 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
                        << std::endl << std::flush;
         }
 
-        encodeFrameInfo->inputTimeStamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+        encodeFrameInfo->inputTimeStamp = (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
                                           std::chrono::high_resolution_clock::now().time_since_epoch())
                                                   .count();
 
@@ -951,9 +951,9 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
 
         uint64_t pts = encodeFrameInfo->inputTimeStamp;
         uint8_t frameHeader[12];
-        mem_put_le32(frameHeader    , (uint32_t)framesSize); // updated with correct size later on
-        mem_put_le32(frameHeader + 4, (uint32_t)(pts & 0xffffffff));
-        mem_put_le32(frameHeader + 8, (uint32_t)(pts >> 32));
+        mem_put_le32(frameHeader    , (int)framesSize); // updated with correct size later on
+        mem_put_le32(frameHeader + 4, (int)(pts & 0xffffffff));
+        mem_put_le32(frameHeader + 8, (int)(pts >> 32));
         fwrite(frameHeader, 1, sizeof(frameHeader), m_encoderConfig->outputFileHandler.GetFileHandle());
 
         // Temporal delimiter
@@ -983,7 +983,7 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
             size_t totalBytesWritten = 0;
             while (totalBytesWritten < bytesToWrite) {
                 const size_t remainingBytes = bytesToWrite - totalBytesWritten;
-                const size_t bytesWritten = fwrite(writeData + totalBytesWritten, 1, 
+                const size_t bytesWritten = fwrite(writeData + totalBytesWritten, 1,
                                                  remainingBytes,
                                                  m_encoderConfig->outputFileHandler.GetFileHandle());
 
@@ -1025,12 +1025,12 @@ void VkVideoEncoderAV1::WriteShowExistingFrameHeader(VkSharedBaseObj<VkVideoEnco
         assert(0);
         uint32_t n = m_stateAV1.m_decoderModelInfo.frame_presentation_time_length_minus_1 + 1;
         uint32_t mask = (1 << n) - 1;
-        payloadWriter.PutBits((int32_t)(pFrameInfo->inputTimeStamp & mask), n);
+        payloadWriter.PutBits((int32_t)(pFrameInfo->inputTimeStamp & mask), (int32_t)n);
     }
     if (m_stateAV1.m_sequenceHeader.flags.frame_id_numbers_present_flag) {
         uint32_t n = m_stateAV1.m_sequenceHeader.delta_frame_id_length_minus_2 + 2 +
                      m_stateAV1.m_sequenceHeader.additional_frame_id_length_minus_1 + 1;
-        payloadWriter.PutBits(pFrameInfo->stdPictureInfo.current_frame_id, n);
+        payloadWriter.PutBits((int32_t)pFrameInfo->stdPictureInfo.current_frame_id, (int32_t)n);
     }
     payloadWriter.PutTrailingBits();
 
@@ -1047,9 +1047,9 @@ void VkVideoEncoderAV1::WriteShowExistingFrameHeader(VkSharedBaseObj<VkVideoEnco
     size_t frameSize = 2 + header.size() + payload.size(); /* 2 is temporal delimiter size */
     uint64_t pts = encodeFrameInfo->inputTimeStamp;
     uint8_t frameHeader[12];
-    mem_put_le32(frameHeader    , (uint32_t)frameSize); // updated with correct size lateron
-    mem_put_le32(frameHeader + 4, (uint32_t)(pts & 0xffffffff));
-    mem_put_le32(frameHeader + 8, (uint32_t)(pts >> 32));
+    mem_put_le32(frameHeader    , (int)frameSize); // updated with correct size lateron
+    mem_put_le32(frameHeader + 4, (int)(pts & 0xffffffff));
+    mem_put_le32(frameHeader + 8, (int)(pts >> 32));
     fwrite(frameHeader, 1, sizeof(frameHeader), m_encoderConfig->outputFileHandler.GetFileHandle());
 
     // Temporal delimiter

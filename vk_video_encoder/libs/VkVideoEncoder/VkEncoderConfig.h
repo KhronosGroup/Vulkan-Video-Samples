@@ -20,7 +20,16 @@
 #include <assert.h>
 #include <string.h>
 #include <atomic>
+// mio is a vendored third-party header-only library; silence its warnings.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
 #include "mio/mio.hpp"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 #include "VkCodecUtils/Helpers.h"
 #include "VkVideoEncoder/VkVideoEncoderDef.h"
@@ -55,11 +64,11 @@ parse_int (const char * str, uint32_t * out_value_ptr)
     return false;
   }
 
-  saved_errno = errno;
+  saved_errno = (uint32_t)errno;
   errno = 0;
   value = (uint32_t)strtol (str, NULL, 0);
   ret = (errno == 0);
-  errno = saved_errno;
+  errno = (int)saved_errno;
   if (value > 0 && value <= UINT32_MAX) {
     *out_value_ptr = value;
   } else {
@@ -385,7 +394,7 @@ beach:
             if (b == 0xa) {
                 break;
             }
-            header[i] = (char)b;
+            header[i] = (uint8_t)b;
         }
 
         return i + 1;
@@ -435,7 +444,7 @@ private:
             fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
             std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
-            return error.value();
+            return (size_t)error.value();
         }
 
         if (m_verbose) {
@@ -635,7 +644,7 @@ private:
             fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
             std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
-            return error.value();
+            return (size_t)error.value();
         }
 
         if (m_verbose) {
@@ -684,7 +693,7 @@ private:
 public:
     std::string appName;
     vk::DeviceUuidUtils deviceUUID;
-    int32_t  deviceId;
+    uint32_t deviceId;
     int32_t  queueId;
     bool     noDeviceFallback;
     VkVideoCodecOperationFlagBitsKHR codec;
@@ -731,7 +740,7 @@ public:
     QpMapMode qpMapMode;
 
     VkVideoGopStructure gopStructure;
-    int8_t dpbCount;
+    uint8_t dpbCount;
 
     // Parameters related to intra-refresh
     bool enableIntraRefresh;
@@ -792,7 +801,7 @@ public:
     EncoderConfig()
     : refCount(0)
     , appName()
-    , deviceId(-1)
+    , deviceId(UINT32_MAX)
     , queueId(0)
     , noDeviceFallback(false)
     , codec(VK_VIDEO_CODEC_OPERATION_NONE_KHR)
@@ -896,7 +905,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --refCount;
+        int32_t ret = --refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;
@@ -967,7 +976,7 @@ public:
 
     virtual uint32_t GetDefaultVideoProfileIdc() { return 0; };
 
-    virtual int8_t InitDpbCount() { return 16; };
+    virtual uint8_t InitDpbCount() { return 16; };
 
     virtual bool InitRateControl();
 

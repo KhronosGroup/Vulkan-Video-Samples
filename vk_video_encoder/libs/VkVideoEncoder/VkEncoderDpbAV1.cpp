@@ -171,7 +171,7 @@ int32_t VkEncDpbAV1::DpbSequenceStart(const VkSharedBaseObj<EncoderConfigAV1>& e
     }
 
     for (uint32_t i = 0; i < STD_VIDEO_AV1_NUM_REF_FRAMES; i++) {
-        m_refBufIdMap[i] = i;
+        m_refBufIdMap[i] = (int32_t)i;
     }
 
     m_lastLastRefNameInUse = (numBFrames == 0) ? STD_VIDEO_AV1_REFERENCE_NAME_GOLDEN_FRAME :
@@ -372,23 +372,23 @@ void VkEncDpbAV1::ConfigureRefBufUpdate(bool bShownKeyFrameOrSwitch, bool bShowE
 
     switch (frameUpdateType) {
         case KF_UPDATE:
-            m_refBufUpdateFlag = (refreshLastFrameFlag |
+            m_refBufUpdateFlag = (uint32_t)(refreshLastFrameFlag |
                                   REFRESH_GOLDEN_FRAME_FLAG |
                                   REFRESH_ALT2_FRAME_FLAG |
                                   REFRESH_ALT_FRAME_FLAG);
             break;
 
         case LF_UPDATE:
-            m_refBufUpdateFlag = refreshLastFrameFlag;
+            m_refBufUpdateFlag = (uint32_t)refreshLastFrameFlag;
             break;
 
         case GF_UPDATE:
-            m_refBufUpdateFlag = refreshLastFrameFlag |
-                                 REFRESH_GOLDEN_FRAME_FLAG;
+            m_refBufUpdateFlag = (uint32_t)(refreshLastFrameFlag |
+                                 REFRESH_GOLDEN_FRAME_FLAG);
             break;
 
         case OVERLAY_UPDATE:
-            m_refBufUpdateFlag = refreshLastFrameFlag;
+            m_refBufUpdateFlag = (uint32_t)refreshLastFrameFlag;
             break;
 
         case ARF_UPDATE:
@@ -396,7 +396,7 @@ void VkEncDpbAV1::ConfigureRefBufUpdate(bool bShownKeyFrameOrSwitch, bool bShowE
             break;
 
         case INTNL_OVERLAY_UPDATE:
-            m_refBufUpdateFlag = refreshLastFrameFlag;
+            m_refBufUpdateFlag = (uint32_t)refreshLastFrameFlag;
             break;
 
         case INTNL_ARF_UPDATE:
@@ -645,11 +645,11 @@ void VkEncDpbAV1::SetupReferenceFrameGroups(VkVideoGopStructure::FrameType pictu
         if (GetRefCount(dpbId) != 0) {
             if (m_DPB[dpbId].picOrderCntVal < curPicOrderCntVal) {
                 refFrameDpbIdListL0[numRefFramesL0] = dpbId;
-                refFramePocListL0[numRefFramesL0] = m_DPB[dpbId].picOrderCntVal;
+                refFramePocListL0[numRefFramesL0] = (int32_t)m_DPB[dpbId].picOrderCntVal;
                 numRefFramesL0++;
             } else {
                 refFrameDpbIdListL1[numRefFramesL1] = dpbId;
-                refFramePocListL1[numRefFramesL1] = m_DPB[dpbId].picOrderCntVal;
+                refFramePocListL1[numRefFramesL1] = (int32_t)m_DPB[dpbId].picOrderCntVal;
                 numRefFramesL1++;
             }
         }

@@ -113,7 +113,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
 
     virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_AV1_PROFILE_MAIN; }
 
-    virtual int8_t InitDpbCount() override;
+    virtual uint8_t InitDpbCount() override;
 
     virtual bool InitRateControl() override;
 
@@ -158,7 +158,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
         }
 
         double minCRBase = lTier ? levelLimits[lLevel].highCR : levelLimits[lLevel].mainCR;
-        double speedAdj = decodeRate / levelLimits[lLevel].maxDisplayRate;
+        double speedAdj = decodeRate / (double)levelLimits[lLevel].maxDisplayRate;
 
         return std::max(minCRBase * speedAdj, 0.8);
     }

@@ -62,7 +62,7 @@ public:
 
     int32_t Release()
     {
-        uint32_t ret;
+        int32_t ret;
         ret = --m_refCount;
         // Destroy the device if refcount reaches zero
         if (ret == 0) {
@@ -222,7 +222,7 @@ VkResult VulkanVideoEncoderImpl::EncodeNextFrame(int64_t& frameNumEncoded)
         return result;
     }
 
-    frameNumEncoded = encodeFrameInfo->frameInputOrderNum;
+    frameNumEncoded = (int64_t)encodeFrameInfo->frameInputOrderNum;
 
     if (m_encoderConfig->verboseFrameStruct) {
         std::cout << "End processing current input frame index: " << m_lastFrameIndex << std::endl;
