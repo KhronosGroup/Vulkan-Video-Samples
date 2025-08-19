@@ -108,6 +108,12 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
 endif()
 
+option(ENABLE_WERROR "Treat warnings as errors" ON)
+
+if(ENABLE_WERROR)
+    add_compile_options(-Werror)
+endif()
+
 # Installation settings
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_LIBDIR}")
 
