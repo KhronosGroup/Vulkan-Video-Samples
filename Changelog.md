@@ -1,3 +1,7 @@
+v0.3.4:
+  - Add profile argument to h26x encoders
+  - Fix signed comparison warning
+
 v0.3.3:
   - Fix CTS non win32 build
 
