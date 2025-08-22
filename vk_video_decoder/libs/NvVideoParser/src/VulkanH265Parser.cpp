@@ -216,7 +216,7 @@ bool VulkanH265Decoder::BeginPicture(VkParserPictureData *pnvpd)
     if (m_nuh_layer_id > 0)
     {
         hevc->mv_hevc_enable = 1;
-        hevc->nuh_layer_id = m_nuh_layer_id;
+        hevc->nuh_layer_id = (uint8_t)m_nuh_layer_id;
         hevc->default_ref_layers_active_flag = vps->privFlags.default_ref_layers_active_flag;
         hevc->NumDirectRefLayers = vps->numDirectRefLayers[m_nuh_layer_id];
         hevc->max_one_active_ref_layer_flag = vps->privFlags.max_one_active_ref_layer_flag;
@@ -279,8 +279,8 @@ int32_t VulkanH265Decoder::ParseNalUnit()
         return NALU_DISCARD;
     }
     // Early exit for the reserved and unknown nal units types
-    if ((nal_unit_type > NUT_RASL_R && nal_unit_type < NUT_BLA_W_LP) || 
-        (nal_unit_type > NUT_CRA_NUT && nal_unit_type < NUT_VPS_NUT) || 
+    if ((nal_unit_type > NUT_RASL_R && nal_unit_type < NUT_BLA_W_LP) ||
+        (nal_unit_type > NUT_CRA_NUT && nal_unit_type < NUT_VPS_NUT) ||
         (nal_unit_type > NUT_SUFFIX_SEI_NUT))
     {
         nvParserLog("Discarding NAL unit type %d\n", nal_unit_type);
@@ -356,7 +356,7 @@ int32_t VulkanH265Decoder::ParseNalUnit()
                     // Therefore set the m_max_dec_pic_buffering to be the max of the vps and sps buffering.
                     uint8_t vps_max_dec_pic_buffering = 1;
                     if (m_active_vps && m_vpss[sps->sps_video_parameter_set_id]) {
-                        vps_max_dec_pic_buffering = (m_active_vps->vps_max_layers_minus1 + 1) * (m_active_vps->stdDecPicBufMgr.max_dec_pic_buffering_minus1[0] + 1);
+                        vps_max_dec_pic_buffering = (uint8_t)((m_active_vps->vps_max_layers_minus1 + 1) * (m_active_vps->stdDecPicBufMgr.max_dec_pic_buffering_minus1[0] + 1));
                     }
                     m_max_dec_pic_buffering = std::max(sps->max_dec_pic_buffering, vps_max_dec_pic_buffering);
 
@@ -372,7 +372,7 @@ int32_t VulkanH265Decoder::ParseNalUnit()
                         return NALU_DISCARD;
                     }
                 }
-                m_intra_pic_flag &= (m_slh.slice_type == SLICE_TYPE_I);
+                m_intra_pic_flag &= (uint32_t)(m_slh.slice_type == SLICE_TYPE_I) & 0x1;
                 retval = NALU_SLICE;
             }
         }
@@ -423,20 +423,20 @@ void VulkanH265Decoder::seq_parameter_set_rbsp()
     }
 
     if (!MultiLayerExtSpsFlag) {
-        sps->flags.sps_temporal_id_nesting_flag = u(1);
+        sps->flags.sps_temporal_id_nesting_flag = flag();
         if ((!sps->sps_max_sub_layers_minus1) && (sps->flags.sps_temporal_id_nesting_flag != true)) {
             return;
         }
         sps->pProfileTierLevel = profile_tier_level(&sps->stdProfileTierLevel, sps->sps_max_sub_layers_minus1);
     }
-    uint8_t seq_parameter_set_id = ue();
+    uint8_t seq_parameter_set_id = (uint8_t)ue();
     bool sps_error = false;
     sps_error |= (seq_parameter_set_id >= MAX_NUM_SPS);
     sps->sps_seq_parameter_set_id = (uint8_t)seq_parameter_set_id;
 
     if (MultiLayerExtSpsFlag) {
         if (u(1)) { // update_rep_format_flag
-            sps->sps_rep_format_idx = u(8);
+            sps->sps_rep_format_idx = (uint8_t)u(8);
         } else {
             sps->sps_rep_format_idx = vps->vps_rep_format_idx[vps->LayerIdxInVps[m_nuh_layer_id]];
         }
@@ -450,14 +450,14 @@ void VulkanH265Decoder::seq_parameter_set_rbsp()
         sps->conf_win_right_offset      = vps->repFormat[sps->sps_rep_format_idx].conf_win_vps_right_offset;
         sps->conf_win_top_offset        = vps->repFormat[sps->sps_rep_format_idx].conf_win_vps_top_offset;
         sps->conf_win_bottom_offset     = vps->repFormat[sps->sps_rep_format_idx].conf_win_vps_bottom_offset;
-        sps->bit_depth_luma_minus8      = vps->repFormat[sps->sps_rep_format_idx].bit_depth_vps_luma_minus8;
-        sps->bit_depth_chroma_minus8    = vps->repFormat[sps->sps_rep_format_idx].bit_depth_vps_chroma_minus8;
+        sps->bit_depth_luma_minus8      = (uint8_t)vps->repFormat[sps->sps_rep_format_idx].bit_depth_vps_luma_minus8;
+        sps->bit_depth_chroma_minus8    = (uint8_t)vps->repFormat[sps->sps_rep_format_idx].bit_depth_vps_chroma_minus8;
     } else {
         uint8_t chroma_format_idc = (uint8_t)ue();
         sps_error |= (chroma_format_idc > 3);
         sps->chroma_format_idc = (StdVideoH265ChromaFormatIdc)chroma_format_idc;
         if (sps->chroma_format_idc == 3) {
-            sps->flags.separate_colour_plane_flag = u(1);
+            sps->flags.separate_colour_plane_flag = flag();
         }
         sps->pic_width_in_luma_samples = ue();
         sps->pic_height_in_luma_samples = ue();
@@ -544,32 +544,32 @@ void VulkanH265Decoder::seq_parameter_set_rbsp()
     sps->log2_diff_max_min_luma_transform_block_size = (uint8_t)ue();
     sps->max_transform_hierarchy_depth_inter = (uint8_t)ue();
     sps->max_transform_hierarchy_depth_intra = (uint8_t)ue();
-    sps->flags.scaling_list_enabled_flag = u(1);
+    sps->flags.scaling_list_enabled_flag = flag();
     if (sps->flags.scaling_list_enabled_flag) {
         uint32_t sps_infer_scaling_list_flag = 0;
         if (MultiLayerExtSpsFlag) {
-            sps_infer_scaling_list_flag = u(1);
+            sps_infer_scaling_list_flag = flag();
         }
         if (sps_infer_scaling_list_flag) {
             u(6); // sps_scaling_list_ref_layer_id
         } else {
-            sps->flags.sps_scaling_list_data_present_flag = u(1);
+            sps->flags.sps_scaling_list_data_present_flag = flag();
             if (sps->flags.sps_scaling_list_data_present_flag) {
                 if (!scaling_list_data(&sps->sps_scaling_list))
                     return;
             }
         }
     }
-    sps->flags.amp_enabled_flag = u(1);
-    sps->flags.sample_adaptive_offset_enabled_flag = u(1);
-    sps->flags.pcm_enabled_flag = u(1);
+    sps->flags.amp_enabled_flag = flag();
+    sps->flags.sample_adaptive_offset_enabled_flag = flag();
+    sps->flags.pcm_enabled_flag = flag();
     if (sps->flags.pcm_enabled_flag) {
 
         sps->pcm_sample_bit_depth_luma_minus1 = (uint8_t)u(4);
         sps->pcm_sample_bit_depth_chroma_minus1 = (uint8_t)u(4);
         sps->log2_min_pcm_luma_coding_block_size_minus3 = (uint8_t)ue();
         sps->log2_diff_max_min_pcm_luma_coding_block_size = (uint8_t)ue();
-        sps->flags.pcm_loop_filter_disabled_flag = u(1);
+        sps->flags.pcm_loop_filter_disabled_flag = flag();
         if ((sps->pcm_sample_bit_depth_luma_minus1 + 1 > sps->bit_depth_luma_minus8 + 8)
          || (sps->pcm_sample_bit_depth_chroma_minus1 + 1 > sps->bit_depth_chroma_minus8 + 8)) {
             nvParserLog("Invalid pcm_sample_bit_depth_minus1 (y:%d, uv:%d)\n", sps->pcm_sample_bit_depth_luma_minus1, sps->pcm_sample_bit_depth_chroma_minus1);
@@ -596,7 +596,7 @@ void VulkanH265Decoder::seq_parameter_set_rbsp()
     if (num_short_term_ref_pic_sets) {
         sps->pShortTermRefPicSet = sps->stdShortTermRefPicSet;
     }
-    sps->flags.long_term_ref_pics_present_flag = u(1);
+    sps->flags.long_term_ref_pics_present_flag = flag();
     if (sps->flags.long_term_ref_pics_present_flag) {
         uint32_t num_long_term_ref_pics_sps = ue();
         sps->pLongTermRefPicsSps = &sps->stdLongTermRefPicsSps;
@@ -615,29 +615,29 @@ void VulkanH265Decoder::seq_parameter_set_rbsp()
             }
         }
     }
-    sps->flags.sps_temporal_mvp_enabled_flag = u(1);
-    sps->flags.strong_intra_smoothing_enabled_flag = u(1);
-    sps->flags.vui_parameters_present_flag = u(1);
+    sps->flags.sps_temporal_mvp_enabled_flag = flag();
+    sps->flags.strong_intra_smoothing_enabled_flag = flag();
+    sps->flags.vui_parameters_present_flag = flag();
     if (sps->flags.vui_parameters_present_flag) { // vui_parameters_present_flag
 
         vui_parameters(sps, sps->sps_max_sub_layers_minus1);
     }
-    sps->flags.sps_extension_present_flag = u(1);
+    sps->flags.sps_extension_present_flag = flag();
     if (sps->flags.sps_extension_present_flag) { // sps_extension_present_flag
 
-        sps->flags.sps_range_extension_flag = u(1);
+        sps->flags.sps_range_extension_flag = flag();
         bool sps_multilayer_extension_flag = u(1);
         u(6); // sps_extension_6bits
         if (sps->flags.sps_range_extension_flag) {
-            sps->flags.transform_skip_rotation_enabled_flag = u(1);
-            sps->flags.transform_skip_context_enabled_flag = u(1);
-            sps->flags.implicit_rdpcm_enabled_flag = u(1);
-            sps->flags.explicit_rdpcm_enabled_flag = u(1);
-            sps->flags.extended_precision_processing_flag = u(1);
-            sps->flags.intra_smoothing_disabled_flag = u(1);
-            sps->flags.high_precision_offsets_enabled_flag = u(1);
-            sps->flags.persistent_rice_adaptation_enabled_flag = u(1);
-            sps->flags.cabac_bypass_alignment_enabled_flag = u(1);
+            sps->flags.transform_skip_rotation_enabled_flag = flag();
+            sps->flags.transform_skip_context_enabled_flag = flag();
+            sps->flags.implicit_rdpcm_enabled_flag = flag();
+            sps->flags.explicit_rdpcm_enabled_flag = flag();
+            sps->flags.extended_precision_processing_flag = flag();
+            sps->flags.intra_smoothing_disabled_flag = flag();
+            sps->flags.high_precision_offsets_enabled_flag = flag();
+            sps->flags.persistent_rice_adaptation_enabled_flag = flag();
+            sps->flags.cabac_bypass_alignment_enabled_flag = flag();
         }
         if (sps_multilayer_extension_flag) {
             u(1); // inter_view_mv_vert_constraint_flag
@@ -735,11 +735,11 @@ void VulkanH265Decoder::pic_parameter_set_rbsp()
     // Setting the sps_video_parameter_set_id as 0 for this case.
     // This also implies that with h.265 we need to cache the PPS/SPS data before we get a valid VPS at the client side.
     pps->sps_video_parameter_set_id = sps ? sps->sps_video_parameter_set_id : 0; // FIXME: pick the last SPS, instead.
-    pps->flags.dependent_slice_segments_enabled_flag = u(1); // name differs from spec
-    pps->flags.output_flag_present_flag = u(1);
+    pps->flags.dependent_slice_segments_enabled_flag = flag(); // name differs from spec
+    pps->flags.output_flag_present_flag = flag();
     pps->num_extra_slice_header_bits = (uint8_t)u(3);
-    pps->flags.sign_data_hiding_enabled_flag = u(1);
-    pps->flags.cabac_init_present_flag = u(1);
+    pps->flags.sign_data_hiding_enabled_flag = flag();
+    pps->flags.cabac_init_present_flag = flag();
     uint32_t num_ref_idx_l0_default_active_minus1 = ue();
     uint32_t num_ref_idx_l1_default_active_minus1 = ue();
     if ((num_ref_idx_l0_default_active_minus1 > 15) || (num_ref_idx_l1_default_active_minus1 > 15)) {
@@ -759,9 +759,9 @@ void VulkanH265Decoder::pic_parameter_set_rbsp()
         nvParserLog("Invalid init_qp_minus26 (%d)\n", pps->init_qp_minus26);
         return;
     }
-    pps->flags.constrained_intra_pred_flag = u(1);
-    pps->flags.transform_skip_enabled_flag = u(1);
-    pps->flags.cu_qp_delta_enabled_flag = u(1);
+    pps->flags.constrained_intra_pred_flag = flag();
+    pps->flags.transform_skip_enabled_flag = flag();
+    pps->flags.cu_qp_delta_enabled_flag = flag();
     if (pps->flags.cu_qp_delta_enabled_flag) {
         pps->diff_cu_qp_delta_depth = (uint8_t)ue();
     }
@@ -773,12 +773,12 @@ void VulkanH265Decoder::pic_parameter_set_rbsp()
         nvParserLog("Invalid pps_crcb_qp_offset (cb:%d,cr:%d)\n", pps->pps_cb_qp_offset, pps->pps_cr_qp_offset);
         return;
     }
-    pps->flags.pps_slice_chroma_qp_offsets_present_flag = u(1); // name differs from spec
-    pps->flags.weighted_pred_flag = u(1);
-    pps->flags.weighted_bipred_flag = u(1);
-    pps->flags.transquant_bypass_enabled_flag = u(1);
-    pps->flags.tiles_enabled_flag = u(1);
-    pps->flags.entropy_coding_sync_enabled_flag = u(1);
+    pps->flags.pps_slice_chroma_qp_offsets_present_flag = flag(); // name differs from spec
+    pps->flags.weighted_pred_flag = flag();
+    pps->flags.weighted_bipred_flag = flag();
+    pps->flags.transquant_bypass_enabled_flag = flag();
+    pps->flags.tiles_enabled_flag = flag();
+    pps->flags.entropy_coding_sync_enabled_flag = flag();
     pps->flags.loop_filter_across_tiles_enabled_flag = 1; // default as per spec, unless explicit
     if (pps->flags.tiles_enabled_flag)
     {
@@ -792,7 +792,7 @@ void VulkanH265Decoder::pic_parameter_set_rbsp()
         }
         pps->num_tile_columns_minus1 = (uint8_t)num_tile_columns_minus1;
         pps->num_tile_rows_minus1 = (uint8_t)num_tile_rows_minus1;
-        pps->flags.uniform_spacing_flag = u(1);
+        pps->flags.uniform_spacing_flag = flag();
         if (!pps->flags.uniform_spacing_flag)
         {
             assert(pps->num_tile_columns_minus1 < sizeof(pps->column_width_minus1) / sizeof(pps->column_width_minus1[0]));
@@ -804,14 +804,14 @@ void VulkanH265Decoder::pic_parameter_set_rbsp()
                 pps->row_height_minus1[i] = (uint16_t)ue();
             }
         }
-        pps->flags.loop_filter_across_tiles_enabled_flag = u(1);
+        pps->flags.loop_filter_across_tiles_enabled_flag = flag();
     }
-    pps->flags.pps_loop_filter_across_slices_enabled_flag = u(1);
-    pps->flags.deblocking_filter_control_present_flag = u(1);
+    pps->flags.pps_loop_filter_across_slices_enabled_flag = flag();
+    pps->flags.deblocking_filter_control_present_flag = flag();
     if (pps->flags.deblocking_filter_control_present_flag)
     {
-        pps->flags.deblocking_filter_override_enabled_flag = u(1);
-        pps->flags.pps_deblocking_filter_disabled_flag = u(1); // slice_disable_deblocking_filter_flag LoopFilterDisable
+        pps->flags.deblocking_filter_override_enabled_flag = flag();
+        pps->flags.pps_deblocking_filter_disabled_flag = flag(); // slice_disable_deblocking_filter_flag LoopFilterDisable
         if (!pps->flags.pps_deblocking_filter_disabled_flag)
         {
             int beta_offset_div2 = se();
@@ -826,21 +826,21 @@ void VulkanH265Decoder::pic_parameter_set_rbsp()
             }
         }
     }
-    pps->flags.pps_scaling_list_data_present_flag = u(1);
+    pps->flags.pps_scaling_list_data_present_flag = flag();
     if (pps->flags.pps_scaling_list_data_present_flag) {
         scaling_list_data(&pps->pps_scaling_list);
     }
-    pps->flags.lists_modification_present_flag = u(1);
+    pps->flags.lists_modification_present_flag = flag();
     pps->log2_parallel_merge_level_minus2 = (uint8_t)ue();
     if (pps->log2_parallel_merge_level_minus2 > 12) // TBD: What's supported worst-case without using SPS ?
     {
         nvParserLog("Invalid log2_parallel_merge_level_minus2 (%d)\n", pps->log2_parallel_merge_level_minus2);
         return;
     }
-    pps->flags.slice_segment_header_extension_present_flag = u(1);
-    pps->flags.pps_extension_present_flag = u(1);
+    pps->flags.slice_segment_header_extension_present_flag = flag();
+    pps->flags.pps_extension_present_flag = flag();
     if (pps->flags.pps_extension_present_flag) {
-        pps->flags.pps_range_extension_flag = u(1);
+        pps->flags.pps_range_extension_flag = flag();
         int pps_multilayer_extension_flag = u(1);
         int pps_extension_6bits = u(6);
         UNUSED_LOCAL_VAR(pps_extension_6bits);
@@ -848,8 +848,8 @@ void VulkanH265Decoder::pic_parameter_set_rbsp()
             if (pps->flags.transform_skip_enabled_flag) {
                 pps->log2_max_transform_skip_block_size_minus2 = (uint8_t)ue();
             }
-            pps->flags.cross_component_prediction_enabled_flag = u(1);
-            pps->flags.chroma_qp_offset_list_enabled_flag = u(1);
+            pps->flags.cross_component_prediction_enabled_flag = flag();
+            pps->flags.chroma_qp_offset_list_enabled_flag = flag();
             if (pps->flags.chroma_qp_offset_list_enabled_flag) {
                 pps->diff_cu_chroma_qp_offset_depth = (uint8_t)ue();
                 pps->chroma_qp_offset_list_len_minus1 = (uint8_t)ue();
@@ -920,13 +920,13 @@ void VulkanH265Decoder::video_parameter_set_rbsp()
     }
 
     // vps base
-    vps->vps_video_parameter_set_id    = vps_video_parameter_set_id;
-    vps->privFlags.vps_base_layer_internal_flag  = u(1);
-    vps->privFlags.vps_base_layer_available_flag = u(1);
+    vps->vps_video_parameter_set_id    = (uint8_t)vps_video_parameter_set_id;
+    vps->privFlags.vps_base_layer_internal_flag  = flag();
+    vps->privFlags.vps_base_layer_available_flag = flag();
     uint32_t tmp = u(6);
     vps->vps_max_layers_minus1         = std::min<int32_t>(tmp, (uint32_t)(MAX_NUM_LAYER_IDS - 2));
-    vps->vps_max_sub_layers_minus1     = u(3);
-    vps->flags.vps_temporal_id_nesting_flag  = u(1);
+    vps->vps_max_sub_layers_minus1     = (uint8_t)u(3);
+    vps->flags.vps_temporal_id_nesting_flag  = flag();
 
     tmp = u(16);
     if (tmp != 0xFFFF)
@@ -938,18 +938,18 @@ void VulkanH265Decoder::video_parameter_set_rbsp()
     vps->pProfileTierLevel = profile_tier_level(&vps->stdProfileTierLevel,
                                                            vps->vps_max_sub_layers_minus1);
 
-    vps->flags.vps_sub_layer_ordering_info_present_flag =  u(1);
+    vps->flags.vps_sub_layer_ordering_info_present_flag =  flag();
     for (uint32_t i = (vps->flags.vps_sub_layer_ordering_info_present_flag ? 0 : vps->vps_max_sub_layers_minus1);
             i <= vps->vps_max_sub_layers_minus1; i++)
     {
-        vps->stdDecPicBufMgr.max_dec_pic_buffering_minus1[i] = ue();
+        vps->stdDecPicBufMgr.max_dec_pic_buffering_minus1[i] = (uint8_t)ue();
         if (vps->stdDecPicBufMgr.max_dec_pic_buffering_minus1[i] >= HEVC_DPB_SIZE)
         {
             nvParserLog("Invalid vps parameter (vps_max_dec_pic_buffering_minus1=%d)\n", vps->stdDecPicBufMgr.max_dec_pic_buffering_minus1[i]);
             return;
         }
 
-        vps->stdDecPicBufMgr.max_num_reorder_pics[i]         = ue();
+        vps->stdDecPicBufMgr.max_num_reorder_pics[i]         = (uint8_t)ue();
         if (vps->stdDecPicBufMgr.max_num_reorder_pics[i] > vps->stdDecPicBufMgr.max_dec_pic_buffering_minus1[i])
         {
             nvParserLog("Invalid vps parameter (vps_max_num_reorder_pics=%d)\n", vps->stdDecPicBufMgr.max_num_reorder_pics[i]);
@@ -973,7 +973,7 @@ void VulkanH265Decoder::video_parameter_set_rbsp()
     for (uint32_t i = 1; i <= vps->vps_num_layer_sets - 1; i++)
     {
         for (uint32_t j = 0; j <= vps->vps_max_layer_id; j++) {
-            vps->layer_id_included_flag[i][j] = u(1);
+            vps->layer_id_included_flag[i][j] = (uint8_t)u(1);
         }
     }
     for (uint32_t i = 1; i <= vps->vps_num_layer_sets - 1; i++)
@@ -982,13 +982,13 @@ void VulkanH265Decoder::video_parameter_set_rbsp()
         for (uint32_t m = 0; m <= vps->vps_max_layer_id; m++)
         {
             if (vps->layer_id_included_flag[i][m])
-                vps->layer_set_layer_id_list[i][n++] = m;
+                vps->layer_set_layer_id_list[i][n++] = (uint8_t)m;
         }
         vps->num_layers_in_id_list[i] = n;
     }
 
     // HRD related
-    vps->flags.vps_timing_info_present_flag = u(1);
+    vps->flags.vps_timing_info_present_flag = flag();
     if (vps->flags.vps_timing_info_present_flag != 0)
     {
         vps->vps_num_units_in_tick = u(16);
@@ -998,7 +998,7 @@ void VulkanH265Decoder::video_parameter_set_rbsp()
         vps->vps_time_scale <<= 16;
         vps->vps_time_scale += u(16);
 
-        vps->flags.vps_poc_proportional_to_timing_flag = u(1);
+        vps->flags.vps_poc_proportional_to_timing_flag = flag();
         if (vps->flags.vps_poc_proportional_to_timing_flag)
         {
             vps->vps_num_ticks_poc_diff_one_minus1 = ue();
@@ -1041,7 +1041,7 @@ void VulkanH265Decoder::video_parameter_set_rbsp()
             }
 
             if (i > 0) {
-                vps->cprms_present_flag[i] = u(1);
+                vps->cprms_present_flag[i] = (uint8_t)u(1);
             }
 
             hrd_parameters(&pHrdParameters[i], vps->cprms_present_flag[i],
@@ -1058,7 +1058,7 @@ void VulkanH265Decoder::video_parameter_set_rbsp()
 
     if (hevc_spec_version != 201304)
     {
-        vps->privFlags.vps_extension_flag = u(1);
+        vps->privFlags.vps_extension_flag = flag();
         if (vps->privFlags.vps_extension_flag != 0)
         {
             // vps_extension_alignment_bit_equal_to_one
@@ -1097,7 +1097,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
                                                                pVideoParamSet->vps_max_sub_layers_minus1, 0);
     }
 
-    pVideoParamSet->privFlags.splitting_flag = u(1);
+    pVideoParamSet->privFlags.splitting_flag = flag();
 
     //////////////////////////////////////////////////////
     /* Layer and nuh_layer_id info */
@@ -1105,7 +1105,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
     pVideoParamSet->numScalabilityTypes = 0;
     for (i = 0; i < MAX_NUM_SCALABILITY_TYPES; i++)
     {
-        pVideoParamSet->scalability_mask_flag[i] = u(1);
+        pVideoParamSet->scalability_mask_flag[i] = (uint8_t)u(1);
         pVideoParamSet->numScalabilityTypes += pVideoParamSet->scalability_mask_flag[i];
     }
 
@@ -1117,10 +1117,10 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
     {
         /* infer last dimension ID Len */
         pVideoParamSet->dimension_id_len[pVideoParamSet->numScalabilityTypes - 1]
-          = 5 - xGetDimBitOffset(pVideoParamSet, pVideoParamSet->numScalabilityTypes - 1);
+          = 5 - (uint8_t)xGetDimBitOffset(pVideoParamSet, pVideoParamSet->numScalabilityTypes - 1);
     }
 
-    pVideoParamSet->privFlags.vps_nuh_layer_id_present_flag = u(1);
+    pVideoParamSet->privFlags.vps_nuh_layer_id_present_flag = flag();
 
     for (i = 1; i <= pVideoParamSet->vps_max_layers_minus1; i++)
     {
@@ -1145,14 +1145,14 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
         {
             for (j = 0; j < pVideoParamSet->numScalabilityTypes; j++)
             {
-                pVideoParamSet->dimension_id[i][j] = (pVideoParamSet->layer_id_in_nuh[i]
-                & ( (1 << xGetDimBitOffset(pVideoParamSet,  j + 1 ) ) - 1) ) >> xGetDimBitOffset(pVideoParamSet, j );
+                pVideoParamSet->dimension_id[i][j] = (uint8_t)(pVideoParamSet->layer_id_in_nuh[i]
+                & ( (1 << xGetDimBitOffset(pVideoParamSet,  j + 1 ) ) - 1) >> xGetDimBitOffset(pVideoParamSet, j ));
             }
         }
     }
     for (i = 1; i <= pVideoParamSet->vps_max_layers_minus1; i++)
     {
-        pVideoParamSet->LayerIdxInVps[pVideoParamSet->layer_id_in_nuh[i]] = i;
+        pVideoParamSet->LayerIdxInVps[pVideoParamSet->layer_id_in_nuh[i]] = (uint8_t)i;
     }
 
     initNumViews(pVideoParamSet);
@@ -1163,7 +1163,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
         for (i = 0; i < pVideoParamSet->numViews; i++)
         {
             uint32_t codelength = pVideoParamSet->view_id_len;
-            pVideoParamSet->view_id_val[i] = u(codelength);
+            pVideoParamSet->view_id_val[i] = (uint8_t)u(codelength);
         }
     }
 
@@ -1171,7 +1171,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
     {
         for (j = 0; j < i; j++)
         {
-            pVideoParamSet->direct_dependency_flag[i][j] = u(1);
+            pVideoParamSet->direct_dependency_flag[i][j] = (uint8_t)u(1);
         }
     }
 
@@ -1192,7 +1192,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
         for (j = 1; j < pVideoParamSet->numIndependentLayers; j++)
         {
             uint32_t length = CeilLog2(pVideoParamSet->numLayersInTreePartition[j] + 1);
-            pVideoParamSet->highest_layer_idx_plus1[i][j] = u(length);
+            pVideoParamSet->highest_layer_idx_plus1[i][j] = (uint8_t)u(length);
         }
 
         uint32_t layerNum = 0;
@@ -1205,12 +1205,12 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
         pVideoParamSet->num_layers_in_id_list[lsIdx] = layerNum;
     }
 
-    pVideoParamSet->privFlags.vps_sub_layers_max_minus1_present_flag = u(1);
+    pVideoParamSet->privFlags.vps_sub_layers_max_minus1_present_flag = flag();
 
     if (pVideoParamSet->privFlags.vps_sub_layers_max_minus1_present_flag)
     {
         for (i = 0; i <= pVideoParamSet->vps_max_layers_minus1; i++)
-            pVideoParamSet->sub_layers_vps_max_minus1[i] = u(3);
+            pVideoParamSet->sub_layers_vps_max_minus1[i] = (uint8_t)u(3);
     }
     else
     {
@@ -1218,7 +1218,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
             pVideoParamSet->sub_layers_vps_max_minus1[i] = pVideoParamSet->vps_max_sub_layers_minus1;
     }
 
-    pVideoParamSet->privFlags.max_tid_ref_present_flag = u(1);
+    pVideoParamSet->privFlags.max_tid_ref_present_flag = flag();
 
     if (pVideoParamSet->privFlags.max_tid_ref_present_flag)
     {
@@ -1227,12 +1227,12 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
             for (j = i+1; j <= pVideoParamSet->vps_max_layers_minus1; j++)
             {
                 if (pVideoParamSet->direct_dependency_flag[j][i])
-                    pVideoParamSet->max_tid_il_ref_pics_plus1[i][j] = u(3);
+                    pVideoParamSet->max_tid_il_ref_pics_plus1[i][j] = (uint8_t)u(3);
             }
         }
     }
 
-    pVideoParamSet->privFlags.default_ref_layers_active_flag = u(1);
+    pVideoParamSet->privFlags.default_ref_layers_active_flag = flag();
 
     pVideoParamSet->vps_num_profile_tier_level_minus1 = ue();
     if (pVideoParamSet->vps_num_profile_tier_level_minus1 > 63 ||
@@ -1243,7 +1243,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
     }
     for (i = pVideoParamSet->privFlags.vps_base_layer_internal_flag ? 2 : 1; i <= pVideoParamSet->vps_num_profile_tier_level_minus1; i++)
     {
-        pVideoParamSet->vps_profile_present_flag[i] = u(1);
+        pVideoParamSet->vps_profile_present_flag[i] = (uint8_t)u(1);
         pVideoParamSet->pProfileTierLevel = profile_tier_level(&pVideoParamSet->stdProfileTierLevel, pVideoParamSet->vps_max_sub_layers_minus1, pVideoParamSet->vps_profile_present_flag[i]);
     }
 
@@ -1288,7 +1288,7 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
             if (pVideoParamSet->necessaryLayerFlag[i][j] && pVideoParamSet->vps_num_profile_tier_level_minus1 > 0)
             {
                 uint32_t codelength = CeilLog2(pVideoParamSet->vps_num_profile_tier_level_minus1 + 1);
-                pVideoParamSet->profile_tier_level_idx[i][j] = u(codelength);
+                pVideoParamSet->profile_tier_level_idx[i][j] = (uint8_t)u(codelength);
             }
         }
 
@@ -1336,25 +1336,25 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
 
     if(pVideoParamSet->vps_num_rep_formats_minus1 > 0)
     {
-        pVideoParamSet->privFlags.rep_format_idx_present_flag = u(1);
+        pVideoParamSet->privFlags.rep_format_idx_present_flag = flag();
         if (pVideoParamSet->privFlags.rep_format_idx_present_flag)
         {
             for (i = pVideoParamSet->privFlags.vps_base_layer_internal_flag ? 1 : 0; i <= pVideoParamSet->vps_max_layers_minus1; i++)
             {
                 uint32_t codelength = CeilLog2(pVideoParamSet->vps_num_rep_formats_minus1 + 1);
-                pVideoParamSet->vps_rep_format_idx[i] = u(codelength);
+                pVideoParamSet->vps_rep_format_idx[i] = (uint8_t)u(codelength);
             }
         }
     }
 
-    pVideoParamSet->privFlags.max_one_active_ref_layer_flag = u(1);
-    pVideoParamSet->privFlags.vps_poc_lsb_aligned_flag = u(1);
+    pVideoParamSet->privFlags.max_one_active_ref_layer_flag = flag();
+    pVideoParamSet->privFlags.vps_poc_lsb_aligned_flag = flag();
 
     for (i = 1; i <= pVideoParamSet->vps_max_layers_minus1; i++)
     {
         if (pVideoParamSet->numDirectRefLayers[pVideoParamSet->layer_id_in_nuh[i]] == 0)
         {
-            pVideoParamSet->poc_lsb_not_present_flag[i] = u(1);
+            pVideoParamSet->poc_lsb_not_present_flag[i] = (uint8_t)u(1);
         }
     }
 
@@ -1362,13 +1362,13 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
     for (i = 1; i < pVideoParamSet->numOutputLayerSets; i++)
     {
         uint32_t currLsIdx = olsIdxToLsIdx(pVideoParamSet, i);
-        pVideoParamSet->sub_layer_flag_info_present_flag[i] = u(1);
+        pVideoParamSet->sub_layer_flag_info_present_flag[i] = (uint8_t)u(1);
 
         for (j = 0; j <= pVideoParamSet->sub_layers_vps_max_minus1[currLsIdx]; j++)
         {
             if (j > 0 && pVideoParamSet->sub_layer_flag_info_present_flag[i])
             {
-                pVideoParamSet->sub_layer_dpb_info_present_flag[i][j] = u(1);
+                pVideoParamSet->sub_layer_dpb_info_present_flag[i][j] = (uint8_t)u(1);
             }
             else if (j == 0)
             {
@@ -1382,11 +1382,11 @@ void VulkanH265Decoder::video_parameter_set_rbspExtension(hevc_video_param_s *pV
                     if (pVideoParamSet->necessaryLayerFlag[i][k] &&
                     (pVideoParamSet->privFlags.vps_base_layer_internal_flag || (pVideoParamSet->layer_set_layer_id_list[currLsIdx][k] != 0) ))
                     {
-                        pVideoParamSet->max_vps_dec_pic_buffering_minus1[i][k][j] = ue();
+                        pVideoParamSet->max_vps_dec_pic_buffering_minus1[i][k][j] = (uint8_t)ue();
                     }
                 }
-                pVideoParamSet->max_vps_num_reorder_pics[i][j] = ue();
-                pVideoParamSet->max_vps_latency_increase_plus1[i][j] = ue();
+                pVideoParamSet->max_vps_num_reorder_pics[i][j] = (uint8_t)ue();
+                pVideoParamSet->max_vps_latency_increase_plus1[i][j] = (uint8_t)ue();
             }
         }
     }
@@ -1427,7 +1427,7 @@ void VulkanH265Decoder::deriveNecessaryLayerFlags(hevc_video_param_s *pVideoPara
     pVideoParamSet->numOutputLayersInOutputLayerSet[olsIdx] = 0;
     for (uint32_t j = 0; j < pVideoParamSet->num_layers_in_id_list[olsIdxToLsIdx(pVideoParamSet, olsIdx)]; j++)
     {
-        pVideoParamSet->numOutputLayersInOutputLayerSet[olsIdx] += (pVideoParamSet->output_layer_flag[olsIdx][j]);
+        pVideoParamSet->numOutputLayersInOutputLayerSet[olsIdx] += (uint8_t)(pVideoParamSet->output_layer_flag[olsIdx][j]);
         if (pVideoParamSet->output_layer_flag[olsIdx][j])
         {
             pVideoParamSet->olsHighestOutputLayerId[olsIdx] = pVideoParamSet->layer_set_layer_id_list[olsIdxToLsIdx(pVideoParamSet, olsIdx)][j];
@@ -1462,7 +1462,7 @@ void VulkanH265Decoder::setRefLayers(hevc_video_param_s *pVideoParamSet)
         uint32_t iNuhLId =  pVideoParamSet->layer_id_in_nuh[i];
         for (j = 0, d = 0, r = 0, p = 0; j <= pVideoParamSet->vps_max_layers_minus1; j++)
         {
-            uint32_t jNuhLid =  pVideoParamSet->layer_id_in_nuh[j];
+            uint8_t jNuhLid =  pVideoParamSet->layer_id_in_nuh[j];
             if (pVideoParamSet->direct_dependency_flag[i][j])
             {
                 pVideoParamSet->idDirectRefLayer[iNuhLId][d++] = jNuhLid;
@@ -1475,9 +1475,9 @@ void VulkanH265Decoder::setRefLayers(hevc_video_param_s *pVideoParamSet)
             {
                 pVideoParamSet->idPredictedLayer[iNuhLId][p++] = jNuhLid;
             }
-            pVideoParamSet->numDirectRefLayers[iNuhLId] = d;
-            pVideoParamSet->numRefLayers[iNuhLId] = r;
-            pVideoParamSet->numPredictedLayers[iNuhLId] = p;
+            pVideoParamSet->numDirectRefLayers[iNuhLId] = (uint8_t)d;
+            pVideoParamSet->numRefLayers[iNuhLId] = (uint8_t)r;
+            pVideoParamSet->numPredictedLayers[iNuhLId] = (uint8_t)p;
         }
     }
 
@@ -1487,13 +1487,13 @@ void VulkanH265Decoder::setRefLayers(hevc_video_param_s *pVideoParamSet)
     }
     for (i = 0, k = 0; i <= pVideoParamSet->vps_max_layers_minus1; i++ )
     {
-        uint32_t iNuhLId = pVideoParamSet->layer_id_in_nuh[i];
+        uint8_t iNuhLId = pVideoParamSet->layer_id_in_nuh[i];
         if (pVideoParamSet->numDirectRefLayers[iNuhLId] == 0)
         {
             pVideoParamSet->treePartitionLayerIdList[k][0] = iNuhLId;
             for (j = 0, h = 1; j < pVideoParamSet->numPredictedLayers[iNuhLId]; j++)
             {
-                uint32_t predLId = pVideoParamSet->idPredictedLayer[iNuhLId][j];
+                uint8_t predLId = pVideoParamSet->idPredictedLayer[iNuhLId][j];
                 if (!pVideoParamSet->layerIdInListFlag[predLId])
                 {
                     pVideoParamSet->treePartitionLayerIdList[k][h++] = predLId;
@@ -1525,7 +1525,7 @@ void VulkanH265Decoder::initNumViews(hevc_video_param_s *pVideoParamSet)
                 ScalabilityId[i][smIdx] = 0;
             }
         }
-        pVideoParamSet->viewOrderIdx[lId] = ScalabilityId[i][1];
+        pVideoParamSet->viewOrderIdx[lId] = (uint8_t)ScalabilityId[i][1];
         if (i > 0)
         {
             uint32_t newViewFlag = 1;
@@ -1641,7 +1641,7 @@ const StdVideoH265ProfileTierLevel* VulkanH265Decoder::profile_tier_level(StdVid
         u(24);      // general source/constraint flags(4), general_reserved_zero_44bits[0..19]
         u(24);      // general_reserved_zero_44bits[20..43]
     }
-    uint8_t general_level_idc = u(8); // general_level_idc
+    uint8_t general_level_idc = (uint8_t)u(8); // general_level_idc
     // Table A.4 - General tier and level limits
     pProfileTierLevel->general_level_idc = generalLevelIdcToVulkanLevelIdcEnum(general_level_idc);
 
@@ -1750,9 +1750,9 @@ StdVideoH265ShortTermRefPicSet* VulkanH265Decoder::short_term_ref_pic_set(StdVid
         int delta_rps_sign = u(1);
         stdShortTermRefPicSet->flags.delta_rps_sign = (delta_rps_sign != 0) ? 1 : 0;
         int abs_delta_rps_minus1 = ue();
-        stdShortTermRefPicSet->abs_delta_rps_minus1 = (uint32_t)abs_delta_rps_minus1;
+        stdShortTermRefPicSet->abs_delta_rps_minus1 = (uint16_t)abs_delta_rps_minus1;
         int DeltaRPS = (1 - 2 * delta_rps_sign) * (abs_delta_rps_minus1 + 1);
-        int RIdx = idx - (delta_idx_minus1 + 1);
+        int RIdx = idx - (int)(delta_idx_minus1 + 1);
         assert(RIdx >= 0);
         const short_term_ref_pic_set_s *rstrps = &strpss[RIdx];
         for (int j = 0; j <= (rstrps->NumNegativePics + rstrps->NumPositivePics); j++)
@@ -1812,7 +1812,7 @@ StdVideoH265ShortTermRefPicSet* VulkanH265Decoder::short_term_ref_pic_set(StdVid
                 }
             }
             strps->NumNegativePics = (uint8_t)i;
-            stdShortTermRefPicSet->num_negative_pics = (uint32_t)i;
+            stdShortTermRefPicSet->num_negative_pics = (uint8_t)i;
         }
         {
             int i = 0;
@@ -1823,7 +1823,7 @@ StdVideoH265ShortTermRefPicSet* VulkanH265Decoder::short_term_ref_pic_set(StdVid
                 {
                     assert(i < MAX_NUM_STRPS_ENTRIES);
                     strps->DeltaPocS1[i] = dPoc;
-                    stdShortTermRefPicSet->delta_poc_s1_minus1[i] = dPoc;
+                    stdShortTermRefPicSet->delta_poc_s1_minus1[i] = (uint16_t)dPoc;
                     strps->UsedByCurrPicS1[i] = used_by_curr_pic_flag[j];
                     if (strps->UsedByCurrPicS1[i] != 0) {
                         stdShortTermRefPicSet->used_by_curr_pic_s1_flag |= (1 << i);
@@ -1835,7 +1835,7 @@ StdVideoH265ShortTermRefPicSet* VulkanH265Decoder::short_term_ref_pic_set(StdVid
             {
                 assert(i < MAX_NUM_STRPS_ENTRIES);
                 strps->DeltaPocS1[i] = DeltaRPS;
-                stdShortTermRefPicSet->delta_poc_s1_minus1[i] = DeltaRPS;
+                stdShortTermRefPicSet->delta_poc_s1_minus1[i] = (uint16_t)DeltaRPS;
                 strps->UsedByCurrPicS1[i] = used_by_curr_pic_flag[rstrps->NumNegativePics+rstrps->NumPositivePics];
                 if (strps->UsedByCurrPicS1[i] != 0) {
                     stdShortTermRefPicSet->used_by_curr_pic_s1_flag |= (1 << i);
@@ -1849,7 +1849,7 @@ StdVideoH265ShortTermRefPicSet* VulkanH265Decoder::short_term_ref_pic_set(StdVid
                 {
                     assert(i < MAX_NUM_STRPS_ENTRIES);
                     strps->DeltaPocS1[i] = dPoc;
-                    stdShortTermRefPicSet->delta_poc_s1_minus1[i] = dPoc;
+                    stdShortTermRefPicSet->delta_poc_s1_minus1[i] = (uint16_t)dPoc;
                     strps->UsedByCurrPicS1[i] = used_by_curr_pic_flag[rstrps->NumNegativePics + j];
                     if (strps->UsedByCurrPicS1[i] != 0) {
                         stdShortTermRefPicSet->used_by_curr_pic_s1_flag |= (1 << i);
@@ -1858,7 +1858,7 @@ StdVideoH265ShortTermRefPicSet* VulkanH265Decoder::short_term_ref_pic_set(StdVid
                 }
             }
             strps->NumPositivePics = (uint8_t)i;
-            stdShortTermRefPicSet->num_positive_pics = (uint32_t)i;
+            stdShortTermRefPicSet->num_positive_pics = (uint8_t)i;
         }
         if (strps->NumNegativePics + strps->NumPositivePics > MAX_NUM_STRPS_ENTRIES)
         {
@@ -1891,9 +1891,9 @@ StdVideoH265ShortTermRefPicSet* VulkanH265Decoder::short_term_ref_pic_set(StdVid
             used_by_curr_pic_s1_flag[i] = (uint8_t)u(1);
         }
         strps->NumNegativePics = (uint8_t)num_negative_pics;
-        stdShortTermRefPicSet->num_negative_pics = num_negative_pics;
+        stdShortTermRefPicSet->num_negative_pics = (uint8_t)num_negative_pics;
         strps->NumPositivePics = (uint8_t)num_positive_pics;
-        stdShortTermRefPicSet->num_positive_pics = num_positive_pics;
+        stdShortTermRefPicSet->num_positive_pics = (uint8_t)num_positive_pics;
         for (uint32_t i = 0; i < num_negative_pics; i++)
         {
             strps->DeltaPocS0[i] = ((i == 0) ? 0 : strps->DeltaPocS0[i - 1]) - (delta_poc_s0_minus1[i] + 1);
@@ -1921,7 +1921,7 @@ void VulkanH265Decoder::vui_parameters(hevc_seq_param_s *sps, int sps_max_sub_la
 {
     StdVideoH265SequenceParameterSetVui *vui = &sps->stdVui;
     vui->aspect_ratio_idc = STD_VIDEO_H265_ASPECT_RATIO_IDC_UNSPECIFIED;
-    vui->flags.aspect_ratio_info_present_flag = u(1);
+    vui->flags.aspect_ratio_info_present_flag = flag();
     if (vui->flags.aspect_ratio_info_present_flag) {
         vui->aspect_ratio_idc = (StdVideoH265AspectRatioIdc)u(8);
     }
@@ -1953,16 +1953,16 @@ void VulkanH265Decoder::vui_parameters(hevc_seq_param_s *sps, int sps_max_sub_la
         vui->sar_height = 1;
         break;
     }
-    vui->flags.overscan_info_present_flag = u(1);
+    vui->flags.overscan_info_present_flag = flag();
     if (vui->flags.overscan_info_present_flag) {
-        vui->flags.overscan_appropriate_flag = u(1);
+        vui->flags.overscan_appropriate_flag = flag();
     }
-    vui->flags.video_signal_type_present_flag = (uint8_t)u(1);
+    vui->flags.video_signal_type_present_flag = flag();
     if (vui->flags.video_signal_type_present_flag)
     {
         vui->video_format = (uint8_t)u(3);
-        vui->flags.video_full_range_flag = (uint8_t)u(1);
-        vui->flags.colour_description_present_flag = (uint8_t)u(1);
+        vui->flags.video_full_range_flag = flag();
+        vui->flags.colour_description_present_flag = flag();
         if (vui->flags.colour_description_present_flag)
         {
             vui->colour_primaries = (uint8_t)u(8);
@@ -1970,46 +1970,46 @@ void VulkanH265Decoder::vui_parameters(hevc_seq_param_s *sps, int sps_max_sub_la
             vui->matrix_coeffs = (uint8_t)u(8);
         }
     }
-    vui->flags.chroma_loc_info_present_flag = u(1);
+    vui->flags.chroma_loc_info_present_flag = flag();
     if (vui->flags.chroma_loc_info_present_flag) {
-        vui->chroma_sample_loc_type_top_field = ue();
-        vui->chroma_sample_loc_type_bottom_field = ue();
+        vui->chroma_sample_loc_type_top_field = (uint8_t)ue();
+        vui->chroma_sample_loc_type_bottom_field = (uint8_t)ue();
     }
-    vui->flags.neutral_chroma_indication_flag = u(1);
-    vui->flags.field_seq_flag = (uint8_t)u(1);
-    vui->flags.frame_field_info_present_flag = u(1);
-    vui->flags.default_display_window_flag = u(1);
+    vui->flags.neutral_chroma_indication_flag = flag();
+    vui->flags.field_seq_flag = flag();
+    vui->flags.frame_field_info_present_flag = flag();
+    vui->flags.default_display_window_flag = flag();
     if (vui->flags.default_display_window_flag) {
-        vui->def_disp_win_left_offset = ue();
-        vui->def_disp_win_right_offset = ue();
-        vui->def_disp_win_top_offset = ue();
-        vui->def_disp_win_bottom_offset = ue();
+        vui->def_disp_win_left_offset = (uint16_t)ue();
+        vui->def_disp_win_right_offset = (uint16_t)ue();
+        vui->def_disp_win_top_offset = (uint16_t)ue();
+        vui->def_disp_win_bottom_offset = (uint16_t)ue();
     }
-    vui->flags.vui_timing_info_present_flag = (uint8_t)u(1);
+    vui->flags.vui_timing_info_present_flag = flag();
     if (vui->flags.vui_timing_info_present_flag)
     {
         vui->vui_num_units_in_tick = u(32);
         vui->vui_time_scale = u(32);
-        vui->flags.vui_poc_proportional_to_timing_flag = u(1);
+        vui->flags.vui_poc_proportional_to_timing_flag = flag();
         if (vui->flags.vui_poc_proportional_to_timing_flag) {
             vui->vui_num_ticks_poc_diff_one_minus1 = ue();
         }
-        vui->flags.vui_hrd_parameters_present_flag = u(1);
+        vui->flags.vui_hrd_parameters_present_flag = flag();
         if (vui->flags.vui_hrd_parameters_present_flag) {
-            hrd_parameters(&sps->stdHrdParameters, 1, sps_max_sub_layers_minus1);
+            hrd_parameters(&sps->stdHrdParameters, 1, (uint8_t)sps_max_sub_layers_minus1);
             sps->stdVui.pHrdParameters = &sps->stdHrdParameters;
         }
     }
-    vui->flags.bitstream_restriction_flag = u(1);
+    vui->flags.bitstream_restriction_flag = flag();
     if (vui->flags.bitstream_restriction_flag) {
-        vui->flags.tiles_fixed_structure_flag = u(1);
-        vui->flags.motion_vectors_over_pic_boundaries_flag = u(1);
-        vui->flags.restricted_ref_pic_lists_flag = u(1);
-        vui->min_spatial_segmentation_idc = ue();
-        vui->max_bytes_per_pic_denom = ue();
-        vui->max_bits_per_min_cu_denom = ue();
-        vui->log2_max_mv_length_horizontal = ue();
-        vui->log2_max_mv_length_vertical = ue();
+        vui->flags.tiles_fixed_structure_flag = flag();
+        vui->flags.motion_vectors_over_pic_boundaries_flag = flag();
+        vui->flags.restricted_ref_pic_lists_flag = flag();
+        vui->min_spatial_segmentation_idc = (uint16_t)ue();
+        vui->max_bytes_per_pic_denom = (uint8_t)ue();
+        vui->max_bits_per_min_cu_denom = (uint8_t)ue();
+        vui->log2_max_mv_length_horizontal = (uint8_t)ue();
+        vui->log2_max_mv_length_vertical = (uint8_t)ue();
     }
 }
 
@@ -2039,26 +2039,26 @@ void VulkanH265Decoder::hrd_parameters(hevc_video_hrd_param_s* pStdHrdParameters
 {
     if (commonInfPresentFlag)
     {
-        pStdHrdParameters->flags.nal_hrd_parameters_present_flag = u(1);
-        pStdHrdParameters->flags.vcl_hrd_parameters_present_flag = u(1);
+        pStdHrdParameters->flags.nal_hrd_parameters_present_flag = flag();
+        pStdHrdParameters->flags.vcl_hrd_parameters_present_flag = flag();
         if (pStdHrdParameters->flags.nal_hrd_parameters_present_flag || pStdHrdParameters->flags.vcl_hrd_parameters_present_flag)
         {
-            pStdHrdParameters->flags.sub_pic_hrd_params_present_flag = u(1);
+            pStdHrdParameters->flags.sub_pic_hrd_params_present_flag = flag();
             if (pStdHrdParameters->flags.sub_pic_hrd_params_present_flag)
             {
-                pStdHrdParameters->tick_divisor_minus2 = u(8);
-                pStdHrdParameters->du_cpb_removal_delay_increment_length_minus1 = u(5);
-                pStdHrdParameters->flags.sub_pic_cpb_params_in_pic_timing_sei_flag = u(1);
-                pStdHrdParameters->dpb_output_delay_du_length_minus1 = u(5);
+                pStdHrdParameters->tick_divisor_minus2 = (uint8_t)u(8);
+                pStdHrdParameters->du_cpb_removal_delay_increment_length_minus1 = (uint8_t)u(5);
+                pStdHrdParameters->flags.sub_pic_cpb_params_in_pic_timing_sei_flag = flag();
+                pStdHrdParameters->dpb_output_delay_du_length_minus1 = (uint8_t)u(5);
             }
-            pStdHrdParameters->bit_rate_scale = u(4);
-            pStdHrdParameters->cpb_size_scale = u(4);
+            pStdHrdParameters->bit_rate_scale = (uint8_t)u(4);
+            pStdHrdParameters->cpb_size_scale = (uint8_t)u(4);
             if (pStdHrdParameters->flags.sub_pic_hrd_params_present_flag) {
-                pStdHrdParameters->cpb_size_du_scale = u(4);
+                pStdHrdParameters->cpb_size_du_scale = (uint8_t)u(4);
             }
-            pStdHrdParameters->initial_cpb_removal_delay_length_minus1 = u(5);
-            pStdHrdParameters->au_cpb_removal_delay_length_minus1 = u(5);
-            pStdHrdParameters->dpb_output_delay_length_minus1 = u(5);
+            pStdHrdParameters->initial_cpb_removal_delay_length_minus1 = (uint8_t)u(5);
+            pStdHrdParameters->au_cpb_removal_delay_length_minus1 = (uint8_t)u(5);
+            pStdHrdParameters->dpb_output_delay_length_minus1 = (uint8_t)u(5);
         }
     }
     assert(maxNumSubLayersMinus1 < STD_VIDEO_H265_SUBLAYERS_LIST_SIZE);
@@ -2069,21 +2069,21 @@ void VulkanH265Decoder::hrd_parameters(hevc_video_hrd_param_s* pStdHrdParameters
         if (!fixed_pic_rate_general_flag) {
             fixed_pic_rate_within_cvs_flag = u(1);
         } else {
-            pStdHrdParameters->flags.fixed_pic_rate_general_flag |= (1 << i);
+            pStdHrdParameters->flags.fixed_pic_rate_general_flag |= (uint32_t)(1 << i) & 0xFF;
             fixed_pic_rate_within_cvs_flag = true;
         }
         if (fixed_pic_rate_within_cvs_flag) {
-            pStdHrdParameters->flags.fixed_pic_rate_within_cvs_flag |= (1 << i);
+            pStdHrdParameters->flags.fixed_pic_rate_within_cvs_flag |= (uint32_t)(1 << i) & 0xFF;
         }
 
         bool low_delay_hrd_flag = false;
         if (fixed_pic_rate_within_cvs_flag) {
             pStdHrdParameters->elemental_duration_in_tc_minus1[i] = (uint16_t)ue();
-            pStdHrdParameters->flags.low_delay_hrd_flag &= ~(1 << i);
+            pStdHrdParameters->flags.low_delay_hrd_flag &= ~(uint32_t)(1 << i) & 0xFF;
         } else {
             low_delay_hrd_flag = u(1);
             if (low_delay_hrd_flag) {
-                pStdHrdParameters->flags.low_delay_hrd_flag |= (1 << i);
+                pStdHrdParameters->flags.low_delay_hrd_flag |= (uint32_t)(1 << i) & 0xFF;
             }
         }
         if (!low_delay_hrd_flag) {
@@ -2218,7 +2218,7 @@ bool VulkanH265Decoder::slice_header(int nal_unit_type, int nuh_temporal_id_plus
 
         m_NumPocTotalCurr = 0;
         if (!IdrPicFlag) {
-            slh->short_term_ref_pic_set_sps_flag = (uint8_t)u(1);
+            slh->short_term_ref_pic_set_sps_flag = flag();
             if (!slh->short_term_ref_pic_set_sps_flag) {
                 int bitcnt = consumed_bits();
                 StdVideoH265ShortTermRefPicSet stdShortTermRefPicSet;
@@ -2361,7 +2361,7 @@ void VulkanH265Decoder::getNumActiveRefLayerPics(const hevc_video_param_s* vps, 
     }
     else if (vps->privFlags.default_ref_layers_active_flag)
     {
-        pSliceHeader->numActiveRefLayerPics = getNumRefLayerPics(vps, pSliceHeader);
+        pSliceHeader->numActiveRefLayerPics = (uint8_t)getNumRefLayerPics(vps, pSliceHeader);
     }
     else if (!pSliceHeader->inter_layer_pred_enabled_flag)
     {
@@ -2726,7 +2726,7 @@ void VulkanH265Decoder::dpb_picture_start(VkSharedBaseObj<hevc_pic_param_s>& pps
         }
     }
     m_dpb_cur = cur;
-    m_current_dpb_id = iCur;
+    m_current_dpb_id = (int8_t)iCur;
 }
 
 
@@ -2973,7 +2973,7 @@ void VulkanH265Decoder::reference_picture_set(hevc_slice_header_s *slh, int PicO
         if (m_RefPicSetStCurrBefore[i] < 0)
         {
             nvParserLog("short-term reference picture not available (POC=%d)\n", PocStCurrBefore[i]);
-            m_RefPicSetStCurrBefore[i] = create_lost_ref_pic(PocStCurrBefore[i], m_nuh_layer_id, 1);
+            m_RefPicSetStCurrBefore[i] = (int8_t)create_lost_ref_pic(PocStCurrBefore[i], m_nuh_layer_id, 1);
         }
     }
 
@@ -2991,7 +2991,7 @@ void VulkanH265Decoder::reference_picture_set(hevc_slice_header_s *slh, int PicO
         if (m_RefPicSetStCurrAfter[i] < 0)
         {
             nvParserLog("short-term reference picture not available (POC=%d)\n", PocStCurrAfter[i]);
-            m_RefPicSetStCurrAfter[i] = create_lost_ref_pic(PocStCurrAfter[i], m_nuh_layer_id, 1);
+            m_RefPicSetStCurrAfter[i] = (int8_t)create_lost_ref_pic(PocStCurrAfter[i], m_nuh_layer_id, 1);
         }
     }
 
@@ -3143,11 +3143,11 @@ void VulkanH265Decoder::sei_payload()
 
                 for (uint8_t i = 0; i < 3; i++)
                 {
-                    display->display_primaries_x[i] = u(16);
-                    display->display_primaries_y[i] = u(16);
+                    display->display_primaries_x[i] = (uint16_t)u(16);
+                    display->display_primaries_y[i] = (uint16_t)u(16);
                 }
-                display->white_point_x = u(16);
-                display->white_point_y = u(16);
+                display->white_point_x = (uint16_t)u(16);
+                display->white_point_y = (uint16_t)u(16);
                 display->max_display_mastering_luminance = u(32);
                 display->min_display_mastering_luminance = u(32);
 

@@ -518,7 +518,7 @@ public:
         std::cout << "BitDepth: " << codedLumaBitDepth << std::endl;
         std::cout << "Profile: "  << profile << std::endl;
         std::cout << "Level: "    << level << std::endl;
-        std::cout << "Aspect Ration: "    << (float)sample_aspect_ratio.num / sample_aspect_ratio.den << std::endl;
+        std::cout << "Aspect Ration: "    << (float)sample_aspect_ratio.num / (float)sample_aspect_ratio.den << std::endl;
 
         static const char* FieldOrder[] = {
             "UNKNOWN",

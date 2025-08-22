@@ -94,7 +94,7 @@ static unsigned long Crc32Table[256] = {
 
 static void getCRC(uint32_t *checksum, const uint8_t *inputBytes, size_t length, unsigned long crcTable[]) {
     for (size_t i = 0; i < length; i += 1) {
-        *checksum = crcTable[inputBytes[i] ^ (*checksum & 0xff)] ^ (*checksum >> 8);
+        *checksum = (uint32_t)(crcTable[inputBytes[i] ^ (*checksum & 0xff)] ^ (*checksum >> 8));
     }
 }
 
@@ -395,10 +395,10 @@ public:
             uint8_t* pDst = pOutBuffer + yuvPlaneLayouts[plane].offset;
 
             if (is8Bit) {
-                CopyPlaneData<uint8_t>(pSrc, pDst, layouts[plane].rowPitch, yuvPlaneLayouts[plane].rowPitch,
+                CopyPlaneData<uint8_t>(pSrc, pDst, (size_t)layouts[plane].rowPitch, (size_t)yuvPlaneLayouts[plane].rowPitch,
                                       frameWidth, imageHeight);
             } else {
-                CopyPlaneData<uint16_t>(pSrc, pDst, layouts[plane].rowPitch, yuvPlaneLayouts[plane].rowPitch,
+                CopyPlaneData<uint16_t>(pSrc, pDst, (size_t)layouts[plane].rowPitch, (size_t)yuvPlaneLayouts[plane].rowPitch,
                                        frameWidth, imageHeight);
             }
         }
@@ -418,10 +418,10 @@ public:
                 }
 
                 if (is8Bit) {
-                    CopyPlaneData<uint8_t>(pSrc, pDst, layouts[srcPlane].rowPitch, yuvPlaneLayouts[plane].rowPitch,
+                    CopyPlaneData<uint8_t>(pSrc, pDst, (size_t)layouts[srcPlane].rowPitch, (size_t)yuvPlaneLayouts[plane].rowPitch,
                                            planeWidth, 1, 2);
                 } else {
-                    CopyPlaneData<uint16_t>(pSrc, pDst, layouts[srcPlane].rowPitch, yuvPlaneLayouts[plane].rowPitch,
+                    CopyPlaneData<uint16_t>(pSrc, pDst, (size_t)layouts[srcPlane].rowPitch, (size_t)yuvPlaneLayouts[plane].rowPitch,
                                             planeWidth, 1, 2);
                 }
                 pDst += yuvPlaneLayouts[plane].rowPitch;
@@ -429,10 +429,10 @@ public:
         }
 
         // Calculate total buffer size
-        outputBufferSize = yuvPlaneLayouts[0].rowPitch * imageHeight;
+        outputBufferSize = (size_t)(yuvPlaneLayouts[0].rowPitch * imageHeight);
         if (mpInfo->planesLayout.numberOfExtraPlanes >= 1) {
-            outputBufferSize += yuvPlaneLayouts[1].rowPitch * secondaryPlaneHeight;
-            outputBufferSize += yuvPlaneLayouts[2].rowPitch * secondaryPlaneHeight;
+            outputBufferSize += (size_t)(yuvPlaneLayouts[1].rowPitch * secondaryPlaneHeight);
+            outputBufferSize += (size_t)(yuvPlaneLayouts[2].rowPitch * secondaryPlaneHeight);
         }
 
         return outputBufferSize;

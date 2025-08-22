@@ -87,7 +87,7 @@ public:
             if (timeDiffNanoseconds) {
                 *timeDiffNanoseconds = diffNanoseconds;
             }
-            fps = (float)((double)(m_profileFramesCount * 1000000000) / diffNanoseconds);
+            fps = (float)((double)(m_profileFramesCount * 1000000000) / (double)diffNanoseconds);
             m_profileFramesCount = 0;
             displayTimeNow = true;
         } else {
