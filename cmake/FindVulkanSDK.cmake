@@ -3,38 +3,43 @@ MACRO(FIND_VULKAN_HEADERS VK_MINIMUM_MAJOR_VERSION VK_MINIMUM_MINOR_VERSION VK_M
     set(USE_SYSTEM_VULKAN OFF)
     set(NEED_FETCH_CONTENT OFF)
 
-    # First try to detect system Vulkan SDK without creating targets
-    if(WIN32)
-        # Try to find Vulkan SDK Bin directory
-        if(DEFINED ENV{VULKAN_SDK})
-            file(TO_CMAKE_PATH "$ENV{VULKAN_SDK}" VULKAN_SDK_PATH)
-            set(VULKAN_HEADERS_INCLUDE_DIR ${VULKAN_SDK_PATH}/Include CACHE PATH "Path to Vulkan SDK include headers directory" FORCE)
-            set(USE_SYSTEM_VULKAN ON)
-        endif()
+    if(VULKAN_HEADERS_INCLUDE_DIR)
+        message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+        set(USE_SYSTEM_VULKAN ON)
     else()
-        # Use pkg-config to detect Vulkan without creating CMake targets
-        find_package(PkgConfig QUIET)
-        if(PKG_CONFIG_FOUND)
-            pkg_check_modules(VULKAN_PC QUIET vulkan)
-            if(VULKAN_PC_FOUND)
-                message(STATUS "Found Vulkan via pkg-config: ${VULKAN_PC_VERSION}")
-                # Get include directory from pkg-config
-                set(VULKAN_HEADERS_INCLUDE_DIR ${VULKAN_PC_INCLUDEDIR})
-                set(VULKAN_LIBRARIES ${VULKAN_PC_LIBRARIES})
-                message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+        # First try to detect system Vulkan SDK without creating targets
+        if(WIN32)
+            # Try to find Vulkan SDK Bin directory
+            if(DEFINED ENV{VULKAN_SDK})
+                file(TO_CMAKE_PATH "$ENV{VULKAN_SDK}" VULKAN_SDK_PATH)
+                set(VULKAN_HEADERS_INCLUDE_DIR ${VULKAN_SDK_PATH}/Include CACHE PATH "Path to Vulkan SDK include headers directory" FORCE)
                 set(USE_SYSTEM_VULKAN ON)
             endif()
-        endif()
+        else()
+            # Use pkg-config to detect Vulkan without creating CMake targets
+            find_package(PkgConfig QUIET)
+            if(PKG_CONFIG_FOUND)
+                pkg_check_modules(VULKAN_PC QUIET vulkan)
+                if(VULKAN_PC_FOUND)
+                    message(STATUS "Found Vulkan via pkg-config: ${VULKAN_PC_VERSION}")
+                    # Get include directory from pkg-config
+                    set(VULKAN_HEADERS_INCLUDE_DIR ${VULKAN_PC_INCLUDEDIR})
+                    set(VULKAN_LIBRARIES ${VULKAN_PC_LIBRARIES})
+                    message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+                    set(USE_SYSTEM_VULKAN ON)
+                endif()
+            endif()
 
-        # Fallback: try to find headers manually if pkg-config failed
-        if(NOT VULKAN_PC_FOUND)
-            find_path(VULKAN_HEADERS_INCLUDE_DIR
-                NAMES vulkan/vulkan.h
-                PATHS /usr/include /usr/local/include
-                DOC "Vulkan Headers include directory"
-            )
-            if(VULKAN_HEADERS_INCLUDE_DIR)
-                message(STATUS "Found Vulkan headers manually: ${VULKAN_HEADERS_INCLUDE_DIR}")
+            # Fallback: try to find headers manually if pkg-config failed
+            if(NOT VULKAN_PC_FOUND)
+                find_path(VULKAN_HEADERS_INCLUDE_DIR
+                        NAMES vulkan/vulkan.h
+                        PATHS /usr/include /usr/local/include
+                        DOC "Vulkan Headers include directory"
+                )
+                if(VULKAN_HEADERS_INCLUDE_DIR)
+                    message(STATUS "Found Vulkan headers manually: ${VULKAN_HEADERS_INCLUDE_DIR}")
+                endif()
             endif()
         endif()
     endif()
@@ -77,17 +82,21 @@ MACRO(FIND_VULKAN_HEADERS VK_MINIMUM_MAJOR_VERSION VK_MINIMUM_MINOR_VERSION VK_M
 
     # Only download vulkan-headers if system SDK is not found or insufficient
     if(NEED_FETCH_CONTENT)
-        message(STATUS "Downloading and using Vulkan Headers from source")
-        FetchContent_Declare(
-            vulkan-headers
-            GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-            GIT_TAG v${VK_MINIMUM_MAJOR_VERSION}.${VK_MINIMUM_MINOR_VERSION}.${VK_MINIMUM_PATCH_VERSION}
-        )
-        FetchContent_MakeAvailable(vulkan-headers)
+        if(FAIL_IF_NO_HEADERS)
+            message( FATAL_ERROR "Vulkan headers in ${VULKAN_HEADERS_INCLUDE_DIR} are not available or compatible with the minimum required version ${VK_MINIMUM_MAJOR_VERSION}.${VK_MINIMUM_MINOR_VERSION}.${VK_MINIMUM_PATCH_VERSION}" )
+        else()
+            message(STATUS "Downloading and using Vulkan Headers from source")
+            FetchContent_Declare(
+                    vulkan-headers
+                    GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
+                    GIT_TAG v${VK_MINIMUM_MAJOR_VERSION}.${VK_MINIMUM_MINOR_VERSION}.${VK_MINIMUM_PATCH_VERSION}
+            )
+            FetchContent_MakeAvailable(vulkan-headers)
 
-        # Set Vulkan headers path (we are using the downloaded headers)
-        set(VULKAN_HEADERS_INCLUDE_DIR ${vulkan-headers_SOURCE_DIR}/include CACHE PATH "Path to Vulkan include headers directory" FORCE)
-        message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+            # Set Vulkan headers path (we are using the downloaded headers)
+            set(VULKAN_HEADERS_INCLUDE_DIR ${vulkan-headers_SOURCE_DIR}/include CACHE PATH "Path to Vulkan include headers directory" FORCE)
+            message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+        endif()
     else()
         # System version is good, now call find_package to create targets
         message(STATUS "Using system Vulkan SDK")
@@ -108,9 +117,9 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
 
         # Fetch the Vulkan Loader
         FetchContent_Declare(
-            vulkan-loader
-            GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Loader.git
-            GIT_TAG v${minimum_major_version}.${minimum_minor_version}.${minimum_patch_version}
+                vulkan-loader
+                GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Loader.git
+                GIT_TAG v${minimum_major_version}.${minimum_minor_version}.${minimum_patch_version}
         )
         FetchContent_MakeAvailable(vulkan-loader)
         set(VULKAN_LOADER_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/vulkan-loader-build/loader")
