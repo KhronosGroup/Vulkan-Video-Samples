@@ -312,6 +312,11 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
 
     if (adaptiveTransformMode == ADAPTIVE_TRANSFORM_ENABLE) {
         pps->flags.transform_8x8_mode_flag = true;
+        if ((profileIdc == STD_VIDEO_H264_PROFILE_IDC_BASELINE) ||
+            (profileIdc == STD_VIDEO_H264_PROFILE_IDC_MAIN)) {
+            fprintf(stderr, "The profile selected does not support transform_8x8_mode_flag, disabling it.\n");
+            pps->flags.transform_8x8_mode_flag = false;
+        }
     } else if (adaptiveTransformMode == ADAPTIVE_TRANSFORM_DISABLE) {
         pps->flags.transform_8x8_mode_flag = false;
     } else {
