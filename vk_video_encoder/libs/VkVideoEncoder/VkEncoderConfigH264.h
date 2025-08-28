@@ -69,7 +69,7 @@ struct EncoderConfigH264 : public EncoderConfig {
         , numRefL1(0)
         , numRefFrames(0)
         , entropyCodingMode(ENTROPY_CODING_MODE_CABAC)
-        , adaptiveTransformMode(ADAPTIVE_TRANSFORM_ENABLE)
+        , adaptiveTransformMode(ADAPTIVE_TRANSFORM_AUTOSELECT)
         , spsId(0)
         , ppsId()
         , numSlicesPerPicture(DEFAULT_NUM_SLICES_PER_PICTURE)
