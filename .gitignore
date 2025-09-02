@@ -39,3 +39,5 @@ __pycache__
 vk_video_decoder/bin/libs/ffmpeg/
 .ccls-cache/
 BUILD*
+tests/resources/
+tests/results/
