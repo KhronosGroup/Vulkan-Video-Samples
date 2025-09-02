@@ -113,3 +113,23 @@ On Windows:
 Do not use `~all~` or `~explicit~` options with `VK_LOADER_LAYERS_DISABLE` because these options disable the validation layers that other applications might attempt to enable programmaticaly.
 
 For more information on Layers configuration please refer to the [LunarG, Layers Configuration](https://vulkan.lunarg.com/doc/sdk/latest/windows/layer_configuration.html)
+
+## Testing Framework
+
+The project includes a comprehensive test framework for validating both encoder and decoder functionality across all supported codecs (H.264, H.265, AV1, VP9).
+
+```bash
+# Run all tests with default paths
+python3 tests/video_test_framework_codec.py
+
+# List all available test samples
+python3 tests/video_test_framework_codec.py --list-samples
+
+# Test only H.264 decoder tests
+python3 tests/video_test_framework_decode.py --test "decode_h264_*"
+
+# Test only H.264 encoder tests
+python3 tests/video_test_framework_encode.py --test "encode_h264_*"
+```
+
+For complete documentation, command-line options, and advanced usage examples, see **[tests/README.md](tests/README.md)**.
