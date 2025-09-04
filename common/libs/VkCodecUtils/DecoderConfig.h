@@ -201,8 +201,12 @@ struct DecoderConfig {
             {"--input", "-i", 1, "Input filename to decode",
                 [this](const char **args, const ProgramArgs &a) {
                     videoFileName = args[0];
-                    std::ifstream validVideoFileStream(videoFileName, std::ifstream::in);
-                    return (bool)validVideoFileStream;
+                    std::ifstream inputFile(videoFileName, std::ifstream::in);
+                    if(!inputFile.is_open()) {
+                        std::cerr << "Error: Cannot open input file \"" << videoFileName << "\"" << std::endl;
+                        return false;
+                    }
+                    return true;
                 }},
             {"--output", "-o", 1, "Output filename to dump raw video to",
                 [this](const char **args, const ProgramArgs &a) {
@@ -386,6 +390,12 @@ struct DecoderConfig {
             }
 
             i += flag->numArgs;
+        }
+
+        if (videoFileName.empty()) {
+            std::cerr << "Please specify -i with the input file name" << std::endl;
+            showHelp(argv, spec);
+            exit(EXIT_FAILURE);
         }
 
         // Resolve the CRC request in case there is a --crcinit specified.
