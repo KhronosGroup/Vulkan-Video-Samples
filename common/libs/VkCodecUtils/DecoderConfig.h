@@ -18,7 +18,6 @@
 #ifndef _PROGRAMSETTINGS_H_
 #define _PROGRAMSETTINGS_H_
 
-#include <stdlib.h>
 #include <string.h>
 #include <iostream>
 #include <string>
@@ -29,7 +28,7 @@
 #include <sstream>
 #include "vulkan_interfaces.h"
 #include "VkCodecUtils/Helpers.h"
-#include "VkVSVersion.h"
+#include "VkVSCommon.h"
 
 struct DecoderConfig {
 
@@ -83,7 +82,7 @@ struct DecoderConfig {
 
     using ProgramArgs = std::vector<ArgSpec>;
     static bool showHelp(const char ** argv, const ProgramArgs &spec) {
-        std::cout << "Version: " << VKVS_VERSION_STRING << std::endl;
+        std::cout << "Version: " << VVS_VERSION_STRING << std::endl;
         std::cout << argv[0] << std::endl;
         for ( auto& flag : spec ) {
             std::stringstream ss;
@@ -114,7 +113,7 @@ struct DecoderConfig {
                 }},
             {"--version", "-v", 0, "Show the version",
                 [](const char **, const ProgramArgs &) {
-                    fprintf(stdout, "%s\n", VKVS_VERSION_STRING);
+                    fprintf(stdout, "%s\n", VVS_VERSION_STRING);
                     exit(EXIT_SUCCESS);
                     return true;
                 }},
