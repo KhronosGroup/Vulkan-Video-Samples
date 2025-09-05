@@ -18,7 +18,6 @@
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkEncoderConfigH265.h"
 #include "VkVideoEncoder/VkEncoderConfigAV1.h"
-#include "VkVSVersion.h"
 
 void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
 {
