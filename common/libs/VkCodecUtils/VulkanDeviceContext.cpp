@@ -29,6 +29,7 @@
 #include <unordered_set>
 #include <algorithm>    // std::find_if
 #include "VkCodecUtils/VulkanDeviceContext.h"
+#include "VkVSCommon.h"
 #ifdef VIDEO_DISPLAY_QUEUE_SUPPORT
 #include "VkShell/Shell.h"
 #endif // VIDEO_DISPLAY_QUEUE_SUPPORT
@@ -450,7 +451,8 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                                                  const VkQueueFlags requestVideoEncodeQueueMask,
                                                  const VkVideoCodecOperationFlagsKHR requestVideoEncodeQueueOperations,
                                                  VkPhysicalDevice vkPhysicalDevice,
-                                                 bool verbose)
+                                                 bool verbose,
+                                                 bool noDeviceFallback)
 {
     std::vector<VkPhysicalDevice> availablePhysicalDevices;
     if (vkPhysicalDevice == VK_NULL_HANDLE) {
@@ -470,9 +472,14 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
         VkPhysicalDeviceVulkan11Properties deviceVulkan11Properties = {};
         deviceVulkan11Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 
+        // Get driver properties for better driver detection (Vulkan 1.2+)
+        VkPhysicalDeviceDriverProperties deviceDriverProperties = {};
+        deviceDriverProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+        deviceDriverProperties.pNext = &deviceVulkan11Properties;
+
         VkPhysicalDeviceProperties2 devProp2 = {};
         devProp2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-        devProp2.pNext = &deviceVulkan11Properties;
+        devProp2.pNext = &deviceDriverProperties;
 
         // Get the properties
         GetPhysicalDeviceProperties2(physicalDevice, &devProp2);
@@ -502,6 +509,10 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                          << ", vendor ID: " << devProp2.properties.vendorID << ", and device ID: " << devProp2.properties.deviceID
                          << std::dec
                          << " NOT having the required extensions!" << std::endl << std::flush;
+            if (noDeviceFallback) {
+                // Don't try other devices - fail immediately
+                return VK_ERROR_FEATURE_NOT_PRESENT;
+            }
             continue;
         }
 
@@ -678,6 +689,8 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                               << ", vendor ID: " << devProp2.properties.vendorID
                               << ", device UUID: " << currentDeviceUuid.ToString()
                               << ", and device ID: " << devProp2.properties.deviceID << std::dec
+                              << ", driver ID: " << deviceDriverProperties.driverID
+                              << ", driver name: " << deviceDriverProperties.driverName
                               << ", Num Decode Queues: " << m_videoDecodeNumQueues
                               << ", Num Encode Queues: " << m_videoEncodeNumQueues
                               << " ***" << std::endl << std::flush;
@@ -689,6 +702,10 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                   << ", vendor ID: " << devProp2.properties.vendorID << ", and device ID: " << devProp2.properties.deviceID
                   << std::dec
                   << " NOT having the required queue families!" << std::endl << std::flush;
+        if (noDeviceFallback) {
+            // Don't try other devices - fail immediately
+            return VK_ERROR_FEATURE_NOT_PRESENT;
+        }
     }
 
     return (m_physDevice != VK_NULL_HANDLE) ? VK_SUCCESS : VK_ERROR_FEATURE_NOT_PRESENT;
@@ -813,13 +830,13 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
         VkPhysicalDeviceFeatures2 deviceFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &intraRefreshFeatures};
         GetPhysicalDeviceFeatures2(m_physDevice, &deviceFeatures);
 
-        assert(timelineSemaphoreFeatures.timelineSemaphore);
-        assert(videoMaintenance1Features.videoMaintenance1);
-        assert(synchronization2Features.synchronization2);
-        assert(((videoCodecs & VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR) != 0) ==
-                (videoEncodeAV1Feature.videoEncodeAV1 != VK_FALSE));
-        assert(((videoCodecs & VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) != 0) ==
-                (videoDecodeVP9Feature.videoDecodeVP9 != VK_FALSE));
+        CHECK_VULKAN_FEATURE(timelineSemaphoreFeatures.timelineSemaphore, "timelineSemaphore", false);
+        CHECK_VULKAN_FEATURE(videoMaintenance1Features.videoMaintenance1, "videoMaintenance1", true);
+        CHECK_VULKAN_FEATURE(synchronization2Features.synchronization2, "synchronization2", false);
+        CHECK_VULKAN_FEATURE(((videoCodecs & VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR) != 0) ==
+                             (videoEncodeAV1Feature.videoEncodeAV1 != VK_FALSE), "videoEncodeAV1", false);
+        CHECK_VULKAN_FEATURE(((videoCodecs & VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) != 0) ==
+                             (videoDecodeVP9Feature.videoDecodeVP9 != VK_FALSE), "videoDecodeVP9", false);
 
         // Validate feature support here.
         // TODO: Currntly this method is receiving all codec bits irrespective of the codec that is required to decode/encode provided input.

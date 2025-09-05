@@ -15,6 +15,7 @@
  */
 
 #include <cassert>
+#include <cstdlib>
 #include <dlfcn.h>
 #include <sstream>
 #include <time.h>
@@ -195,7 +196,7 @@ void ShellWayland::InitConnection() {
         if (!m_shell) throw std::runtime_error("failed to bind shell");
     } catch (const std::exception &e) {
         std::cerr << "Could not initialize Wayland: " << e.what() << std::endl;
-        exit(-1);
+        exit(EXIT_FAILURE);
     }
 }
 

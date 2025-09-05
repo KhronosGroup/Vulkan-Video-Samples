@@ -29,6 +29,7 @@
 #include "VkCodecUtils/Helpers.h"
 #include "VkCodecUtils/VulkanDeviceContext.h"
 #include "VkVideoCore/VulkanVideoCapabilities.h"
+#include "VkVSCommon.h"
 #include "VulkanVideoProcessor.h"
 #include "vulkan_interfaces.h"
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
@@ -137,9 +138,34 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
                                                                  videoDecodeCapabilities);
 
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get Video Capabilities :" << result << " ***" << std::endl;
-        assert(!"Could not get Video Capabilities!");
-        return -result;
+        std::cerr << "FATAL ERROR: Video decode capabilities not supported for this codec/profile!" << std::endl;
+        std::cerr << "GetVideoDecodeCapabilities failed with error: " << string_VkResult_Extended(result) << std::endl;
+        // Return negated VkResult to preserve error information for caller
+        return -static_cast<int32_t>(result);
+    }
+
+    // Validate video dimensions against hardware capabilities
+    uint32_t videoWidth = m_videoStreamDemuxer->GetWidth();
+    uint32_t videoHeight = m_videoStreamDemuxer->GetHeight();
+
+    if (videoWidth < videoCapabilities.minCodedExtent.width ||
+        videoWidth > videoCapabilities.maxCodedExtent.width) {
+        std::cerr << "*** Video width " << videoWidth
+                  << " is outside supported range ["
+                  << videoCapabilities.minCodedExtent.width << ", "
+                  << videoCapabilities.maxCodedExtent.width << "] ***" << std::endl;
+        // Return negated VK_ERROR_FORMAT_NOT_SUPPORTED to indicate unsupported dimensions
+        return -static_cast<int32_t>(VK_ERROR_FORMAT_NOT_SUPPORTED);
+    }
+
+    if (videoHeight < videoCapabilities.minCodedExtent.height ||
+        videoHeight > videoCapabilities.maxCodedExtent.height) {
+        std::cerr << "*** Video height " << videoHeight
+                  << " is outside supported range ["
+                  << videoCapabilities.minCodedExtent.height << ", "
+                  << videoCapabilities.maxCodedExtent.height << "] ***" << std::endl;
+        // Return negated VK_ERROR_FORMAT_NOT_SUPPORTED to indicate unsupported dimensions
+        return -static_cast<int32_t>(VK_ERROR_FORMAT_NOT_SUPPORTED);
     }
 
     const uint32_t defaultMinBufferSize = 2 * 1024 * 1024; // 2MB

@@ -15,6 +15,7 @@
 */
 
 #include "VkVideoEncoder/VkEncoderConfigAV1.h"
+#include "vk_enum_string_helper.h"
 
 #define READ_PARAM(i, param, type) {                            \
     int32_t data = 0;                                           \
@@ -199,8 +200,15 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
                                                          av1QuantizationMapCapabilities,
                                                          intraRefreshCapabilities);
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get video capabilities :" << result << " ***" << std::endl;
-        assert(!"Coult not get Video Capabilities!");
+        // Distinguish between "not supported" and "actual error"
+        if (IsVideoProfileNotSupportedError(result)) {
+            // Not supported by hardware/driver - return VK_ERROR_INCOMPATIBLE_DRIVER
+            std::cerr << "*** Video encode capabilities not supported by hardware/driver ("
+                      << string_VkResult_Extended(result) << ") ***" << std::endl;
+            return VK_ERROR_INCOMPATIBLE_DRIVER;
+        }
+        // Actual error (e.g., out of memory)
+        std::cerr << "*** Error getting video capabilities: " << string_VkResult_Extended(result) << " ***" << std::endl;
         return result;
     }
 
