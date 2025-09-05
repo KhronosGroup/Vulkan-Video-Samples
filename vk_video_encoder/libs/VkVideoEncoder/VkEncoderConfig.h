@@ -26,6 +26,7 @@
 #include "VkVideoEncoder/VkVideoGopStructure.h"
 #include "VkVideoCore/VkVideoCoreProfile.h"
 #include "VkVideoCore/VulkanVideoCapabilities.h"
+#include "VkVSCommon.h"
 #ifdef SHADERC_SUPPORT
 #   include "VkCodecUtils/VulkanFilterYuvCompute.h"
 #else
