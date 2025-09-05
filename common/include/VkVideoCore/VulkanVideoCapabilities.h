@@ -49,11 +49,9 @@ public:
         } else if (videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
             videoDecodeCapabilities.pNext = &vp9Capabilities;
         } else {
-            assert(!"Unsupported codec");
             return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
         }
         VkResult result = GetVideoCapabilities(vkDevCtx, videoProfile, &videoCapabilities);
-        assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             fprintf(stderr, "\nERROR: Input is not supported. GetVideoCapabilities() result: 0x%x\n", result);
         }
@@ -79,7 +77,6 @@ public:
         videoCapabilities       =       VkVideoCapabilitiesKHR { VK_STRUCTURE_TYPE_VIDEO_CAPABILITIES_KHR, &videoEncodeCapabilities };
 
         VkResult result = GetVideoCapabilities(vkDevCtx, videoProfile, &videoCapabilities);
-        assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             fprintf(stderr, "\nERROR: Input is not supported. GetVideoCapabilities() result: 0x%x\n", result);
         }
@@ -250,7 +247,6 @@ public:
         VkResult result = vkDevCtx->GetPhysicalDeviceVideoCapabilitiesKHR(vkDevCtx->getPhysicalDevice(),
                                                                             videoProfile.GetProfile(),
                                                                             pVideoCapabilities);
-        assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             return result;
         }

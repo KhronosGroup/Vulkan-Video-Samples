@@ -27,6 +27,7 @@
 #include "VkVideoEncoder/VkVideoGopStructure.h"
 #include "VkVideoCore/VkVideoCoreProfile.h"
 #include "VkVideoCore/VulkanVideoCapabilities.h"
+#include "VkVSCommon.h"
 #ifdef SHADERC_SUPPORT
 #   include "VkCodecUtils/VulkanFilterYuvCompute.h"
 #else
@@ -681,6 +682,7 @@ public:
     vk::DeviceUuidUtils deviceUUID;
     int32_t  deviceId;
     int32_t  queueId;
+    bool     noDeviceFallback;
     VkVideoCodecOperationFlagBitsKHR codec;
     bool useDpbArray;
     uint32_t videoProfileIdc;
@@ -788,6 +790,7 @@ public:
     , appName()
     , deviceId(-1)
     , queueId(0)
+    , noDeviceFallback(false)
     , codec(VK_VIDEO_CODEC_OPERATION_NONE_KHR)
     , useDpbArray(false)
     , videoProfileIdc((uint32_t)-1)

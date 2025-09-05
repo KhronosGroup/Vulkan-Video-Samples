@@ -194,13 +194,15 @@ set(VK_VIDEO_ENCODER_LIBS_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/vk_video_enc
 # Enable cmake folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(LVL_TARGET_FOLDER lvl_cmake_targets)
-set (PYTHON_CMD ${PYTHON_EXECUTABLE})
+set (PYTHON_CMD ${Python3_EXECUTABLE})
 
 # Define macro used for building vkxml generated files
 macro(run_vk_xml_generate dependency output)
+    get_filename_component(output_name ${output} NAME)
     add_custom_command(OUTPUT ${output}
-    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output}
+    COMMAND ${PYTHON_CMD} ${SCRIPTS_DIR}/lvl_genvk.py -registry ${SCRIPTS_DIR}/vk.xml ${output_name}
     DEPENDS ${SCRIPTS_DIR}/vk.xml ${SCRIPTS_DIR}/generator.py ${SCRIPTS_DIR}/${dependency} ${SCRIPTS_DIR}/lvl_genvk.py ${SCRIPTS_DIR}/reg.py
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 endmacro()
 
@@ -216,14 +218,27 @@ macro(run_external_revision_generate source_dir symbol_name output)
 endmacro()
 
 # Rules to build generated helper files
-run_vk_xml_generate(loader_extension_generator.py vk_layer_dispatch_table.h)
-run_vk_xml_generate(dispatch_table_helper_generator.py vk_dispatch_table_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_safe_struct.h)
-run_vk_xml_generate(helper_file_generator.py vk_safe_struct.cpp)
-run_vk_xml_generate(helper_file_generator.py vk_enum_string_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_object_types.h)
-run_vk_xml_generate(helper_file_generator.py vk_extension_helper.h)
-run_vk_xml_generate(helper_file_generator.py vk_typemap_helper.h)
+run_vk_xml_generate(loader_extension_generator.py ${CMAKE_BINARY_DIR}/vk_layer_dispatch_table.h)
+run_vk_xml_generate(dispatch_table_helper_generator.py ${CMAKE_BINARY_DIR}/vk_dispatch_table_helper.h)
+run_vk_xml_generate(helper_file_generator.py ${CMAKE_BINARY_DIR}/vk_safe_struct.h)
+run_vk_xml_generate(helper_file_generator.py ${CMAKE_BINARY_DIR}/vk_safe_struct.cpp)
+run_vk_xml_generate(helper_file_generator.py ${CMAKE_BINARY_DIR}/vk_enum_string_helper.h)
+run_vk_xml_generate(helper_file_generator.py ${CMAKE_BINARY_DIR}/vk_object_types.h)
+run_vk_xml_generate(helper_file_generator.py ${CMAKE_BINARY_DIR}/vk_extension_helper.h)
+run_vk_xml_generate(helper_file_generator.py ${CMAKE_BINARY_DIR}/vk_typemap_helper.h)
+
+# Create custom target for generated helper files
+add_custom_target(VulkanHelperFiles
+    DEPENDS
+        ${CMAKE_BINARY_DIR}/vk_layer_dispatch_table.h
+        ${CMAKE_BINARY_DIR}/vk_dispatch_table_helper.h
+        ${CMAKE_BINARY_DIR}/vk_safe_struct.h
+        ${CMAKE_BINARY_DIR}/vk_safe_struct.cpp
+        ${CMAKE_BINARY_DIR}/vk_enum_string_helper.h
+        ${CMAKE_BINARY_DIR}/vk_object_types.h
+        ${CMAKE_BINARY_DIR}/vk_extension_helper.h
+        ${CMAKE_BINARY_DIR}/vk_typemap_helper.h
+)
 
 # Add before the build components section
 # Common dispatch table generation macro
@@ -260,6 +275,9 @@ else()
         install(TARGETS VkVideoUtils DESTINATION ${CMAKE_INSTALL_LIBDIR})
     endif()
 endif()
+
+# Ensure VkVideoUtils depends on generated helper files
+add_dependencies(VkVideoUtils VulkanHelperFiles GenerateDispatchTables)
 
 target_include_directories(
     VkVideoUtils PUBLIC

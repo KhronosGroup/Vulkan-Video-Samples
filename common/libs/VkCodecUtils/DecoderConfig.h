@@ -18,7 +18,6 @@
 #ifndef _PROGRAMSETTINGS_H_
 #define _PROGRAMSETTINGS_H_
 
-#include <stdlib.h>
 #include <string.h>
 #include <iostream>
 #include <string>
@@ -29,7 +28,7 @@
 #include <sstream>
 #include "vulkan_interfaces.h"
 #include "VkCodecUtils/Helpers.h"
-#include "VkVSVersion.h"
+#include "VkVSCommon.h"
 
 struct DecoderConfig {
 
@@ -75,6 +74,7 @@ struct DecoderConfig {
         directMode = false;
         enableHwLoadBalancing = false;
         selectVideoWithComputeQueue = false;
+        noDeviceFallback = false;
         outputy4m = false;
         outputcrcPerFrame = false;
         outputcrc = false;
@@ -288,6 +288,11 @@ struct DecoderConfig {
                     }
                     return true;
                 }},
+            {"--no-device-fallback", nullptr, 0, "Don't try other GPUs if first device doesn't meet requirements",
+                [this](const char **args, const ProgramArgs &a) {
+                    noDeviceFallback = true;
+                    return true;
+                }},
             {"--direct", nullptr, 0, "Direct to display mode",
                 [this](const char **args, const ProgramArgs &a) {
                     directMode = true;
@@ -442,6 +447,7 @@ struct DecoderConfig {
     std::vector<uint32_t> crcInitValue;
     uint32_t deviceId;
     uint32_t decoderQueueSize;
+    bool noDeviceFallback;
     int32_t enablePostProcessFilter;
     uint32_t enableStreamDemuxing : 1;
     uint32_t directMode : 1;

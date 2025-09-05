@@ -660,7 +660,11 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     // Update the video profile
     encoderConfig->InitVideoProfile();
 
-    encoderConfig->InitDeviceCapabilities(m_vkDevCtx);
+    result = encoderConfig->InitDeviceCapabilities(m_vkDevCtx);
+    if (result != VK_SUCCESS) {
+        std::cerr << "InitDeviceCapabilties failed" << std::endl;
+        return result;
+    }
 
     if (encoderConfig->qualityLevel >= encoderConfig->videoEncodeCapabilities.maxQualityLevels) {
         std::cerr << "Quality level " << encoderConfig->qualityLevel

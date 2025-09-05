@@ -285,7 +285,8 @@ public:
                                 const VkVideoCodecOperationFlagsKHR requestVideoEncodeQueueOperations =
                                                                   VIDEO_CODEC_OPERATIONS_ENCODE,
                                 VkPhysicalDevice vkPhysicalDevice = VK_NULL_HANDLE,
-                                bool verbose = false);
+                                bool verbose = false,
+                                bool noDeviceFallback = false);
 
     VkResult CreateVulkanDevice(int32_t numDecodeQueues = 1,
                                 int32_t numEncodeQueues = 0,
