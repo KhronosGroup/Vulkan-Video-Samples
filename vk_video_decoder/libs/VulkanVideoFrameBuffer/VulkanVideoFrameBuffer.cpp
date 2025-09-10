@@ -953,16 +953,20 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
     timelineCreateInfo.initialValue = 0ULL;
 
     VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
-    result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_frameCompleteSemaphore);
-    assert(result == VK_SUCCESS);
-    if (result != VK_SUCCESS) {
-        return -1;
+    if (m_frameCompleteSemaphore == VK_NULL_HANDLE) {
+        result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_frameCompleteSemaphore);
+        assert(result == VK_SUCCESS);
+        if (result != VK_SUCCESS) {
+            return -1;
+        }
     }
 
-    result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_consumerCompleteSemaphore);
-    assert(result == VK_SUCCESS);
-    if (result != VK_SUCCESS) {
-        return -1;
+    if (m_consumerCompleteSemaphore == VK_NULL_HANDLE) {
+        result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_consumerCompleteSemaphore);
+        assert(result == VK_SUCCESS);
+        if (result != VK_SUCCESS) {
+            return -1;
+        }
     }
 
     m_videoProfile.InitFromProfile(pDecodeProfile);
