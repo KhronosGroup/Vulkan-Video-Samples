@@ -1140,12 +1140,12 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
         MAX_DPB_REF_AND_SETUP_SLOTS : MAX_DPB_REF_SLOTS;
 
     if (pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) {
-        maxDpbSlots = 9;
+        maxDpbSlots = STD_VIDEO_AV1_NUM_REF_FRAMES + 1;
         if ((pnvsi->nCodedWidth <= m_nvsi.nCodedWidth) && (pnvsi->nCodedHeight <= m_nvsi.nCodedHeight)) {
             return 1;
         }
     } else if (pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
-        maxDpbSlots = 9;
+        maxDpbSlots = STD_VIDEO_VP9_NUM_REF_FRAMES + 1;
         if ((pnvsi->nMaxWidth <= m_nvsi.nMaxWidth) && (pnvsi->nMaxHeight <= m_nvsi.nMaxHeight)) {
             return 1;
         }
@@ -1171,8 +1171,8 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
     }
 
     m_nvsi = *pnvsi;
-    m_nvsi.nMaxWidth = pnvsi->nMaxWidth;
-    m_nvsi.nMaxHeight = pnvsi->nMaxHeight;
+    m_nvsi.nMaxWidth = std::max(m_nvsi.nMaxWidth, m_nvsi.nDisplayWidth);
+    m_nvsi.nMaxHeight = std::max(m_nvsi.nMaxHeight, m_nvsi.nDisplayHeight);
 
     m_maxNumDecodeSurfaces = pnvsi->nMinNumDecodeSurfaces;
 
