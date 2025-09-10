@@ -329,7 +329,7 @@ public:
             int8_t pictureIndex = m_displayFrames.front();
             assert((pictureIndex >= 0) && ((uint32_t)pictureIndex < m_perFrameDecodeImageSet.size()));
             m_displayFrames.pop();
-            if (m_perFrameDecodeImageSet[(uint32_t)pictureIndex].IsAvailable()) {
+            if (!m_perFrameDecodeImageSet[(uint32_t)pictureIndex].IsAvailable()) {
                 // The frame is not released yet - force release it.
                 m_perFrameDecodeImageSet[(uint32_t)pictureIndex].Release();
             }
