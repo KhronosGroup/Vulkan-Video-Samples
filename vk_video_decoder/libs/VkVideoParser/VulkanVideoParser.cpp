@@ -21,6 +21,7 @@
 #include <stdarg.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <iostream>
 #include <vector>
@@ -752,7 +753,7 @@ protected:
     DpbSlots m_dpb;
     uint32_t m_outOfBandPictureParameters : 1;
     uint32_t m_inlinedPictureParametersUseBeginCoding : 1;
-    int8_t m_pictureToDpbSlotMap[MAX_FRM_CNT];
+    std::array<int8_t, MAX_FRM_CNT> m_pictureToDpbSlotMap;
 
 public:
     static bool m_dumpParserData;
@@ -937,9 +938,7 @@ VulkanVideoParser::VulkanVideoParser(VkVideoCodecOperationFlagBitsKHR codecType,
     , m_inlinedPictureParametersUseBeginCoding(false)
 {
     memset(&m_nvsi, 0, sizeof(m_nvsi));
-    for (uint32_t picId = 0; picId < MAX_FRM_CNT; picId++) {
-        m_pictureToDpbSlotMap[picId] = -1;
-    }
+    m_pictureToDpbSlotMap.fill(-1);
 }
 
 static void nvParserLog(const char* format, ...)
@@ -1272,7 +1271,24 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
         assert(!"m_pDecoderHandler is NULL");
     }
 
-    m_maxNumDpbSlots = m_dpb.Init(configDpbSlots, sequenceUpdate /* reconfigure the DPB size if true */);
+    // AV1 and VP9 support cross-sequence referencing.
+   if (pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR ||
+        pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR)
+    {
+        m_maxNumDpbSlots = m_dpb.Init(configDpbSlots, false /* reconfigure the DPB size if true */);
+        // Ensure the picture map is empited, so that DPB slot management doesn't get confused in-between sequences.
+        m_pictureToDpbSlotMap.fill(-1);
+    }
+    else if (pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR ||
+             pnvsi->eCodec == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR)
+    {
+        if (m_dpb.getMaxSize() < configDpbSlots)
+        {
+            m_maxNumDpbSlots = m_dpb.Init(configDpbSlots, false);
+        }
+    } else {
+        assert(!"Codec DPB management not fully implemented");
+    }
 
     return m_maxNumDecodeSurfaces;
 }
