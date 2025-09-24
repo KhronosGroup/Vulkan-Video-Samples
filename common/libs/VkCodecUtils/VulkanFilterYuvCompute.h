@@ -73,6 +73,8 @@ public:
                                 VK_IMAGE_ASPECT_PLANE_2_BIT)
         , m_enableRowAndColumnReplication(true)
     {
+        // FIXME: m_ycbcrPrimariesConstants is currently unused but is kept for future use.
+        (void)m_ycbcrPrimariesConstants;
     }
 
     VkResult Init(const VkSamplerYcbcrConversionCreateInfo* pYcbcrConversionCreateInfo,
