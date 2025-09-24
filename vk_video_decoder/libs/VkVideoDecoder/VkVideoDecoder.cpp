@@ -280,8 +280,6 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                 pVideoFormat->video_signal_description.video_full_range_flag);
         const VkSamplerYcbcrModelConversion ycbcrModelConversion = VkVideoCoreProfile::CodecColorPrimariesToYCbCrModel(
                 pVideoFormat->video_signal_description.color_primaries);
-        const YcbcrPrimariesConstants ycbcrPrimariesConstants = VkVideoCoreProfile::CodecGetMatrixCoefficients(
-                pVideoFormat->video_signal_description.matrix_coefficients);
 
         const VkFormat inputFormat = dpbImageFormat;
         const VkFormat outputFormat = outImageFormat;
@@ -322,7 +320,6 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                 inputFormat,
                                                 outputFormat,
                                                 &ycbcrConversionCreateInfo,
-                                                &ycbcrPrimariesConstants,
                                                 &samplerInfo,
                                                 m_yuvFilter);
         if (result == VK_SUCCESS) {
