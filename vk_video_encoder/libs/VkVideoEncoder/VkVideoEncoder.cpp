@@ -1178,7 +1178,6 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
         const VkSamplerYcbcrRange ycbcrRange = VK_SAMPLER_YCBCR_RANGE_ITU_FULL; // FIXME
         const VkSamplerYcbcrModelConversion ycbcrModelConversion = VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_2020;   // FIXME
-        const YcbcrPrimariesConstants ycbcrPrimariesConstants = GetYcbcrPrimariesConstants(YcbcrBtStandardBt2020); // FIXME
 
         const VkSamplerYcbcrConversionCreateInfo ycbcrConversionCreateInfo {
                    VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
@@ -1216,7 +1215,6 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                 m_imageInFormat,  // in filter format (can be RGB)
                                                 m_imageInFormat,  // out filter - same as input for now.
                                                 &ycbcrConversionCreateInfo,
-                                                &ycbcrPrimariesConstants,
                                                 &samplerInfo,
                                                 m_inputComputeFilter);
     }

@@ -27,7 +27,6 @@ VkResult VulkanFilterYuvCompute::Create(const VulkanDeviceContext* vkDevCtx,
                                         VkFormat inputFormat,
                                         VkFormat outputFormat,
                                         const VkSamplerYcbcrConversionCreateInfo* pYcbcrConversionCreateInfo,
-                                        const YcbcrPrimariesConstants* pYcbcrPrimariesConstants,
                                         const VkSamplerCreateInfo* pSamplerCreateInfo,
                                         VkSharedBaseObj<VulkanFilter>& vulkanFilter)
 {
@@ -38,8 +37,7 @@ VkResult VulkanFilterYuvCompute::Create(const VulkanDeviceContext* vkDevCtx,
                                                                                          flterType,
                                                                                          maxNumFrames,
                                                                                          inputFormat,
-                                                                                         outputFormat,
-                                                                                         pYcbcrPrimariesConstants));
+                                                                                         outputFormat));
 
     if (!yCbCrVulkanFilter) {
        return VK_ERROR_OUT_OF_HOST_MEMORY;

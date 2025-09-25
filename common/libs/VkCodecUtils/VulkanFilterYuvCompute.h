@@ -41,7 +41,6 @@ public:
                            VkFormat inputFormat,
                            VkFormat outputFormat,
                            const VkSamplerYcbcrConversionCreateInfo* pYcbcrConversionCreateInfo,
-                           const YcbcrPrimariesConstants* pYcbcrPrimariesConstants,
                            const VkSamplerCreateInfo* pSamplerCreateInfo,
                            VkSharedBaseObj<VulkanFilter>& vulkanFilter);
 
@@ -51,8 +50,7 @@ public:
                            FilterType filterType,
                            uint32_t maxNumFrames,
                            VkFormat inputFormat,
-                           VkFormat outputFormat,
-                           const YcbcrPrimariesConstants* pYcbcrPrimariesConstants)
+                           VkFormat outputFormat)
         : VulkanFilter(vkDevCtx, queueFamilyIndex, queueIndex)
         , m_filterType(filterType)
         , m_inputFormat(inputFormat)
@@ -60,9 +58,6 @@ public:
         , m_workgroupSizeX(16)
         , m_workgroupSizeY(16)
         , m_maxNumFrames(maxNumFrames)
-        , m_ycbcrPrimariesConstants (pYcbcrPrimariesConstants ?
-                                        *pYcbcrPrimariesConstants :
-                                        YcbcrPrimariesConstants{0.0, 0.0})
         , m_inputImageAspects(  VK_IMAGE_ASPECT_COLOR_BIT |
                                 VK_IMAGE_ASPECT_PLANE_0_BIT |
                                 VK_IMAGE_ASPECT_PLANE_1_BIT |
@@ -346,7 +341,6 @@ private:
     uint32_t                                 m_workgroupSizeX; // usually 16
     uint32_t                                 m_workgroupSizeY; // usually 16
     uint32_t                                 m_maxNumFrames;
-    const YcbcrPrimariesConstants            m_ycbcrPrimariesConstants;
     VulkanSamplerYcbcrConversion             m_samplerYcbcrConversion;
     VulkanDescriptorSetLayout                m_descriptorSetLayout;
     VulkanComputePipeline                    m_computePipeline;
