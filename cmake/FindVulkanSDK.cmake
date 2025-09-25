@@ -113,7 +113,9 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
             GIT_TAG v${minimum_major_version}.${minimum_minor_version}.${minimum_patch_version}
         )
         FetchContent_MakeAvailable(vulkan-loader)
-        set(VULKAN_LOADER_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/vulkan-loader-build/loader")
+        set(VULKAN_LOADER_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/vulkan-loader-build/loader" CACHE INTERNAL "Vulkan loader library dir")
+    endif()
+    if(VULKAN_LOADER_LIBRARY_DIR)
         link_directories(${VULKAN_LOADER_LIBRARY_DIR})
     endif()
 ENDMACRO(FIND_VULKAN_SDK)
