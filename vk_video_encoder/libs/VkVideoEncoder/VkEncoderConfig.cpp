@@ -74,17 +74,15 @@ void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
     --intraRefreshCycleDuration     <integer> : Duration of (number of frames in) an intra-refresh cycle\n\
     --intraRefreshMode              <string>  : Intra-refresh mode to be used\n\
                                         picpartition, blockrows, blockcolumns, blocks\n\
-    --testIntraRefreshMidway        <integer> : Index at which an intra-refresh cycle is to be interrupted.\n\
-                                        This is for testing purposes only. Allowed values for this option\n\
-                                        are such that 0 <= index < intraRefreshCycleDuration .\n\
+    --testIntraRefreshMidway        <integer> : Testing only - Index at which an intra-refresh cycle is to be interrupted.\n\
+                                        Allowed values for this option are such that 0 <= index < intraRefreshCycleDuration.\n\
                                         A value of 0 is a no-op; for other values, a new intra-refresh\n\
                                         cycle will start `index` frames into an existing intra-refresh\n\
                                         cycle and a complete cycle will be finished. This results in\n\
                                         a fully intra-refreshed frame being available after every\n\
                                         `intraRefreshCycleDuration + index` frames.\n\
-    --testSkipIntraRefreshStart     <integer> : Index at which an intra-refresh cycle should start.\n\
-                                        This is for testing purposes only. Allowed values for this option\n\
-                                        are such that 0 <= index < intraRefreshCycleDuration .\n\
+    --testSkipIntraRefreshStart     <integer> : Testing only - Index at which an intra-refresh cycle should start.\n\
+                                        Allowed values for this option are such that 0 <= index < intraRefreshCycleDuration.\n\
                                         A value of 0 is a no-op; for other values, a new intra-refresh\n\
                                         cycle will start with an intra-refresh index of `index` and\n\
                                         will run to completion. This will be followed by a full\n\
@@ -543,7 +541,9 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
             }
         } else if (args[i] == "--testIntraRefreshMidway") {
             // Testing only - don't use this feature for production!
-            fprintf(stdout, "Warning: %s should only be used for testing!\n", args[i].c_str());
+            if (verbose) {
+                fprintf(stdout, "Warning: %s should only be used for testing!\n", args[i].c_str());
+            }
             if (++i >= argc || sscanf(args[i].c_str(), "%u", &intraRefreshCycleRestartIndex) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
@@ -551,7 +551,9 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
             gopStructure.SetIntraRefreshCycleRestartIndex(intraRefreshCycleRestartIndex);
         } else if (args[i] == "--testSkipIntraRefreshStart") {
             // Testing only - don't use this feature for production!
-            fprintf(stdout, "Warning: %s should only be used for testing!\n", args[i].c_str());
+            if (verbose) {
+                fprintf(stdout, "Warning: %s should only be used for testing!\n", args[i].c_str());
+            }
             if (++i >= argc || sscanf(args[i].c_str(), "%u", &intraRefreshSkippedStartIndex) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
