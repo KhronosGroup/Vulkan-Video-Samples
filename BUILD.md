@@ -88,9 +88,9 @@ cmake --build build --config Debug --target INSTALL
 For Release build:
 ```bash
 For X86_64 based platforms:
-  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=x64 -DCMAKE_INSTALL_PREFIX="$(PWD)/build/install/Release" -DCMAKE_BUILD_TYPE=Release
+  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=x64 -DCMAKE_INSTALL_PREFIX="./build/install/Release" -DCMAKE_BUILD_TYPE=Release
 For ARM64 based platforms:
-  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=ARM64 -DCMAKE_INSTALL_PREFIX="$(PWD)/build/install/Release" -DCMAKE_BUILD_TYPE=Release
+  cmake . -B build -DCMAKE_GENERATOR_PLATFORM=ARM64 -DCMAKE_INSTALL_PREFIX="./build/install/Release" -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 16 --config Release
 cmake --build build --config Release --target INSTALL
 ```
