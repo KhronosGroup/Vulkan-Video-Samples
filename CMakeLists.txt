@@ -248,7 +248,7 @@ add_custom_target(GenerateDispatchTables
 # For Windows, we use a static lib because the Windows loader has a fairly restrictive loader search
 # path that can't be easily modified to point it to the same directory that contains the layers.
 set(VKVIDEO_UTILS_VLF_SOURCES
-    ../common/layers/vk_format_utils.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/../layers/vk_format_utils.cpp
     )
 
 if (WIN32)
