@@ -36,7 +36,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::NEON>(const uint8_t *pdatai
 #if defined (__aarch64__) || defined(_M_ARM64)
                 uint64_t resmask = vmaxvq_u8(vmask);
 #else
-                uint64_t resmask = vget_lane_u64(vmax_u8(vget_low_u8(vmask), vget_high_u8(vmask)), 0);
+                uint64_t resmask = vget_lane_u64(vreinterpret_u64_u8(vmax_u8(vget_low_u8(vmask), vget_high_u8(vmask))), 0);
 #endif
                 if (resmask)
                 {
