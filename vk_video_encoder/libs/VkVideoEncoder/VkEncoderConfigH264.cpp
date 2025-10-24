@@ -15,6 +15,7 @@
 */
 
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
+#include "VkVideoEncoder/VkVideoEncoderH264.h"
 
 int EncoderConfigH264::DoParseArguments(int argc, char* argv[])
 {
@@ -24,6 +25,10 @@ int EncoderConfigH264::DoParseArguments(int argc, char* argv[])
         if (args[i] == "--slices") {
             if (++i >= argc || sscanf(args[i].c_str(), "%u", &sliceCount) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
+                return -1;
+            }
+            if (sliceCount > VkVideoEncoderH264::MAX_NUM_SLICES) {
+                fprintf(stderr, "this application supports a max of %d slices\n", VkVideoEncoderH264::MAX_NUM_SLICES);
                 return -1;
             }
         } else if (args[i] == "--profile") {
