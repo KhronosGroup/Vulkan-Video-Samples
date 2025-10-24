@@ -16,6 +16,7 @@
 
 #include <math.h>       /* sqrt */
 #include "VkVideoEncoder/VkEncoderConfigH265.h"
+#include "VkVideoEncoder/VkVideoEncoderH265.h"
 
 static void SetupAspectRatio(StdVideoH265SequenceParameterSetVui *vui, uint32_t width, uint32_t height,
                              uint32_t darWidth, uint32_t darHeight)
@@ -75,6 +76,10 @@ int EncoderConfigH265::DoParseArguments(int argc, char* argv[])
         if (args[i] == "--slices") {
             if (++i >= argc || sscanf(args[i].c_str(), "%u", &sliceCount) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
+                return -1;
+            }
+            if (sliceCount > VkVideoEncoderH265::MAX_NUM_SLICES) {
+                fprintf(stderr, "this application supports a max of %d slices\n", VkVideoEncoderH265::MAX_NUM_SLICES);
                 return -1;
             }
         } else if (args[i] == "--profile") {
