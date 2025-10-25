@@ -17,7 +17,7 @@ jobs:
   Vulkan-Video-Samples-linux:
     strategy:
       matrix:
-        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, linux-cross-aarch64]
+        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, linux-cross-aarch64, linux-cross-armhf]
     runs-on: ubuntu-24.04
 
     env:
@@ -43,6 +43,15 @@ jobs:
           echo "AR=aarch64-linux-gnu-ar" >> $GITHUB_ENV
           echo "STRIP=aarch64-linux-gnu-strip" >> $GITHUB_ENV
           echo "PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig/:/usr/share/pkgconfig" >> $GITHUB_ENV
+
+      - name: Set armhf environment variables
+        if: matrix.platform == 'linux-cross-armhf'
+        run: |
+          echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+          echo "CXX=arm-linux-gnueabihf-g++" >> $GITHUB_ENV
+          echo "AR=arm-linux-gnueabihf-ar" >> $GITHUB_ENV
+          echo "STRIP=arm-linux-gnueabihf-strip" >> $GITHUB_ENV
+          echo "PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig/:/usr/share/pkgconfig" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: |
@@ -98,6 +107,32 @@ jobs:
           sudo apt install libxrandr-dev:arm64
           sudo apt install libvulkan-dev:arm64
 
+      - name: Install armhf dependencies
+        if: matrix.platform == 'linux-cross-armhf'
+        run: |
+          sudo tee /etc/apt/sources.list.d/ubuntu.sources > /dev/null <<EOF
+          Types: deb
+          URIs: http://azure.archive.ubuntu.com/ubuntu
+          Suites: noble noble-updates noble-security
+          Components: main restricted universe multiverse
+          Architectures: amd64 i386
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+          Types: deb
+          URIs: http://azure.ports.ubuntu.com/ubuntu-ports
+          Suites: noble noble-updates noble-security
+          Components: main restricted universe multiverse
+          Architectures: armhf
+          Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          EOF
+          sudo dpkg --add-architecture armhf
+          sudo apt update
+          sudo apt install crossbuild-essential-armhf
+          sudo apt install libx11-dev:armhf libwayland-dev:armhf
+          sudo apt install libavformat-dev:armhf
+          sudo apt install libxrandr-dev:armhf
+          sudo apt install libvulkan-dev:armhf
+
       - name: Build debug
         shell: bash
         run: |
@@ -105,6 +140,8 @@ jobs:
           cd BUILD_DEBUG
           if [ "${{ matrix.platform }}" = "linux-cross-aarch64" ]; then
             cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 ..
+          elif [ "${{ matrix.platform }}" = "linux-cross-armhf" ]; then
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm ..
           else
             cmake -DCMAKE_BUILD_TYPE=Debug ..
           fi
@@ -117,6 +154,8 @@ jobs:
           pushd BUILD_RELEASE
           if [ "${{ matrix.platform }}" = "linux-cross-aarch64" ]; then
             cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 ..
+          elif [ "${{ matrix.platform }}" = "linux-cross-armhf" ]; then
+            cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=arm ..
           else
             cmake -DCMAKE_BUILD_TYPE=Release ..
           fi
