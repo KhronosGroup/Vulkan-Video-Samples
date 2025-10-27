@@ -24,8 +24,13 @@
 
 class VkVideoEncoderH265 : public VkVideoEncoder {
 
-    enum { MAX_REFFERENCES = 16 };
+public:
+
     enum { MAX_NUM_SLICES  = 64 };
+
+private:
+
+    enum { MAX_REFFERENCES = 16 };
 
     struct VkVideoEncodeFrameInfoH265 : public VkVideoEncodeFrameInfo {
 

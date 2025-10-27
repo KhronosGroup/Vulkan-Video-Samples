@@ -25,17 +25,20 @@ class VkVideoEncoderH264 : public VkVideoEncoder {
 
 public:
 
+    enum { MAX_NUM_SLICES = 64 };
+
+private:
+
     enum { NON_VCL_BITSTREAM_OFFSET = 4096 };
-    enum { MAX_NUM_SLICES_H264 = 64 };
     enum { MAX_MEM_MGMNT_CTRL_OPS_COMMANDS = 16 }; // max mmco commands.
     enum { MAX_REFFERENCES = 16 };
 
     struct VkVideoEncodeFrameInfoH264 : public VkVideoEncodeFrameInfo {
 
         VkVideoEncodeH264PictureInfoKHR          pictureInfo;
-        VkVideoEncodeH264NaluSliceInfoKHR        naluSliceInfo[MAX_NUM_SLICES_H264];
+        VkVideoEncodeH264NaluSliceInfoKHR        naluSliceInfo[MAX_NUM_SLICES];
         StdVideoEncodeH264PictureInfo            stdPictureInfo;
-        StdVideoEncodeH264SliceHeader            stdSliceHeader[MAX_NUM_SLICES_H264];
+        StdVideoEncodeH264SliceHeader            stdSliceHeader[MAX_NUM_SLICES];
         VkVideoEncodeH264RateControlInfoKHR      rateControlInfoH264;
         VkVideoEncodeH264RateControlLayerInfoKHR rateControlLayersInfoH264[1];
         StdVideoEncodeH264ReferenceListsInfo     stdReferenceListsInfo;
@@ -64,7 +67,7 @@ public:
             pictureInfo.pNaluSliceEntries = naluSliceInfo;
             pictureInfo.pStdPictureInfo = &stdPictureInfo;
 
-            for (uint32_t i = 0; i < MAX_NUM_SLICES_H264; i++) {
+            for (uint32_t i = 0; i < MAX_NUM_SLICES; i++) {
                 auto& sliceInfo = naluSliceInfo[i];
 
                 sliceInfo.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_NALU_SLICE_INFO_KHR;
@@ -104,6 +107,8 @@ public:
             Reset(true);
         }
     };
+
+public:
 
     VkVideoEncoderH264(const VulkanDeviceContext* vkDevCtx)
         : VkVideoEncoder(vkDevCtx)
