@@ -335,10 +335,12 @@ bool VulkanVideoDecoder::ParseByteStream(const VkParserBitstreamPacket* pck, siz
         return ParseByteStreamSVE(pck, pParsedBytes);
     } else
 #endif //__aarch64__
+#if defined(__ARM_NEON)
     if (m_NextStartCode == SIMD_ISA::NEON)
     {
         return ParseByteStreamNEON(pck, pParsedBytes);
     } else
+#endif // __ARM_NEON
 #endif
     {
         return ParseByteStreamC(pck, pParsedBytes);
