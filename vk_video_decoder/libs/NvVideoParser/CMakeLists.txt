@@ -66,6 +66,14 @@ check_cxx_source_compiles("
 " IS_ARM)
 
 check_cxx_source_compiles("
+  #if defined(__ARM_NEON)
+  int main() { return 0; }
+  #else
+  #error Not ARM NEON
+  #endif
+  " HAS_ARM_NEON)
+
+check_cxx_source_compiles("
   #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
   int main() { return 0; }
   #else
@@ -84,7 +92,6 @@ if (IS_AARCH64 OR (CMAKE_GENERATOR_PLATFORM MATCHES "^aarch64") OR (CMAKE_GENERA
     set(NEON_CPU_FEATURE "-march=armv8-a")
     set(SVE_CPU_FEATURE "-march=armv8-a+sve")
   endif()
-  MESSAGE(STATUS "Parser optimizations selected for generic ARM NEON")
   add_library(next_start_code_c OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeC.cpp include)
   target_include_directories(next_start_code_c PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
   add_library(next_start_code_neon OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeNEON.cpp include)
@@ -113,12 +120,18 @@ elseif (IS_ARM OR (CMAKE_GENERATOR_PLATFORM MATCHES "^arm") OR (CMAKE_GENERATOR_
   endif()
   add_library(next_start_code_c OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeC.cpp include)
   target_include_directories(next_start_code_c PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  add_library(next_start_code_neon OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeNEON.cpp include)
-  set_target_properties(next_start_code_neon PROPERTIES COMPILE_FLAGS ${NEON_CPU_FEATURE} )
-  target_include_directories(next_start_code_neon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-  MESSAGE(STATUS "Parser optimizations linking ARM next_start_code_c next_start_code_neon")
-  target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_neon)
-  target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_neon)
+  if (HAS_ARM_NEON)
+    add_library(next_start_code_neon OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/NextStartCodeNEON.cpp include)
+    set_target_properties(next_start_code_neon PROPERTIES COMPILE_FLAGS ${NEON_CPU_FEATURE} )
+    target_include_directories(next_start_code_neon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    MESSAGE(STATUS "Parser optimizations linking ARM next_start_code_c next_start_code_neon")
+    target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c next_start_code_neon)
+    target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c next_start_code_neon)
+  else()
+    MESSAGE(STATUS "Parser optimizations linking ARM next_start_code_c")
+    target_link_libraries(${VULKAN_VIDEO_PARSER_LIB} next_start_code_c)
+    target_link_libraries(${VULKAN_VIDEO_PARSER_STATIC_LIB} next_start_code_c)
+  endif()
 elseif (IS_X86)
   MESSAGE(STATUS "Parser optimization for X86 ${CMAKE_SYSTEM_PROCESSOR}")
   if(WIN32)
