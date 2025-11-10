@@ -22,6 +22,7 @@
 #include <atomic>
 #include "mio/mio.hpp"
 #include "VkCodecUtils/VkVideoRefCountBase.h"
+#include "VkCodecUtils/Helpers.h"
 #include "VkVideoEncoder/VkVideoEncoderDef.h"
 #include "VkVideoEncoder/VkVideoGopStructure.h"
 #include "VkVideoCore/VkVideoCoreProfile.h"
