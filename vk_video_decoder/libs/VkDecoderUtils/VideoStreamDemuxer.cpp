@@ -18,16 +18,6 @@
 #include <fstream>
 #include "VkDecoderUtils/VideoStreamDemuxer.h"
 
-bool VideoStreamDemuxer::CheckFile(const char* szInFilePath)
-{
-    std::ifstream fpIn(szInFilePath, std::ios::in | std::ios::binary);
-    if (fpIn.fail()) {
-        std::ostringstream err;
-        err << "Unable to open input file: " << szInFilePath << std::endl;
-        throw std::invalid_argument(err.str());
-    }
-    return true;
-}
 
 VkResult VideoStreamDemuxer::Create(const char *pFilePath,
                                     VkVideoCodecOperationFlagBitsKHR codecType,
@@ -37,8 +27,6 @@ VkResult VideoStreamDemuxer::Create(const char *pFilePath,
                                     int32_t defaultBitDepth,
                                     VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer)
 {
-    VideoStreamDemuxer::CheckFile(pFilePath);
-
 #ifdef FFMPEG_DEMUXER_SUPPORT
     if (requiresStreamDemuxing || (codecType == VK_VIDEO_CODEC_OPERATION_NONE_KHR)) {
         return FFmpegDemuxerCreate(pFilePath,

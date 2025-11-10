@@ -24,6 +24,7 @@
 #include <iostream>
 #include <cstring>
 #include <iomanip>
+#include <filesystem>
 #include "HelpersDispatchTable.h"
 
 namespace vk {
@@ -442,6 +443,47 @@ private:
     uint8_t  m_deviceUUID[VK_UUID_SIZE];
     uint32_t m_deviceUuidIsValid : 1;
 };
+
+// File validation helper
+inline bool IsValidFilePath(const char *pFilePath, bool checkExists = true) {
+    if (!pFilePath || pFilePath[0] == '\0') {
+        std::cerr << "Error: File path is null or empty" << std::endl;
+        return false;
+    }
+
+    try {
+        std::filesystem::path path(pFilePath);
+
+        if (checkExists) {
+            if (!std::filesystem::exists(path)) {
+                std::cerr << "Error: File does not exist: " << pFilePath << std::endl;
+                return false;
+            }
+
+            if (std::filesystem::is_directory(path)) {
+                std::cerr << "Error: Path is a directory, not a file: " << pFilePath << std::endl;
+                return false;
+            }
+
+            if (!std::filesystem::is_regular_file(path)) {
+                std::cerr << "Error: Path is not a regular file: " << pFilePath << std::endl;
+                return false;
+            }
+        } else {
+            // For output files, verify parent directory exists
+            auto parent = path.parent_path();
+            if (!parent.empty() && !std::filesystem::exists(parent)) {
+                std::cerr << "Error: Parent directory does not exist: " << parent << std::endl;
+                return false;
+            }
+        }
+
+        return true;
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::cerr << "Error: Invalid file path (" << e.what() << "): " << pFilePath << std::endl;
+        return false;
+    }
+}
 
 }  // namespace vk
 

@@ -70,8 +70,9 @@ int main(int argc, const char** argv)
                                         decoderConfig.initialBitdepth,
                                         videoStreamDemuxer);
     if (result != VK_SUCCESS) {
-        assert(!"Can't initialize the VideoStreamDemuxer!");
-        return result;
+        fprintf(stderr, "Error: Failed to initialize VideoStreamDemuxer for file: %s\n",
+                decoderConfig.videoFileName.c_str());
+        return -1;
     }
 
     const int32_t numDecodeQueues = ((decoderConfig.queueId != 0) ||

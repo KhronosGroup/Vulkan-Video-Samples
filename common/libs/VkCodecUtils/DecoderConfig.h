@@ -200,16 +200,17 @@ struct DecoderConfig {
                 }},
             {"--input", "-i", 1, "Input filename to decode",
                 [this](const char **args, const ProgramArgs &a) {
-                    videoFileName = args[0];
-                    std::ifstream inputFile(videoFileName, std::ifstream::in);
-                    if(!inputFile.is_open()) {
-                        std::cerr << "Error: Cannot open input file \"" << videoFileName << "\"" << std::endl;
+                    if (!vk::IsValidFilePath(args[0], true)) {
                         return false;
                     }
+                    videoFileName = args[0];
                     return true;
                 }},
             {"--output", "-o", 1, "Output filename to dump raw video to",
                 [this](const char **args, const ProgramArgs &a) {
+                    if (!vk::IsValidFilePath(args[0], false)) {
+                        return false;
+                    }
                     outputFileName = args[0];
                     return true;
                 }},
@@ -310,6 +311,9 @@ struct DecoderConfig {
                 }},
             {"--crcoutfile", nullptr, 1, "Output file to store the CRC output into.",
                     [this](const char **args, const ProgramArgs &a) {
+                    if (!vk::IsValidFilePath(args[0], false)) {
+                        return false;
+                    }
                     crcOutputFileName = args[0];
                     return true;
                 }},

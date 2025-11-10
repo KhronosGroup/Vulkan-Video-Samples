@@ -172,6 +172,9 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
+            if (!vk::IsValidFilePath(args[i].c_str(), true)) {
+                return -1;
+            }
             size_t fileSize = inputFileHandler.SetFileName(args[i].c_str());
             if (fileSize <= 0) {
                 return (int)fileSize;
@@ -184,6 +187,9 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
         } else if (args[i] == "-o" || args[i] == "--output") {
             if (++i >= argc) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
+                return -1;
+            }
+            if (!vk::IsValidFilePath(args[i].c_str(), false)) {
                 return -1;
             }
             size_t fileSize = outputFileHandler.SetFileName(args[i].c_str());
@@ -496,6 +502,9 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
         } else if (args[i] == "--qpMapFileName") {
             if (++i >= argc) {
                 fprintf(stderr, "Invaid paramter for %s\n", args[i - 1].c_str());
+                return -1;
+            }
+            if (!vk::IsValidFilePath(args[i].c_str(), true)) {
                 return -1;
             }
             size_t fileSize = qpMapFileHandler.SetFileName(args[i].c_str());

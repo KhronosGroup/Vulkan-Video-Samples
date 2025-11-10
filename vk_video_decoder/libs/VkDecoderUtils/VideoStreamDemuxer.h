@@ -34,8 +34,6 @@ public:
                            int32_t defaultBitDepth = 12,
                            VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer = invalidDemuxer);
 
-    static bool CheckFile(const char* szInFilePath);
-
     virtual int32_t AddRef()
     {
         return ++m_refCount;
