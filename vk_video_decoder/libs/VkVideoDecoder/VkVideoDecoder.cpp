@@ -313,8 +313,10 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                    // unnormalizedCoordinates
                    0.0, false, 0.00, false, VK_COMPARE_OP_NEVER, 0.0, 16.0, VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, false
         };
-
-        result = VulkanFilterYuvCompute::Create(m_vkDevCtx,
+        result = VK_SUCCESS;
+        if  (m_yuvFilter == nullptr) {
+            // Create the compute filter only on the first StartVideoSequence and reuse it on resolution change for example.
+            result = VulkanFilterYuvCompute::Create(m_vkDevCtx,
                                                 m_vkDevCtx->GetComputeQueueFamilyIdx(),
                                                 0,
                                                 m_filterType,
@@ -325,6 +327,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                 &ycbcrPrimariesConstants,
                                                 &samplerInfo,
                                                 m_yuvFilter);
+        }
         if (result == VK_SUCCESS) {
 
             // We need extra image for the filter output - linear or optimal image
