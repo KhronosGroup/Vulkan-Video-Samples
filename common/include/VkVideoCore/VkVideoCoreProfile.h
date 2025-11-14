@@ -246,6 +246,7 @@ public:
                 assert(false && "Bad profile IDC");
             }
             decodeAV1ProfilesRequest.stdProfile = (StdVideoAV1Profile)videoH26xProfileIdc;
+            decodeAV1ProfilesRequest.filmGrainSupport = false;
             pVideoProfileExt = (VkBaseInStructure*)&decodeAV1ProfilesRequest;
         } else if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR) {
             decodeH265ProfilesRequest.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H265_PROFILE_INFO_KHR;
