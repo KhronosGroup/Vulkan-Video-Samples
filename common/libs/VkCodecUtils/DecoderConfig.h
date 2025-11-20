@@ -18,7 +18,6 @@
 #ifndef _PROGRAMSETTINGS_H_
 #define _PROGRAMSETTINGS_H_
 
-#include <stdlib.h>
 #include <string.h>
 #include <iostream>
 #include <fstream>
@@ -30,7 +29,7 @@
 #include <sstream>
 #include "vulkan_interfaces.h"
 #include "VkCodecUtils/Helpers.h"
-#include "VkVSVersion.h"
+#include "VkVSCommon.h"
 
 struct DecoderConfig {
 
