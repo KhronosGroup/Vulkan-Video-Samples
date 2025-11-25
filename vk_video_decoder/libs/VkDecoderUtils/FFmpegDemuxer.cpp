@@ -88,7 +88,7 @@ private:
         /**
          * Codec-specific bitstream restrictions that the stream conforms to.
          */
-        profile = fmtc->streams[videoStream]->codecpar->profile;
+        profile = fmtc->streams[videoStream]->codecpar->profile & 0xFF; /* constraint_set_flags in higher bits */
         level = fmtc->streams[videoStream]->codecpar->level;
 
         /**
