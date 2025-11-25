@@ -49,17 +49,22 @@ public:
     {
         if (newObjectPtr != m_sharedObject) {
             int refCount = -1;
-            if (m_sharedObject != nullptr) {
-                refCount = m_sharedObject->Release();
-                if (refCount < 0) {
-                    assert(!"RefCount is smaller than zero");
-                }
-            }
+            // Store old object pointer before clearing, avoiding reentrancy
+            VkBaseObjType* oldObject = m_sharedObject;
+
             m_sharedObject = newObjectPtr;
+
             if (newObjectPtr != nullptr) {
                 refCount = newObjectPtr->AddRef();
                 if (!(refCount > 0)) {
                     assert(!"RefCount is smaller not bigger than zero");
+                }
+            }
+
+            if (oldObject != nullptr) {
+                refCount = oldObject->Release();
+                if (refCount < 0) {
+                    assert(!"RefCount is smaller than zero");
                 }
             }
         }
