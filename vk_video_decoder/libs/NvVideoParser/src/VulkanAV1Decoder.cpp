@@ -1352,6 +1352,9 @@ void VulkanAV1Decoder::DecodeSegmentationData()
     flags->segmentation_enabled = u(1);
 
     if (!flags->segmentation_enabled) {
+        flags->segmentation_update_map = 0;
+        flags->segmentation_update_data = 0;
+        flags->segmentation_temporal_update = 0;
         memset(pSegmentation, 0, sizeof(*pSegmentation));
         return;
     }
