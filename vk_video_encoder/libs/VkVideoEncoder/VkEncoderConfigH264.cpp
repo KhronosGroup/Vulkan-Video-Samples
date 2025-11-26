@@ -64,6 +64,13 @@ StdVideoH264LevelIdc EncoderConfigH264::DetermineLevel(uint8_t dpbSize,
                                                        uint32_t _vbvBufferSize,
                                                        double frameRate)
 {
+    uint32_t cpbBrNalFactor = 1200;
+
+    // Set cpbBrNalFactor depending on whether the High (or greater) profile is
+    // being used. See table A-2 in the H.264 specification.
+    if (profileIdc >= STD_VIDEO_H264_PROFILE_IDC_HIGH) {
+        cpbBrNalFactor = (profileIdc >= STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE) ? 4800 : 1500;
+    }
 
     uint32_t frameSizeInMbs = pic_width_in_mbs * pic_height_in_map_units;
     for (uint32_t idx = 0; idx < levelLimitsSize; idx++) {
@@ -72,8 +79,8 @@ StdVideoH264LevelIdc EncoderConfigH264::DetermineLevel(uint8_t dpbSize,
         if ((frameSizeInMbs) > ((uint32_t)levelLimits[idx].maxFS)) continue;
         if ((frameSizeInMbs * numRefFrames * 384) > levelLimits[idx].maxDPB * 1024) continue;
 
-        if ((bitrate != 0) && (bitrate > ((uint32_t)levelLimits[idx].maxBR * 1200))) continue;
-        if ((_vbvBufferSize != 0) && (_vbvBufferSize > ((uint32_t)levelLimits[idx].maxCPB * 1200))) continue;
+        if ((bitrate != 0) && (bitrate > ((uint32_t)levelLimits[idx].maxBR * cpbBrNalFactor))) continue;
+        if ((_vbvBufferSize != 0) && (_vbvBufferSize > ((uint32_t)levelLimits[idx].maxCPB * cpbBrNalFactor))) continue;
 
         return levelLimits[idx].level;
     }
@@ -517,28 +524,18 @@ int8_t EncoderConfigH264::InitDpbCount()
 
     assert(pic_width_in_mbs > 0);
     assert(pic_height_in_map_units > 0);
-    uint32_t frameSizeInMbs = pic_width_in_mbs * pic_height_in_map_units;
 
     double frameRate = ((frameRateNumerator > 0) && (frameRateDenominator > 0))
                            ? (double)frameRateNumerator / frameRateDenominator
                            : (double)FRAME_RATE_NUM_DEFAULT / (double)FRAME_RATE_DEN_DEFAULT;
 
-    // WAR for super HD resolution (bypass H264 level check for frame mode and use level 5.2)
-    if ((frameSizeInMbs > ((uint32_t)levelLimits[levelLimitsSize - 1].maxFS) ||
-        ((frameSizeInMbs * frameRate) > ((uint32_t)levelLimits[levelLimitsSize - 1].maxMBPS)))) {
-        levelIdc = STD_VIDEO_H264_LEVEL_IDC_5_2;
-    } else {
-        // find lowest possible level
-        levelIdc = DetermineLevel(dpbCount, levelBitRate, vbvBufferSize, frameRate);
-    }
+    // find lowest possible level
+    levelIdc = DetermineLevel(dpbCount, levelBitRate, vbvBufferSize, frameRate);
 
     uint8_t levelDpbSize = (uint8_t)(((1024 * levelLimits[levelIdc].maxDPB)) /
                             ((pic_width_in_mbs * pic_height_in_map_units) * 384));
 
-    // XXX: If the level is 5.2, it is highly likely that we forced it to that
-    // value as a WAR for super HD. In that case, force the DPB size to
-    // DEFAULT_MAX_NUM_REF_FRAMES. Otherwise, clamp the computed DPB size to DEFAULT_MAX_NUM_REF_FRAMES.
-    levelDpbSize = (levelIdc == STD_VIDEO_H264_LEVEL_IDC_5_2) ? (uint8_t)DEFAULT_MAX_NUM_REF_FRAMES : std::min(uint8_t(DEFAULT_MAX_NUM_REF_FRAMES), levelDpbSize);
+    levelDpbSize = std::min(uint8_t(DEFAULT_MAX_NUM_REF_FRAMES), levelDpbSize);
 
     uint8_t dpbSize = (uint8_t)((dpbCount < 1) ? levelDpbSize : (uint8_t)(std::min((uint8_t)dpbCount, levelDpbSize))) + 1;
 
