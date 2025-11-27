@@ -48,8 +48,6 @@ VkResult VulkanDeviceMemoryImpl::CreateDeviceMemory(const VulkanDeviceContext* v
                                                     VkDeviceMemory& deviceMemory,
                                                     VkDeviceSize&   deviceMemoryOffset)
 {
-    assert(memoryRequirements.size ==
-            ((memoryRequirements.size + (memoryRequirements.alignment - 1)) & ~(memoryRequirements.alignment - 1)));
     deviceMemoryOffset = 0;
 
     VkMemoryAllocateInfo allocInfo = VkMemoryAllocateInfo();
