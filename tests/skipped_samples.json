@@ -1,0 +1,246 @@
+{
+  "version": "1.0",
+  "description": "Test skip list for Vulkan Video Samples test framework",
+  "skipped_tests": [
+    {
+      "name": "h264_clip_c",
+      "source_filepath": "video/avc/clip-c.h264",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "Issue with the compute filter",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/99",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_basic_10bit",
+      "source_filepath": "video/av1/av1-176x144-main-basic-10.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_cdef_10bit",
+      "source_filepath": "video/av1/av1-176x144-main-cdef-10.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_forward_key_frame_10bit",
+      "source_filepath": "video/av1/av1-176x144-main-forward-key-frame-10.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_loop_filter_10bit",
+      "source_filepath": "video/av1/av1-176x144-main-loop-filter-10.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_lossless_10bit",
+      "source_filepath": "video/av1/av1-176x144-main-lossless-10.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_orderhint_10bit",
+      "source_filepath": "video/av1/av1-176x144-main-orderhint-10.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_argon_test1019",
+      "source_filepath": "video/av1/av1-argon_test1019.obu",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "Argon test - needs investigation. Color primaries assertion failed",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/123",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_argon_test787",
+      "source_filepath": "video/av1/av1-argon_test787.obu",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "Argon test - needs investigation, OBU frame header parsing issue.",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/124",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_argon_test9354_2",
+      "source_filepath": "video/av1/av1-argon_test9354_2.obu",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "Argon test - needs investigation. Resolution change issue.",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/125",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "av1_sizeup_fluster",
+      "source_filepath": "video/av1/av1-sizeup-fluster.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "Size up test - needs investigation. Resolution change trigger the same issue as clip-c",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/126",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "vp9_show_existing_frames",
+      "source_filepath": "video/vp9/vp9-352x288-show-existing-frames.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "Show existing frames feature not supported",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/pull/113",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "vp9_resize",
+      "source_filepath": "video/vp9/vp9-resize.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "VP9 dynamic resize not supported. MD5 mismatch",
+      "bug_url": "",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "vp9_320x240_10bits",
+      "source_filepath": "video/vp9/vp9-320x240-10bits.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "10-bit VP9 decoding. MD5 mismatch",
+      "bug_url": "",
+      "date_added": "2025-01-27"
+    },
+    {
+      "name": "vp9_resize_1_2",
+      "source_filepath": "video/vp9/vp9-resize-1-2.ivf",
+      "type": "decode",
+      "format": "vvs",
+      "drivers": [
+        "all"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "VP9 resize not supported. Resolution change trigger the same issue as clip-c",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/126",
+      "date_added": "2025-01-27"
+    }
+  ]
+}
