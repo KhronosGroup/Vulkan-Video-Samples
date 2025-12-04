@@ -332,7 +332,7 @@ struct DecoderConfig {
                     std::string token;
                     while (std::getline(stream, token, ',')) {
                         char* endPtr = NULL;
-                        uint32_t initValue = strtoul(token.c_str(), &endPtr, 16);
+                        uint32_t initValue = static_cast<uint32_t>(strtoul(token.c_str(), &endPtr, 16));
                         if ((endPtr == NULL) || (*endPtr != 0)) {
                             std::cerr << "Failed to parse the following initial CRC value:"
                                   << token << std::endl;

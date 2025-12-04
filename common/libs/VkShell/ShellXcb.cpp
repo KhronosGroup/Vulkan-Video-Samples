@@ -28,7 +28,7 @@
 namespace {
 
 xcb_intern_atom_cookie_t intern_atom_cookie(xcb_connection_t *c, const std::string &s) {
-    return xcb_intern_atom(c, false, s.size(), s.c_str());
+    return xcb_intern_atom(c, false, static_cast<uint16_t>(s.size()), s.c_str());
 }
 
 xcb_atom_t intern_atom(xcb_connection_t *c, xcb_intern_atom_cookie_t cookie) {
@@ -118,7 +118,7 @@ void ShellXcb::CreateWindow() {
     xcb_atom_t utf8_string = intern_atom(m_connection, utf8_string_cookie);
     xcb_atom_t _net_wm_name = intern_atom(m_connection, _net_wm_name_cookie);
     xcb_change_property(m_connection, XCB_PROP_MODE_REPLACE, m_window, _net_wm_name, utf8_string, 8,
-                        m_settings.m_windowName.size(), m_settings.m_windowName.c_str());
+                        static_cast<uint32_t>(m_settings.m_windowName.size()), m_settings.m_windowName.c_str());
 
     // advertise WM_DELETE_WINDOW
     m_wm_protocols = intern_atom(m_connection, wm_protocols_cookie);

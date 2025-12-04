@@ -311,7 +311,7 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
     av1->setupSlotInfo.OrderHint = m_PicData.std_info.OrderHint;
     memcpy(&av1->setupSlotInfo.SavedOrderHints, m_PicData.std_info.OrderHints, STD_VIDEO_AV1_NUM_REF_FRAMES);
     for (size_t av1name = 0; av1name < STD_VIDEO_AV1_NUM_REF_FRAMES; av1name += 1) {
-        av1->setupSlotInfo.RefFrameSignBias |= (m_pBuffers[0].RefFrameSignBias[av1name] <= 0) << av1name;
+        av1->setupSlotInfo.RefFrameSignBias |= (uint8_t)((m_pBuffers[0].RefFrameSignBias[av1name] <= 0) << av1name);
     }
     av1->setupSlotInfo.flags.disable_frame_end_update_cdf = m_PicData.std_info.flags.disable_frame_end_update_cdf;
     av1->setupSlotInfo.flags.segmentation_enabled = m_PicData.std_info.flags.segmentation_enabled;
@@ -325,7 +325,7 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
         av1->dpbSlotInfos[i].frame_type = m_pBuffers[i].frame_type;
         av1->dpbSlotInfos[i].OrderHint = m_pBuffers[i].order_hint;
         for (size_t av1name = STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME; av1name < STD_VIDEO_AV1_NUM_REF_FRAMES; av1name += 1) {
-            av1->dpbSlotInfos[i].RefFrameSignBias |= (m_pBuffers[i].RefFrameSignBias[av1name] <= 0) << av1name;
+            av1->dpbSlotInfos[i].RefFrameSignBias |= (uint8_t)((m_pBuffers[i].RefFrameSignBias[av1name] <= 0) << av1name);
             av1->dpbSlotInfos[i].SavedOrderHints[av1name] = m_pBuffers[i].SavedOrderHints[av1name];
         }
     }
@@ -340,7 +340,7 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
     }
 
     for (uint32_t i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
-        av1->ref_frame_idx[i] = ref_frame_idx[i];
+        av1->ref_frame_idx[i] = (uint8_t)ref_frame_idx[i];
     }
 
     return true;
@@ -387,7 +387,7 @@ void VulkanAV1Decoder::UpdateFramePointers(VkPicIf* currentPicture)
             for (uint8_t refName = STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME; refName < STD_VIDEO_AV1_NUM_REF_FRAMES; refName ++) {
                 uint8_t ref_order_hint = pStd->OrderHints[refName];
                 m_pBuffers[ref_index].SavedOrderHints[refName] = ref_order_hint;
-                m_pBuffers[ref_index].RefFrameSignBias[refName] = GetRelativeDist(pStd->OrderHint, ref_order_hint);
+                m_pBuffers[ref_index].RefFrameSignBias[refName] = (uint8_t)GetRelativeDist(pStd->OrderHint, ref_order_hint);
             }
 
             // film grain
@@ -599,9 +599,9 @@ int VulkanAV1Decoder::ChooseOperatingPoint()
         memset(&OPInfo, 0, sizeof(OPInfo));
 
         OPInfo.eCodec = (VkVideoCodecOperationFlagBitsKHR)VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR;
-        OPInfo.av1.operating_points_cnt = m_sps->operating_points_cnt_minus_1 + 1;
+        OPInfo.av1.operating_points_cnt = (uint8_t)m_sps->operating_points_cnt_minus_1 + 1;
         for (int i = 0; i < OPInfo.av1.operating_points_cnt; i++) {
-            OPInfo.av1.operating_points_idc[i] = m_sps->operating_point_idc[i];
+            OPInfo.av1.operating_points_idc[i] = (uint16_t)m_sps->operating_point_idc[i];
         }
 
         operating_point = 0; // GetOperatingPoint was deprecated because it always returned 0 - m_pClient->GetOperatingPoint(&OPInfo);
@@ -643,8 +643,8 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
         return false;
     }
 
-    sps->flags.still_picture = u(1);
-    sps->flags.reduced_still_picture_header = u(1);
+    sps->flags.still_picture = flag();
+    sps->flags.reduced_still_picture_header = flag();
 
     if (!sps->flags.still_picture && sps->flags.reduced_still_picture_header) {
         // Error: Video must have reduced_still_picture_hdr == 0
@@ -666,7 +666,7 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
         op_params[0].decoder_model_param_present = 0;
         op_params[0].display_model_param_present = 0;
     } else {
-        timing_info_present = u(1);
+        timing_info_present = (uint8_t)u(1);
         if (timing_info_present) {
             ReadTimingInfoHeader();
 
@@ -686,7 +686,7 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
                 return false;
             }
             if (sps->level[i] > STD_VIDEO_AV1_LEVEL_3_3) {
-                sps->tier[i] = u(1);
+                sps->tier[i] = (uint8_t)u(1);
             } else {
                 sps->tier[i] = 0;
             }
@@ -722,29 +722,29 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
         }
     }
 
-    sps->frame_width_bits_minus_1 = u(4);
-    sps->frame_height_bits_minus_1 = u(4);
-    sps->max_frame_width_minus_1 = u(sps->frame_width_bits_minus_1 + 1);
-    sps->max_frame_height_minus_1 = u(sps->frame_height_bits_minus_1 + 1);
+    sps->frame_width_bits_minus_1 = (uint8_t)u(4);
+    sps->frame_height_bits_minus_1 = (uint8_t)u(4);
+    sps->max_frame_width_minus_1 = (uint16_t)u(sps->frame_width_bits_minus_1 + 1);
+    sps->max_frame_height_minus_1 = (uint16_t)u(sps->frame_height_bits_minus_1 + 1);
 
     if (sps->flags.reduced_still_picture_header) {
         sps->flags.frame_id_numbers_present_flag = 0;
     } else {
-        sps->flags.frame_id_numbers_present_flag = u(1);
+        sps->flags.frame_id_numbers_present_flag = flag();
     }
 
     if (sps->flags.frame_id_numbers_present_flag) {
-        delta_frame_id_length = u(4) + 2;
-        frame_id_length = u(3) + delta_frame_id_length + 1;
+        delta_frame_id_length = (uint8_t)u(4) + 2;
+        frame_id_length = (uint8_t)(u(3) + delta_frame_id_length + 1);
         if (frame_id_length > 16) {
             // Invalid frame_id_length
             return false;
         }
     }
 
-    sps->flags.use_128x128_superblock = u(1);
-    sps->flags.enable_filter_intra = u(1);
-    sps->flags.enable_intra_edge_filter = u(1);
+    sps->flags.use_128x128_superblock = flag();
+    sps->flags.enable_filter_intra = flag();
+    sps->flags.enable_intra_edge_filter = flag();
 
     if (sps->flags.reduced_still_picture_header) {
         sps->flags.enable_interintra_compound = 0;
@@ -758,14 +758,14 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
         sps->seq_force_integer_mv = STD_VIDEO_AV1_SELECT_INTEGER_MV;
         sps->order_hint_bits_minus_1 = 0;
     } else {
-        sps->flags.enable_interintra_compound = u(1);
-        sps->flags.enable_masked_compound = u(1);
-        sps->flags.enable_warped_motion = u(1);
-        sps->flags.enable_dual_filter = u(1);
-        sps->flags.enable_order_hint = u(1);
+        sps->flags.enable_interintra_compound = flag();
+        sps->flags.enable_masked_compound = flag();
+        sps->flags.enable_warped_motion = flag();
+        sps->flags.enable_dual_filter = flag();
+        sps->flags.enable_order_hint = flag();
         if (sps->flags.enable_order_hint) {
-            sps->flags.enable_jnt_comp = u(1);
-            sps->flags.enable_ref_frame_mvs = u(1);
+            sps->flags.enable_jnt_comp = flag();
+            sps->flags.enable_ref_frame_mvs = flag();
         } else {
             sps->flags.enable_jnt_comp = 0;
             sps->flags.enable_ref_frame_mvs = 0;
@@ -775,23 +775,23 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
             sps->seq_force_screen_content_tools = STD_VIDEO_AV1_SELECT_SCREEN_CONTENT_TOOLS;
         }
         else
-            sps->seq_force_screen_content_tools = u(1);
+            sps->seq_force_screen_content_tools = (uint8_t)u(1);
 
         if (sps->seq_force_screen_content_tools > 0) {
             if (u(1)) {
                 sps->seq_force_integer_mv = STD_VIDEO_AV1_SELECT_INTEGER_MV;
             } else {
-                sps->seq_force_integer_mv = u(1);
+                sps->seq_force_integer_mv = (uint8_t)u(1);
             }
         } else {
             sps->seq_force_integer_mv = STD_VIDEO_AV1_SELECT_INTEGER_MV;
         }
-        sps->order_hint_bits_minus_1 = sps->flags.enable_order_hint ? u(3) : 0;
+        sps->order_hint_bits_minus_1 = sps->flags.enable_order_hint ? (uint8_t)u(3) : 0;
     }
 
-    sps->flags.enable_superres = u(1);
-    sps->flags.enable_cdef = u(1);
-    sps->flags.enable_restoration = u(1);
+    sps->flags.enable_superres = flag();
+    sps->flags.enable_cdef = flag();
+    sps->flags.enable_restoration = flag();
     // color config
     bool high_bitdepth = u(1);
     if (sps->seq_profile == STD_VIDEO_AV1_PROFILE_PROFESSIONAL && high_bitdepth) {
@@ -809,8 +809,8 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
     sps->color_config.subsampling_x = sps->color_config.subsampling_x;
     sps->color_config.subsampling_y = sps->color_config.subsampling_y;
 
-    sps->color_config.flags.mono_chrome = sps->seq_profile != STD_VIDEO_AV1_PROFILE_HIGH ? u(1) : 0;
-    sps->color_config.flags.color_description_present_flag = u(1);
+    sps->color_config.flags.mono_chrome = sps->seq_profile != STD_VIDEO_AV1_PROFILE_HIGH ? flag() : 0;
+    sps->color_config.flags.color_description_present_flag = flag();
     if (sps->color_config.flags.color_description_present_flag) {
         sps->color_config.color_primaries = (StdVideoAV1ColorPrimaries)u(8);
         sps->color_config.transfer_characteristics = (StdVideoAV1TransferCharacteristics)u(8);
@@ -822,7 +822,7 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
     }
 
     if (sps->color_config.flags.mono_chrome) {
-        sps->color_config.flags.color_range = u(1);
+        sps->color_config.flags.color_range = flag();
         sps->color_config.subsampling_x = sps->color_config.subsampling_y = 1;
         sps->color_config.flags.separate_uv_delta_q = 0;
     } else {
@@ -832,16 +832,16 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
             sps->color_config.subsampling_y = sps->color_config.subsampling_x = 0;
             sps->color_config.flags.color_range = 1;  // assume full color-range
         } else {
-            sps->color_config.flags.color_range = u(1);
+            sps->color_config.flags.color_range = flag();
             if (sps->seq_profile == STD_VIDEO_AV1_PROFILE_MAIN) {
                 sps->color_config.subsampling_x = sps->color_config.subsampling_y = 1;// 420
             } else if (sps->seq_profile == STD_VIDEO_AV1_PROFILE_HIGH) {
                 sps->color_config.subsampling_x = sps->color_config.subsampling_y = 0;// 444
             } else {
                 if (sps->color_config.BitDepth == 12) {
-                    sps->color_config.subsampling_x = u(1);
+                    sps->color_config.subsampling_x = (uint8_t)u(1);
                     if (sps->color_config.subsampling_x) {
-                        sps->color_config.subsampling_y = u(1);
+                        sps->color_config.subsampling_y = (uint8_t)u(1);
                     } else {
                         sps->color_config.subsampling_y = 0;
                     }
@@ -854,9 +854,9 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
 	        sps->color_config.chroma_sample_position = (StdVideoAV1ChromaSamplePosition)u(2);
             }
         }
-        sps->color_config.flags.separate_uv_delta_q = u(1);
+        sps->color_config.flags.separate_uv_delta_q = flag();
     }
-    sps->flags.film_grain_params_present = u(1);
+    sps->flags.film_grain_params_present = flag();
 
     // check_trailing_bits()
     int bits_before_byte_alignment = 8 - (m_nalu.get_bfroffs % 8);
@@ -903,8 +903,8 @@ void VulkanAV1Decoder::SetupFrameSize(int frame_size_override_flag)
 	StdVideoDecodeAV1PictureInfo *const pStd = &m_PicData.std_info;
 
     if (frame_size_override_flag) {
-        frame_width = u(sps->frame_width_bits_minus_1 + 1) + 1;
-        frame_height = u(sps->frame_height_bits_minus_1 + 1) + 1;
+        frame_width = (uint16_t)u(sps->frame_width_bits_minus_1 + 1) + 1;
+        frame_height = (uint16_t)u(sps->frame_height_bits_minus_1 + 1) + 1;
         if (frame_width > (sps->max_frame_width_minus_1 + 1) || frame_height > (sps->max_frame_height_minus_1 + 1)) {
             assert(false);
         }
@@ -921,15 +921,15 @@ void VulkanAV1Decoder::SetupFrameSize(int frame_size_override_flag)
     if (sps->flags.enable_superres){
         if (u(1)) {
             pStd->flags.use_superres = 1;
-            superres_scale_denominator = u(3);
+            superres_scale_denominator = (uint8_t)u(3);
             pStd->coded_denom = superres_scale_denominator;
             superres_scale_denominator += SUPERRES_DENOM_MIN;
-            frame_width = (upscaled_width*SUPERRES_NUM + superres_scale_denominator / 2) / superres_scale_denominator;
+            frame_width = (uint16_t)(upscaled_width*SUPERRES_NUM + superres_scale_denominator / 2) / superres_scale_denominator;
         }
     }
 
     //render size
-    pStd->flags.render_and_frame_size_different = u(1);
+    pStd->flags.render_and_frame_size_different = flag();
     if (pStd->flags.render_and_frame_size_different) {
         render_width = u(16) + 1;
         render_height = u(16) + 1;
@@ -957,9 +957,9 @@ int VulkanAV1Decoder::SetupFrameSizeWithRefs()
             found = 1;
             VkPicIf *m_pPic = m_pBuffers[ref_frame_idx[i]].buffer;
             if (m_pPic) {
-                upscaled_width = m_pPic->decodeSuperResWidth;
-                frame_width = m_pPic->decodeWidth;
-                frame_height = m_pPic->decodeHeight;
+                upscaled_width = (uint16_t)(m_pPic->decodeSuperResWidth);
+                frame_width = (uint16_t)(m_pPic->decodeWidth);
+                frame_height = (uint16_t)(m_pPic->decodeHeight);
                 render_width = m_pPic->decodeWidth;
                 render_height = m_pPic->decodeHeight;
             }
@@ -977,13 +977,13 @@ int VulkanAV1Decoder::SetupFrameSizeWithRefs()
         if (sps->flags.enable_superres) {
             if (u(1)) {
                 pStd->flags.use_superres = 1;
-                superres_scale_denominator = u(SUPERRES_DENOM_BITS);
+                superres_scale_denominator = (uint8_t)u(SUPERRES_DENOM_BITS);
                 pStd->coded_denom = superres_scale_denominator;
                 superres_scale_denominator += SUPERRES_DENOM_MIN;
             }
         }
 
-        frame_width = (upscaled_width*SUPERRES_NUM + superres_scale_denominator / 2) / superres_scale_denominator;
+        frame_width = (uint16_t)(upscaled_width*SUPERRES_NUM + superres_scale_denominator / 2) / superres_scale_denominator;
     }
 
     return 1;
@@ -997,18 +997,18 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
 	StdVideoAV1FilmGrain *const pFilmGrain = &m_PicData.filmGrain;
 
     if (sps->flags.film_grain_params_present && (pic_data->showFrame || showable_frame)) {
-		pStd->flags.apply_grain = u(1);
+		pStd->flags.apply_grain = flag();
         if (!pStd->flags.apply_grain) {
 			memset(pFilmGrain, 0, sizeof(StdVideoAV1FilmGrain));
             return 1;
         }
 
-		pFilmGrain->grain_seed = u(16);
-        pFilmGrain->flags.update_grain = pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_INTER ? u(1) : 1;
+		pFilmGrain->grain_seed = (uint16_t)u(16);
+        pFilmGrain->flags.update_grain = pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_INTER ? flag() : 1;
 
         if (!pFilmGrain->flags.update_grain) {
             // Use previous reference frame film grain params
-            int buf_idx = u(3);
+            uint8_t buf_idx = (uint8_t)u(3);
             uint16_t random_seed = pFilmGrain->grain_seed;
             if (m_pBuffers[buf_idx].buffer) {
                 memcpy(pFilmGrain, &(m_pBuffers[buf_idx].film_grain_params), sizeof(StdVideoAV1FilmGrain));
@@ -1019,55 +1019,55 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
         }
 
         // Scaling functions parameters
-        pFilmGrain->num_y_points = u(4);
+        pFilmGrain->num_y_points = (uint8_t)u(4);
         if (pFilmGrain->num_y_points > STD_VIDEO_AV1_MAX_NUM_Y_POINTS) {
             assert("num_y_points exceeds the maximum value\n");
         }
 
         for (uint32_t i = 0; i < pFilmGrain->num_y_points; i++) {
-            pFilmGrain->point_y_value[i] = u(8);
+            pFilmGrain->point_y_value[i] = (uint8_t)u(8);
             if (i && pFilmGrain->point_y_value[i-1] >= pFilmGrain->point_y_value[i]) {
                 assert(!"Y cordinates should be increasing\n");
             }
-            pFilmGrain->point_y_scaling[i] = u(8);
+            pFilmGrain->point_y_scaling[i] = (uint8_t)u(8);
         }
 
-        pFilmGrain->flags.chroma_scaling_from_luma = !sps->color_config.flags.mono_chrome ? u(1) : 0;
+        pFilmGrain->flags.chroma_scaling_from_luma = !sps->color_config.flags.mono_chrome ? flag() : 0;
 
         if (sps->color_config.flags.mono_chrome || pFilmGrain->flags.chroma_scaling_from_luma ||
             ((sps->color_config.subsampling_x == 1) && (sps->color_config.subsampling_y == 1) && (pFilmGrain->num_y_points == 0))) {
             pFilmGrain->num_cb_points = 0;
             pFilmGrain->num_cr_points = 0;
         } else {
-            pFilmGrain->num_cb_points = u(4);
+            pFilmGrain->num_cb_points = (uint8_t)u(4);
             if (pFilmGrain->num_cb_points > STD_VIDEO_AV1_MAX_NUM_CR_POINTS) {
                 assert(!"num_cb_points exceeds the maximum value\n");
             }
 
             for (uint32_t i = 0; i < pFilmGrain->num_cb_points; i++) {
-                pFilmGrain->point_cb_value[i] = u(8);
+                pFilmGrain->point_cb_value[i] = (uint8_t)u(8);
                 if (i && pFilmGrain->point_cb_value[i-1] >= pFilmGrain->point_cb_value[i]) {
                     assert(!"cb cordinates should be increasing\n");
                 }
-                pFilmGrain->point_cb_scaling[i] = u(8);
+                pFilmGrain->point_cb_scaling[i] = (uint8_t)u(8);
             }
 
-            pFilmGrain->num_cr_points = u(4);
+            pFilmGrain->num_cr_points = (uint8_t)u(4);
             if (pFilmGrain->num_cr_points > STD_VIDEO_AV1_MAX_NUM_CR_POINTS) {
                 assert(!"num_cr_points exceeds the maximum value\n");
             }
 
             for (uint32_t i = 0; i < pFilmGrain->num_cr_points; i++) {
-                pFilmGrain->point_cr_value[i] = u(8);
+                pFilmGrain->point_cr_value[i] = (uint8_t)u(8);
                 if (i && pFilmGrain->point_cr_value[i-1] >= pFilmGrain->point_cr_value[i]) {
                     assert(!"cr cordinates should be increasing\n");
                 }
-                pFilmGrain->point_cr_scaling[i] = u(8);
+                pFilmGrain->point_cr_scaling[i] = (uint8_t)u(8);
             }
         }
 
-        pFilmGrain->grain_scaling_minus_8 = u(2);
-        pFilmGrain->ar_coeff_lag = u(2);
+        pFilmGrain->grain_scaling_minus_8 = (uint8_t)u(2);
+        pFilmGrain->ar_coeff_lag = (uint8_t)u(2);
 
         uint32_t numPosLuma = 2 * pFilmGrain->ar_coeff_lag * (pFilmGrain->ar_coeff_lag + 1);
 		assert(numPosLuma <= STD_VIDEO_AV1_MAX_NUM_POS_LUMA);
@@ -1079,39 +1079,39 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
 
         if (pFilmGrain->num_y_points) {
             for (uint32_t i = 0; i < numPosLuma; i++) {
-                pFilmGrain->ar_coeffs_y_plus_128[i] = u(8);
+                pFilmGrain->ar_coeffs_y_plus_128[i] = (int8_t)u(8);
             }
         }
 
         if (pFilmGrain->num_cb_points || pFilmGrain->flags.chroma_scaling_from_luma) {
             for (uint32_t i = 0; i < numPosChroma; i++) {
-                pFilmGrain->ar_coeffs_cb_plus_128[i] = u(8);
+                pFilmGrain->ar_coeffs_cb_plus_128[i] = (int8_t)u(8);
             }
         }
 
         if (pFilmGrain->num_cr_points || pFilmGrain->flags.chroma_scaling_from_luma) {
             for (uint32_t i = 0; i < numPosChroma; i++) {
-                pFilmGrain->ar_coeffs_cr_plus_128[i] = u(8);
+                pFilmGrain->ar_coeffs_cr_plus_128[i] = (int8_t)u(8);
             }
         }
 
-        pFilmGrain->ar_coeff_shift_minus_6 = u(2);
-        pFilmGrain->grain_scale_shift = u(2);
+        pFilmGrain->ar_coeff_shift_minus_6 = (uint8_t)u(2);
+        pFilmGrain->grain_scale_shift = (uint8_t)u(2);
 
         if (pFilmGrain->num_cb_points) {
-            pFilmGrain->cb_mult = u(8);
-            pFilmGrain->cb_luma_mult = u(8);
-            pFilmGrain->cb_offset = u(9);
+            pFilmGrain->cb_mult = (uint8_t)u(8);
+            pFilmGrain->cb_luma_mult = (uint8_t)u(8);
+            pFilmGrain->cb_offset = (uint16_t)u(9);
         }
 
         if (pFilmGrain->num_cr_points) {
-            pFilmGrain->cr_mult = u(8);
-            pFilmGrain->cr_luma_mult = u(8);
-            pFilmGrain->cr_offset = u(9);
+            pFilmGrain->cr_mult = (uint8_t)u(8);
+            pFilmGrain->cr_luma_mult = (uint8_t)u(8);
+            pFilmGrain->cr_offset = (uint16_t)u(9);
         }
 
-        pFilmGrain->flags.overlap_flag = u(1);
-        pFilmGrain->flags.clip_to_restricted_range = u(1);
+        pFilmGrain->flags.overlap_flag = flag();
+        pFilmGrain->flags.clip_to_restricted_range = flag();
     } else {
         memset(pFilmGrain, 0, sizeof(StdVideoAV1FilmGrain));
     }
@@ -1179,7 +1179,7 @@ bool VulkanAV1Decoder::DecodeTileInfo()
     uint32_t max_log2_tile_rows = tile_log2(1, std::min(sb_rows, (uint32_t)STD_VIDEO_AV1_MAX_TILE_ROWS));
     uint32_t min_log2_tiles = std::max(min_log2_tile_cols, tile_log2(max_tile_area_sb, sb_rows * sb_cols));
 
-	pTileInfo->flags.uniform_tile_spacing_flag = u(1);
+	pTileInfo->flags.uniform_tile_spacing_flag = flag();
     memset(&pic_data->MiColStarts[0], 0, sizeof(pic_data->MiColStarts));
     memset(&pic_data->MiRowStarts[0], 0, sizeof(pic_data->MiRowStarts));
     memset(&pic_data->width_in_sbs_minus_1[0], 0, sizeof(pic_data->width_in_sbs_minus_1));
@@ -1196,9 +1196,9 @@ bool VulkanAV1Decoder::DecodeTileInfo()
 
         tile_width_sb = (sb_cols + (1 << log2_tile_cols) - 1) >> log2_tile_cols;
         for (uint32_t off = 0, i = 0; off < sb_cols; off += tile_width_sb)
-            pic_data->MiColStarts[i++] = off;
+            pic_data->MiColStarts[i++] = (uint16_t)off;
 
-        pic_data->tileInfo.TileCols = (sb_cols + tile_width_sb - 1) / tile_width_sb;
+        pic_data->tileInfo.TileCols = (uint8_t)((sb_cols + tile_width_sb - 1) / tile_width_sb);
 
         min_log2_tile_rows = std::max(int(min_log2_tiles - log2_tile_cols), 0);
         log2_tile_rows = min_log2_tile_rows;
@@ -1210,34 +1210,34 @@ bool VulkanAV1Decoder::DecodeTileInfo()
 
         tile_height_sb = (sb_rows + (1 << log2_tile_rows) - 1) >> log2_tile_rows;
         for (uint32_t off = 0, i = 0; off < sb_rows; off += tile_height_sb)
-            pic_data->MiRowStarts[i++] = off;
+            pic_data->MiRowStarts[i++] = (uint16_t)off;
 
-        pic_data->tileInfo.TileRows = (sb_rows + tile_height_sb - 1) / tile_height_sb;
+        pic_data->tileInfo.TileRows = (uint8_t)((sb_rows + tile_height_sb - 1) / tile_height_sb);
 
         // Derive tile_width_in_sbs_minus_1 and tile_height_in_sbs_minus_1
         uint32_t tile_col = 0;
          for ( ; tile_col < pic_data->tileInfo.TileCols - 1u; tile_col++)
-            pic_data->width_in_sbs_minus_1[tile_col] = tile_width_sb - 1;
-        pic_data->width_in_sbs_minus_1[tile_col] = sb_cols - (pic_data->tileInfo.TileCols - 1) * tile_width_sb - 1;
+            pic_data->width_in_sbs_minus_1[tile_col] = (uint16_t)tile_width_sb - 1;
+        pic_data->width_in_sbs_minus_1[tile_col] = (uint16_t)(sb_cols - (pic_data->tileInfo.TileCols - 1) * tile_width_sb - 1);
 
         uint32_t tile_row = 0;
          for ( ; tile_row < pic_data->tileInfo.TileRows - 1u; tile_row++)
-            pic_data->height_in_sbs_minus_1[tile_row] = tile_height_sb - 1;
-        pic_data->height_in_sbs_minus_1[tile_row] = sb_rows - (pic_data->tileInfo.TileRows - 1) * tile_height_sb - 1;
+            pic_data->height_in_sbs_minus_1[tile_row] = (uint16_t)(tile_height_sb - 1);
+        pic_data->height_in_sbs_minus_1[tile_row] = (uint16_t)(sb_rows - (pic_data->tileInfo.TileRows - 1) * tile_height_sb - 1);
 
         // Derivce superblock column / row start positions
         uint32_t i, start_sb;
         for (i = 0, start_sb = 0; start_sb < sb_cols; i++) {
-            pic_data->MiColStarts[i] = start_sb;
+            pic_data->MiColStarts[i] = (uint16_t)start_sb;
             start_sb += tile_width_sb;
         }
-        pic_data->MiColStarts[i] = sb_cols;
+        pic_data->MiColStarts[i] = (uint16_t)sb_cols;
 
         for (i = 0, start_sb = 0; start_sb < sb_rows; i++) {
-            pic_data->MiRowStarts[i] = start_sb;
+            pic_data->MiRowStarts[i] = (uint16_t)start_sb;
             start_sb += tile_height_sb;
         }
-        pic_data->MiRowStarts[i] = sb_rows;
+        pic_data->MiRowStarts[i] = (uint16_t)sb_rows;
     } else {
         uint32_t i, widest_tile_sb, start_sb, size_sb, max_width, max_height;
         widest_tile_sb = 0;
@@ -1245,15 +1245,15 @@ bool VulkanAV1Decoder::DecodeTileInfo()
 
         start_sb = 0;
         for (i = 0; start_sb < sb_cols && i < STD_VIDEO_AV1_MAX_TILE_COLS; i++) {
-            pic_data->MiColStarts[i] = start_sb;
+            pic_data->MiColStarts[i] = (uint16_t)start_sb;
             max_width = std::min(sb_cols - start_sb, max_tile_width_sb);
-            pic_data->width_in_sbs_minus_1[i] = (max_width > 1) ? SwGetUniform(max_width) : 0;
+            pic_data->width_in_sbs_minus_1[i] = (max_width > 1) ? (uint16_t)SwGetUniform(max_width) : 0;
             size_sb = pic_data->width_in_sbs_minus_1[i] + 1;
             widest_tile_sb = std::max(size_sb, widest_tile_sb);
             start_sb += size_sb;
         }
         log2_tile_cols = tile_log2(1, i);
-        pic_data->tileInfo.TileCols = i;
+        pic_data->tileInfo.TileCols = (uint8_t)i;
 
         if (min_log2_tiles > 0)
             max_tile_area_sb = (numSuperblocks) >> (min_log2_tiles + 1);
@@ -1263,23 +1263,23 @@ bool VulkanAV1Decoder::DecodeTileInfo()
 
         start_sb = 0;
         for (i = 0; start_sb < sb_rows && i < STD_VIDEO_AV1_MAX_TILE_ROWS; i++) {
-            pic_data->MiRowStarts[i] = start_sb;
+            pic_data->MiRowStarts[i] = (uint16_t)start_sb;
             max_height = std::min(sb_rows - start_sb, max_tile_height_sb);
-            pic_data->height_in_sbs_minus_1[i] = (max_height > 1) ? SwGetUniform(max_height) : 0;
+            pic_data->height_in_sbs_minus_1[i] = (max_height > 1) ? (uint16_t)SwGetUniform(max_height) : 0;
             size_sb = pic_data->height_in_sbs_minus_1[i] + 1;
             start_sb += size_sb;
         }
         log2_tile_rows = tile_log2(1, i);
-        pic_data->tileInfo.TileRows = i;
+        pic_data->tileInfo.TileRows = (uint8_t)i;
     }
 
     pic_data->tileInfo.context_update_tile_id = 0;
     tile_size_bytes_minus_1 = 3;
     if (pic_data->tileInfo.TileRows * pic_data->tileInfo.TileCols > 1) {
         // tile to use for cdf update
-        pic_data->tileInfo.context_update_tile_id = u(log2_tile_rows + log2_tile_cols);
+        pic_data->tileInfo.context_update_tile_id = (uint16_t)u(log2_tile_rows + log2_tile_cols);
         // tile size magnitude
-        tile_size_bytes_minus_1 = u(2);
+        tile_size_bytes_minus_1 = (uint8_t)u(2);
         pic_data->tileInfo.tile_size_bytes_minus_1 = tile_size_bytes_minus_1;
     }
 
@@ -1288,14 +1288,14 @@ bool VulkanAV1Decoder::DecodeTileInfo()
 
 inline int VulkanAV1Decoder::ReadSignedBits(uint32_t bits)
 {
-    const int nbits = sizeof(uint32_t) * 8 - bits - 1;
+    const int nbits = (int)(sizeof(uint32_t) * 8 - bits - 1);
     uint32_t v = (uint32_t)u(bits + 1) << nbits;
     return ((int)v) >> nbits;
 }
 
 inline int VulkanAV1Decoder::ReadDeltaQ(uint32_t bits)
 {
-    return u(1) ? ReadSignedBits(bits) : 0;
+    return u(1) ? (uint8_t)ReadSignedBits(bits) : 0;
 }
 
 void VulkanAV1Decoder::DecodeQuantizationData()
@@ -1303,17 +1303,17 @@ void VulkanAV1Decoder::DecodeQuantizationData()
     av1_seq_param_s *const sps = m_sps.Get();
     VkParserAv1PictureData *const pic_data = &m_PicData;
 
-    pic_data->quantization.base_q_idx = u(8);
-    pic_data->quantization.DeltaQYDc = ReadDeltaQ(6);
+    pic_data->quantization.base_q_idx = (uint8_t)u(8);
+    pic_data->quantization.DeltaQYDc = (uint8_t)ReadDeltaQ(6);
     if (!sps->color_config.flags.mono_chrome) {
         int diff_uv_delta = 0;
         if (sps->color_config.flags.separate_uv_delta_q)
             diff_uv_delta = u(1);
-        pic_data->quantization.DeltaQUDc = ReadDeltaQ(6);
-        pic_data->quantization.DeltaQUAc = ReadDeltaQ(6);
+        pic_data->quantization.DeltaQUDc = (uint8_t)ReadDeltaQ(6);
+        pic_data->quantization.DeltaQUAc = (uint8_t)ReadDeltaQ(6);
         if (diff_uv_delta) {
-            pic_data->quantization.DeltaQVDc = ReadDeltaQ(6);
-            pic_data->quantization.DeltaQVAc = ReadDeltaQ(6);
+            pic_data->quantization.DeltaQVDc = (uint8_t)ReadDeltaQ(6);
+            pic_data->quantization.DeltaQVAc = (uint8_t)ReadDeltaQ(6);
         } else {
             pic_data->quantization.DeltaQVDc = pic_data->quantization.DeltaQUDc;
             pic_data->quantization.DeltaQVAc = pic_data->quantization.DeltaQUAc;
@@ -1325,14 +1325,14 @@ void VulkanAV1Decoder::DecodeQuantizationData()
         pic_data->quantization.DeltaQVAc = 0;
     }
 
-    pic_data->quantization.flags.using_qmatrix = u(1);
+    pic_data->quantization.flags.using_qmatrix = flag();
     if (pic_data->quantization.flags.using_qmatrix) {
-        pic_data->quantization.qm_y = u(4);
-        pic_data->quantization.qm_u = u(4);
+        pic_data->quantization.qm_y = (uint8_t)u(4);
+        pic_data->quantization.qm_u = (uint8_t)u(4);
         if (!sps->color_config.flags.separate_uv_delta_q) {
             pic_data->quantization.qm_v = pic_data->quantization.qm_u;
         } else {
-            pic_data->quantization.qm_v = u(4);
+            pic_data->quantization.qm_v = (uint8_t)u(4);
         }
     } else {
         pic_data->quantization.qm_y = 0;
@@ -1351,7 +1351,7 @@ void VulkanAV1Decoder::DecodeSegmentationData()
 	StdVideoAV1Segmentation* pSegmentation = &m_PicData.segmentation;
     StdVideoDecodeAV1PictureInfoFlags *const flags = &pStd->flags;
 
-    flags->segmentation_enabled = u(1);
+    flags->segmentation_enabled = flag();
 
     if (!flags->segmentation_enabled) {
         memset(pSegmentation, 0, sizeof(*pSegmentation));
@@ -1363,15 +1363,15 @@ void VulkanAV1Decoder::DecodeSegmentationData()
         flags->segmentation_update_data = 1;
         flags->segmentation_temporal_update = 0;
     } else {
-        flags->segmentation_update_map = u(1);
+        flags->segmentation_update_map = flag();
 
         if (flags->segmentation_update_map) {
-            flags->segmentation_temporal_update = u(1);
+            flags->segmentation_temporal_update = flag();
         } else {
             flags->segmentation_temporal_update = 0;
         }
 
-        flags->segmentation_update_data = u(1);
+        flags->segmentation_update_data = flag();
     }
 
     if (flags->segmentation_update_data) {
@@ -1380,7 +1380,7 @@ void VulkanAV1Decoder::DecodeSegmentationData()
             for (uint32_t j = 0; j < STD_VIDEO_AV1_SEG_LVL_MAX; j++) {
                 int feature_value = 0;
 				int enabled = u(1);
-				pSegmentation->FeatureEnabled[i] |= enabled << j;
+				pSegmentation->FeatureEnabled[i] |= (uint8_t)enabled << j;
                 if (enabled) {
                     const int data_max = av1_seg_feature_data_max[j];
                     if (av1_seg_feature_data_signed[j]) {
@@ -1391,7 +1391,7 @@ void VulkanAV1Decoder::DecodeSegmentationData()
                         feature_value = CLAMP(feature_value, 0, data_max);
                     }
                 }
-                pSegmentation->FeatureData[i][j] = feature_value;
+                pSegmentation->FeatureData[i][j] = (uint16_t)feature_value;
             }
         }
     } else {
@@ -1432,29 +1432,29 @@ void VulkanAV1Decoder::DecodeLoopFilterdata()
         }
     }
 
-    pLoopFilter->loop_filter_level[0] = u(6);
-    pLoopFilter->loop_filter_level[1] = u(6);
+    pLoopFilter->loop_filter_level[0] = (uint8_t)u(6);
+    pLoopFilter->loop_filter_level[1] = (uint8_t)u(6);
     if (!sps->color_config.flags.mono_chrome && (pLoopFilter->loop_filter_level[0] || pLoopFilter->loop_filter_level[1])) {
-        pLoopFilter->loop_filter_level[2] = u(6); // loop_filter_level_u
-        pLoopFilter->loop_filter_level[3] = u(6); // loop_filter_level_v
+        pLoopFilter->loop_filter_level[2] = (uint8_t)u(6); // loop_filter_level_u
+        pLoopFilter->loop_filter_level[3] = (uint8_t)u(6); // loop_filter_level_v
     }
-    pLoopFilter->loop_filter_sharpness = u(3);
+    pLoopFilter->loop_filter_sharpness = (uint8_t)u(3);
 
     uint8_t lf_mode_ref_delta_update = 0;
-    pLoopFilter->flags.loop_filter_delta_enabled = u(1);
+    pLoopFilter->flags.loop_filter_delta_enabled = flag();
     if (pLoopFilter->flags.loop_filter_delta_enabled) {
-        lf_mode_ref_delta_update = u(1);
-        pLoopFilter->flags.loop_filter_delta_update = lf_mode_ref_delta_update;
+        lf_mode_ref_delta_update = (uint8_t)u(1);
+        pLoopFilter->flags.loop_filter_delta_update = lf_mode_ref_delta_update & 0x1;
         if (lf_mode_ref_delta_update) {
             for (uint32_t i = 0; i < STD_VIDEO_AV1_TOTAL_REFS_PER_FRAME; i++) {
                 if (u(1)) {
-                    pLoopFilter->loop_filter_ref_deltas[i] = ReadSignedBits(6);
+                    pLoopFilter->loop_filter_ref_deltas[i] = (int8_t)ReadSignedBits(6);
                 }
             }
 
             for (uint32_t i = 0; i < STD_VIDEO_AV1_LOOP_FILTER_ADJUSTMENTS; i++) {
                 if (u(1)) {
-                    pLoopFilter->loop_filter_mode_deltas[i] = ReadSignedBits(6);
+                    pLoopFilter->loop_filter_mode_deltas[i] = (int8_t)ReadSignedBits(6);
                 }
             }
         }
@@ -1470,18 +1470,18 @@ void VulkanAV1Decoder::DecodeCDEFdata()
     if (pStd->flags.allow_intrabc)
         return;
 
-    pCDEF->cdef_damping_minus_3 = u(2);
-    pCDEF->cdef_bits = u(2);
+    pCDEF->cdef_damping_minus_3 = (uint8_t)u(2);
+    pCDEF->cdef_bits = (uint8_t)u(2);
 
     for (int i = 0; i < 8; i++) {
         if (i == (1 << pCDEF->cdef_bits)) {
             break;
         }
-        pCDEF->cdef_y_pri_strength[i] = u(4);
-        pCDEF->cdef_y_sec_strength[i] = u(2);
+        pCDEF->cdef_y_pri_strength[i] = (uint8_t)u(4);
+        pCDEF->cdef_y_sec_strength[i] = (uint8_t)u(2);
         if (!sps->color_config.flags.mono_chrome) {
-            pCDEF->cdef_uv_pri_strength[i] = u(4);
-            pCDEF->cdef_uv_sec_strength[i] = u(2);
+            pCDEF->cdef_uv_pri_strength[i] = (uint8_t)u(4);
+            pCDEF->cdef_uv_sec_strength[i] = (uint8_t)u(2);
         }
     }
 }
@@ -1501,7 +1501,7 @@ void VulkanAV1Decoder::DecodeLoopRestorationData()
 
     StdVideoAV1FrameRestorationType remap_lr_type[4] = { STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_NONE, STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SWITCHABLE, STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_WIENER, STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_SGRPROJ };
     for (int pl = 0; pl < n_planes; pl++) {
-        uint8_t lr_type = u(2);
+        uint8_t lr_type = (uint8_t)u(2);
         pLoopRestoration->FrameRestorationType[pl] = remap_lr_type[lr_type];
 
         if (pLoopRestoration->FrameRestorationType[pl] != STD_VIDEO_AV1_FRAME_RESTORATION_TYPE_NONE) {
@@ -1517,7 +1517,7 @@ void VulkanAV1Decoder::DecodeLoopRestorationData()
         int sb_size = sps->flags.use_128x128_superblock == 1 /*BLOCK_128X128*/ ? 2 : 1; //128 : 64;
 
         for (int pl = 0; pl < n_planes; pl++) {
-            pLoopRestoration->LoopRestorationSize[pl] = sb_size;  // 64 or 128
+            pLoopRestoration->LoopRestorationSize[pl] = (uint16_t)sb_size;  // 64 or 128
         }
         if (sps->flags.use_128x128_superblock == 1) {
             lr_unit_shift = 1 + u(1);
@@ -1527,7 +1527,7 @@ void VulkanAV1Decoder::DecodeLoopRestorationData()
                 lr_unit_shift += u(1);
             }
         }
-        pLoopRestoration->LoopRestorationSize[0] = 1 + lr_unit_shift;
+        pLoopRestoration->LoopRestorationSize[0] = 1 + (uint16_t)lr_unit_shift;
     } else {
         for (int pl = 0; pl < n_planes; pl++)
             pLoopRestoration->LoopRestorationSize[pl] = 3;
@@ -1536,7 +1536,7 @@ void VulkanAV1Decoder::DecodeLoopRestorationData()
 
     if (!sps->color_config.flags.mono_chrome) {
         if (use_chroma_lr && (sps->color_config.subsampling_x && sps->color_config.subsampling_y)) {
-            lr_uv_shift = u(1);
+            lr_uv_shift = (uint8_t)u(1);
             pLoopRestoration->LoopRestorationSize[1] = pLoopRestoration->LoopRestorationSize[0] - lr_uv_shift;
             pLoopRestoration->LoopRestorationSize[2] = pLoopRestoration->LoopRestorationSize[1];
         } else {
@@ -1741,8 +1741,8 @@ int VulkanAV1Decoder::IsSkipModeAllowed()
 
     if (ref0 != -1 && ref1 != -1) {
         // == Bi-directional prediction ==
-        pStd->SkipModeFrame[0] = std::min(ref0, ref1);
-        pStd->SkipModeFrame[1] = std::max(ref0, ref1);
+        pStd->SkipModeFrame[0] = (uint8_t)std::min(ref0, ref1);
+        pStd->SkipModeFrame[1] = (uint8_t)std::max(ref0, ref1);
         return 1;
     } else if (ref0 != -1) {
         // == Forward prediction only ==
@@ -1760,8 +1760,8 @@ int VulkanAV1Decoder::IsSkipModeAllowed()
             }
         }
         if (ref1 != -1) {
-            pStd->SkipModeFrame[0] = std::min(ref0, ref1);
-            pStd->SkipModeFrame[1] = std::max(ref0, ref1);
+            pStd->SkipModeFrame[0] = (uint8_t)std::min(ref0, ref1);
+            pStd->SkipModeFrame[1] = (uint8_t)std::max(ref0, ref1);
             return 1;
         }
     }
@@ -1780,7 +1780,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
     pic_flags->frame_size_override_flag = 0;
 
     last_frame_type = pStd->frame_type;
-    last_intra_only = intra_only;
+    last_intra_only = (uint8_t)intra_only;
 
     if (sps->flags.reduced_still_picture_header) {
         show_existing_frame = 0;
@@ -1833,7 +1833,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                 // load segmentation
                 memcpy(pic_info->segmentation.FeatureEnabled, m_pBuffers[show_existing_frame_index].seg.FeatureEnabled, STD_VIDEO_AV1_MAX_SEGMENTS * sizeof(pic_info->segmentation.FeatureEnabled[0]));
                 memcpy(pic_info->segmentation.FeatureData, m_pBuffers[show_existing_frame_index].seg.FeatureData, STD_VIDEO_AV1_MAX_SEGMENTS * STD_VIDEO_AV1_SEG_LVL_MAX * sizeof(pic_info->segmentation.FeatureData[0][0]));
-                pStd->OrderHint = RefOrderHint[show_existing_frame_index];
+                pStd->OrderHint = (uint8_t)RefOrderHint[show_existing_frame_index];
                 UpdateFramePointers(m_pBuffers[show_existing_frame_index].buffer);
             } else {
                 pStd->refresh_frame_flags = 0;
@@ -1860,7 +1860,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
             showable_frame = u(1);
         }
 
-        pic_flags->error_resilient_mode = (pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_SWITCH || (pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_KEY && pic_info->showFrame)) ? 1 : u(1);
+        pic_flags->error_resilient_mode = (pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_SWITCH || (pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_KEY && pic_info->showFrame)) ? 1 : flag();
     }
 
 
@@ -1871,19 +1871,19 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         }
     }
 
-    pic_flags->disable_cdf_update = u(1);
+    pic_flags->disable_cdf_update = flag();
     if (sps->seq_force_screen_content_tools == STD_VIDEO_AV1_SELECT_SCREEN_CONTENT_TOOLS) {
-        pic_flags->allow_screen_content_tools = u(1);
+        pic_flags->allow_screen_content_tools = flag();
     } else {
-        pic_flags->allow_screen_content_tools = sps->seq_force_screen_content_tools;
+        pic_flags->allow_screen_content_tools = sps->seq_force_screen_content_tools & 0x1;
     }
 
     if (pic_flags->allow_screen_content_tools) {
         if (sps->seq_force_integer_mv == STD_VIDEO_AV1_SELECT_INTEGER_MV) {
-            pic_flags->force_integer_mv = u(1);
+            pic_flags->force_integer_mv = flag();
         }
         else {
-            pic_flags->force_integer_mv = sps->seq_force_integer_mv;
+            pic_flags->force_integer_mv = sps->seq_force_integer_mv & 0x1;
         }
     } else {
         pic_flags->force_integer_mv = 0;
@@ -1947,17 +1947,17 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
             pStd->current_frame_id = 0;
         }
 
-        pic_flags->frame_size_override_flag = pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_SWITCH ? 1 : u(1);
+        pic_flags->frame_size_override_flag = pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_SWITCH ? 1 : flag();
         //order_hint
-        pStd->OrderHint = sps->flags.enable_order_hint ? u(sps->order_hint_bits_minus_1 + 1) : 0;
+        pStd->OrderHint = sps->flags.enable_order_hint ? (uint8_t)u(sps->order_hint_bits_minus_1 + 1) : 0;
 
         if (!pic_flags->error_resilient_mode && !(IsFrameIntra())) {
-            pStd->primary_ref_frame = u(3);
+            pStd->primary_ref_frame = (uint8_t)u(3);
         }
     }
 
     if (sps->decoder_model_info_present) {
-        pic_flags->buffer_removal_time_present_flag = u(1);
+        pic_flags->buffer_removal_time_present_flag = flag();
         if (pic_flags->buffer_removal_time_present_flag) {
             for (int opNum = 0; opNum <= sps->operating_points_cnt_minus_1; opNum++) {
                 if (op_params[opNum].decoder_model_param_present) {
@@ -1977,7 +1977,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
     }
     if (pStd->frame_type == STD_VIDEO_AV1_FRAME_TYPE_KEY) {
         if (!pic_info->showFrame) {
-            pStd->refresh_frame_flags = u(8);
+            pStd->refresh_frame_flags = (uint8_t)u(8);
         } else {
             pStd->refresh_frame_flags = (1 << STD_VIDEO_AV1_NUM_REF_FRAMES) - 1;
         }
@@ -1989,7 +1989,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         // memset(&ref_frame_names, -1, sizeof(ref_frame_names));
     } else {
         if (intra_only || pStd->frame_type != 3) {
-            pStd->refresh_frame_flags = u(STD_VIDEO_AV1_NUM_REF_FRAMES);
+            pStd->refresh_frame_flags = (uint8_t)u(STD_VIDEO_AV1_NUM_REF_FRAMES);
             if (pStd->refresh_frame_flags == 0xFF && intra_only) {
                 assert(!"Intra_only frames cannot have refresh flags 0xFF");
             }
@@ -2018,7 +2018,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         SetupFrameSize(pic_flags->frame_size_override_flag);
 
         if (pic_flags->allow_screen_content_tools && frame_width == upscaled_width) {
-            pic_flags->allow_intrabc = u(1);
+            pic_flags->allow_intrabc = flag();
         }
         pic_flags->use_ref_frame_mvs = 0;
     } else {
@@ -2026,7 +2026,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         // if (pbi->need_resync != 1)
         {
             if (sps->flags.enable_order_hint) {
-                pic_flags->frame_refs_short_signaling = u(1);
+                pic_flags->frame_refs_short_signaling = flag();
             } else {
                 pic_flags->frame_refs_short_signaling = 0;
             }
@@ -2077,23 +2077,23 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
             if (pic_flags->force_integer_mv) {
                 pic_flags->allow_high_precision_mv = 0;
             } else {
-                pic_flags->allow_high_precision_mv = u(1);
+                pic_flags->allow_high_precision_mv = flag();
             }
 
             //read_interpolation_filter
             int tmp = u(1);
-            pic_flags->is_filter_switchable = tmp;
+            pic_flags->is_filter_switchable = tmp & 0x1;
             if (tmp) {
                 pStd->interpolation_filter = STD_VIDEO_AV1_INTERPOLATION_FILTER_SWITCHABLE;
             } else {
                 pStd->interpolation_filter = (StdVideoAV1InterpolationFilter)u(2);
             }
-            pic_flags->is_motion_mode_switchable = u(1);
+            pic_flags->is_motion_mode_switchable = flag();
         }
 
         if (!pic_flags->error_resilient_mode && sps->flags.enable_ref_frame_mvs &&
             sps->flags.enable_order_hint && !IsFrameIntra()) {
-            pic_flags->use_ref_frame_mvs = u(1);
+            pic_flags->use_ref_frame_mvs = flag();
         } else {
             pic_flags->use_ref_frame_mvs = 0;
         }
@@ -2105,7 +2105,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                 assert(false);
             }
 
-            pStd->OrderHints[i + STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] = RefOrderHint[ref_frame_idx[i]];
+            pStd->OrderHints[i + STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] = (uint8_t)RefOrderHint[ref_frame_idx[i]];
          }
 
         /*      for (int i = 0; i < REFS_PER_FRAME; ++i)
@@ -2133,7 +2133,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
     }
 
     if (!(sps->flags.reduced_still_picture_header) && !(pic_flags->disable_cdf_update)) {
-        pic_flags->disable_frame_end_update_cdf = u(1);
+        pic_flags->disable_frame_end_update_cdf = flag();
     } else {
         pic_flags->disable_frame_end_update_cdf = 1;
     }
@@ -2147,15 +2147,15 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
     pStd->delta_lf_res = 0;
     pic_flags->delta_lf_present = 0;
     pic_flags->delta_lf_multi = 0;
-    pic_flags->delta_q_present = pic_info->quantization.base_q_idx > 0 ? u(1) : 0;
+    pic_flags->delta_q_present = pic_info->quantization.base_q_idx > 0 ? flag() : 0;
     if (pic_flags->delta_q_present) {
-        pStd->delta_q_res = u(2); // 1 << u(2); use log2(). Shift is done at HW
+        pStd->delta_q_res = (uint8_t)u(2); // 1 << u(2); use log2(). Shift is done at HW
         if (!pic_flags->allow_intrabc) {
-            pic_flags->delta_lf_present = u(1);
+            pic_flags->delta_lf_present = flag();
         }
         if (pic_flags->delta_lf_present) {
-            pStd->delta_lf_res = u(2); //1 << u(2);
-            pic_flags->delta_lf_multi = u(1);
+            pStd->delta_lf_res = (uint8_t)u(2); //1 << u(2);
+            pic_flags->delta_lf_multi = flag();
             // av1_reset_loop_filter_delta(xd, av1_num_planes(cm)); // FIXME
         }
     }
@@ -2169,10 +2169,10 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
             pic_info->quantization.DeltaQVDc == 0 && pic_info->quantization.DeltaQVAc == 0;
     }
 
-    coded_lossless = lossless[0];
+    coded_lossless = (uint8_t)lossless[0];
     if (pic_flags->segmentation_enabled) {
         for (uint32_t i = 1; i < STD_VIDEO_AV1_MAX_SEGMENTS; i++) {
-            coded_lossless &= lossless[i];
+            coded_lossless &= (uint8_t)lossless[i];
         }
     }
 
@@ -2203,20 +2203,20 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
 
     pStd->TxMode = coded_lossless ? STD_VIDEO_AV1_TX_MODE_ONLY_4X4 : (u(1) ? STD_VIDEO_AV1_TX_MODE_SELECT : STD_VIDEO_AV1_TX_MODE_LARGEST);
     if (!IsFrameIntra()) {
-        pic_flags->reference_select = u(1);
+        pic_flags->reference_select = flag();
     } else {
         pic_flags->reference_select = 0;
     }
 
-    pic_flags->skip_mode_present = IsSkipModeAllowed() ? u(1) : 0;
+    pic_flags->skip_mode_present = IsSkipModeAllowed() ? flag() : 0;
 
     if (!IsFrameIntra() && !pic_flags->error_resilient_mode && sps->flags.enable_warped_motion) {
-        pic_flags->allow_warped_motion = u(1);
+        pic_flags->allow_warped_motion = flag();
     } else {
         pic_flags->allow_warped_motion = 0;
     }
 
-    pic_flags->reduced_tx_set = u(1);
+    pic_flags->reduced_tx_set = flag();
 
     // reset global motions
     for (int i = 0; i < GM_GLOBAL_MODELS_PER_FRAME; ++i) {
@@ -2281,7 +2281,7 @@ bool VulkanAV1Decoder::ParseObuTileGroup(const AV1ObuHeader& hdr)
             consumedBytes += tile_size_bytes_minus_1 + 1;
             m_PicData.tileOffsets[m_PicData.khr_info.tileCount] = (uint32_t)m_nalu.start_offset + (uint32_t)consumedBytes;
 
-            tileSize = tile_size_minus_1 + 1;
+            tileSize = (size_t)(tile_size_minus_1 + 1);
             consumedBytes += (uint32_t)tileSize;
 
             skip_bits((uint32_t)(tileSize * 8));

@@ -364,7 +364,7 @@ public:
                                               queueFamilyIndex);
 
         if (imageSetCreateResult >= 0) {
-            m_maxNumImageTypeIdx = maxNumImageTypeIdx;
+            m_maxNumImageTypeIdx = maxNumImageTypeIdx & 0xF;
         }
         m_numberParameterUpdates++;
 
@@ -973,7 +973,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
 
     m_queueFamilyIndex = queueFamilyIndex;
 
-    for (uint32_t imageTypeIdx = 0; imageTypeIdx < maxNumImageTypeIdx; imageTypeIdx++) {
+    for (uint8_t imageTypeIdx = 0; imageTypeIdx < maxNumImageTypeIdx; imageTypeIdx++) {
 
         if (!(imageSpecs[imageTypeIdx].imageTypeIdx < DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES)) {
             continue;
@@ -1052,11 +1052,11 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
         uint32_t maxNumImages = std::max(m_numImages, numImages);
         for (uint32_t imageIndex = firstIndex; imageIndex < maxNumImages; imageIndex++) {
 
-            bool imageExist = m_perFrameDecodeResources[imageIndex].ImageExist(imageTypeIdx);
+            bool imageExist = m_perFrameDecodeResources[imageIndex].ImageExist((uint8_t)imageTypeIdx);
 
             if (imageExist && reconfigureImages) {
 
-                m_perFrameDecodeResources[imageIndex].SetRecreateImage(imageTypeIdx);
+                m_perFrameDecodeResources[imageIndex].SetRecreateImage((uint8_t)imageTypeIdx);
 
             } else if (!imageExist && !m_imageSpecs[imageTypeIdx].deferCreate) {
 
@@ -1079,7 +1079,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
             // layout in order for them to be cleared next time before use by transitioning
             // their layout from undefined to any of the encoder/decode/DPB.
             for (uint32_t imageIndex = 0; imageIndex < m_numImages; imageIndex++) {
-                m_perFrameDecodeResources[imageIndex].InvalidateImageLayout(imageTypeIdx);
+                m_perFrameDecodeResources[imageIndex].InvalidateImageLayout((uint8_t)imageTypeIdx);
             }
         }
     }
