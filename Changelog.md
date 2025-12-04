@@ -1,3 +1,7 @@
+v0.3.7:
+  - Remove unused variable warning becoming error in CTS
+  - FFmpegDemuxer: fix profile retrieval
+
 v0.3.6:
   - Add file path validation helper
   - Fix ARM builds for non-NEON and ARMv7 targets
