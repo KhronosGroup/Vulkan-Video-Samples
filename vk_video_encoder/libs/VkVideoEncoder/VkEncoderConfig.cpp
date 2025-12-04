@@ -18,12 +18,11 @@
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkEncoderConfigH265.h"
 #include "VkVideoEncoder/VkEncoderConfigAV1.h"
-#include "VkVSVersion.h"
 
 void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
 {
     fprintf(stderr,
-    "Version: " VKVS_VERSION_STRING "\n"\
+    "Version: " VVS_VERSION_STRING "\n"\
     "Usage : EncodeApp \n\
     -v, --version                   provides version information\n\
     -h, --help                      provides help\n\
@@ -200,7 +199,7 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
             printHelp(codec);
             exit(EXIT_SUCCESS);
         } else if (args[i] == "-v" || args[i] == "--version") {
-            fprintf(stderr, VKVS_VERSION_STRING"\n");
+            fprintf(stderr, VVS_VERSION_STRING"\n");
             return 0;
         } else if (args[i] == "-c" || args[i] == "--codec") {
             std::string codec_ = args[i + 1];
@@ -729,7 +728,7 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, char *argv[],
             exit(EXIT_SUCCESS);
         }
         else if (args[i] == "--version" || args[i] == "-v") {
-            fprintf(stderr, VKVS_VERSION_STRING"\n");
+            fprintf(stderr, VVS_VERSION_STRING"\n");
             return VK_ERROR_INITIALIZATION_FAILED;
         }
     }
