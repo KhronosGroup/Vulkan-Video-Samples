@@ -206,13 +206,14 @@ public:
         assert(pOutputBuffer != nullptr);
 
         assert((pFrame->displayWidth >= 0) && (pFrame->displayHeight >= 0));
-
-        WaitAndGetStatus(vkDevCtx,
+        if (pFrame->frameCompleteFence) {
+            WaitAndGetStatus(vkDevCtx,
                         *vkDevCtx,
                         pFrame->frameCompleteFence,
                         pFrame->queryPool,
                         pFrame->startQueryId,
                         pFrame->pictureIndex, false, "frameCompleteFence");
+        }
 
         VkFormat format = imageResource->GetImageCreateInfo().format;
         const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(format);
