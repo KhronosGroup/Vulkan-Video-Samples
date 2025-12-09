@@ -153,7 +153,15 @@ int main(int argc, const char **argv)
             }
         }
 
-        vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        result = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        if (result != VK_SUCCESS) {
+            if (result == VK_ERROR_FORMAT_NOT_SUPPORTED ||
+                result == VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR) {
+                return VVS_EXIT_UNSUPPORTED;
+            }
+            printf("Failed to initialize video processor: %d\n", result);
+            return EXIT_FAILURE;
+        }
 
         VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoProcessor);
         DecoderFrameProcessorState frameProcessor(&vkDevCtxt, videoQueue, 0);
@@ -225,7 +233,15 @@ int main(int argc, const char **argv)
             }
         }
 
-        vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        result = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        if (result != VK_SUCCESS) {
+            if (result == VK_ERROR_FORMAT_NOT_SUPPORTED ||
+                result == VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR) {
+                return VVS_EXIT_UNSUPPORTED;
+            }
+            printf("Failed to initialize video processor: %d\n", result);
+            return EXIT_FAILURE;
+        }
 
         VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoProcessor);
         DecoderFrameProcessorState frameProcessor(&vkDevCtxt, videoQueue, decoderConfig.decoderQueueSize);
