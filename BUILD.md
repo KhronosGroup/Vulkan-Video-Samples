@@ -105,10 +105,18 @@ This repository has been tested on recent Ubuntu LTS versions. Minimum requireme
 - Vulkan SDK vulkansdk-linux-x86_64-1.4.304.0.tar.xz or later for x86_64
 
 Required packages:
+
+**Ubuntu/Debian:**
 ```bash
 sudo apt-get install git cmake build-essential libx11-xcb-dev libxkbcommon-dev \
     libwayland-dev libxrandr-dev libavcodec-dev \
-    libavformat-dev libavutil-dev ninja-build
+    libavformat-dev libavutil-dev ninja-build libvulkan-dev
+```
+
+**Fedora:**
+```bash
+sudo dnf install git cmake gcc-c++ make libxcb-devel libX11-devel libxkbcommon-devel \
+    wayland-devel libXrandr-devel ffmpeg-free-devel ninja-build vulkan-devel vulkan-loader-devel
 ```
 
 ### Linux Build Steps
