@@ -269,6 +269,9 @@ target_include_directories(
     ${VULKAN_VIDEO_APIS_INCLUDE}
     )
 
+# Link to vulkan loader
+target_link_libraries(VkVideoUtils PUBLIC vulkan)
+
 # Build components based on options
 
 ############ VULKAN_VIDEO_PARSER_LIB ######################################
