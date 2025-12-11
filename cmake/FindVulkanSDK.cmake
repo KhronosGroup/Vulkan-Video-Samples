@@ -82,6 +82,7 @@ MACRO(FIND_VULKAN_HEADERS VK_MINIMUM_MAJOR_VERSION VK_MINIMUM_MINOR_VERSION VK_M
             vulkan-headers
             GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
             GIT_TAG v${VK_MINIMUM_MAJOR_VERSION}.${VK_MINIMUM_MINOR_VERSION}.${VK_MINIMUM_PATCH_VERSION}
+            GIT_SHALLOW TRUE
         )
         FetchContent_MakeAvailable(vulkan-headers)
 
@@ -111,6 +112,7 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
             vulkan-loader
             GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Loader.git
             GIT_TAG v${minimum_major_version}.${minimum_minor_version}.${minimum_patch_version}
+            GIT_SHALLOW TRUE
         )
         FetchContent_MakeAvailable(vulkan-loader)
         set(VULKAN_LOADER_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/vulkan-loader-build/loader" CACHE INTERNAL "Vulkan loader library dir")
