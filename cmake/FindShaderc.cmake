@@ -1,60 +1,16 @@
 # Now check if we need to build shaderc and its dependencies
-set(USE_SYSTEM_SHADERC ON CACHE BOOL "Use system installed shaderc" FORCE)
 option(USE_SYSTEM_SHADERC "Use system installed shaderc" ON)
-set(USE_SHADERC ON CACHE BOOL "Find shaderc either from the system or build it" FORCE)
 
-if( USE_SYSTEM_SHADERC)
-    if(WIN32)
-        # Try to find shaderc in Vulkan SDK Bin directory
-        if(DEFINED ENV{VULKAN_SDK})
-            # Normalize path
-            file(TO_CMAKE_PATH "$ENV{VULKAN_SDK}" VULKAN_SDK_PATH)
+include(FetchContent)
 
-            # Look in the SDK's Bin directory
-            find_library(SHADERC_SHARED_LIBRARY NAMES shaderc_shared
-                         PATHS "${VULKAN_SDK_PATH}/lib"
-                         NO_DEFAULT_PATH)
-
-            if(SHADERC_SHARED_LIBRARY)
-                message(STATUS "VVS: Found shaderc at: ${SHADERC_SHARED_LIBRARY}")
-                set(shaderc_FOUND TRUE)
-                # Store the Bin directory for later use
-                get_filename_component(VULKAN_SDK_BIN_DIR "${SHADERC_SHARED_LIBRARY}" DIRECTORY)
-                message(STATUS "VVS: Vulkan SDK Bin directory: ${VULKAN_SDK_BIN_DIR}")
-            else()
-                message(STATUS "VVS: Could not find shaderc_shared.dll in ${VULKAN_SDK_PATH}/Bin")
-            endif()
-        endif()
-    else()
-        find_library(SHADERC_SHARED_LIBRARY NAMES shaderc_shared shaderc)
-
-        if(SHADERC_SHARED_LIBRARY)
-            message(STATUS "VVS: Found shaderc at: ${SHADERC_SHARED_LIBRARY}")
-            set(shaderc_FOUND TRUE)
-            # Store the Bin directory for later use
-            get_filename_component(VULKAN_SDK_BIN_DIR "${SHADERC_SHARED_LIBRARY}" DIRECTORY)
-            message(STATUS "Vulkan SDK Bin directory: ${VULKAN_SDK_BIN_DIR}")
-        else()
-            message(STATUS "VVS: Could not find libshaderc_shared.so in filesystem")
-	endif()
+# Macro to download shaderc and its dependencies (SPIRV-Headers, SPIRV-Tools, glslang)
+macro(download_shaderc_and_dependencies)
+    # Set default build type if not specified (avoids warning from SPIRV-Tools/glslang)
+    if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+        set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+        message(STATUS "VVS: CMAKE_BUILD_TYPE not set, defaulting to Release")
     endif()
 
-    if(shaderc_FOUND)
-        message(STATUS "VVS: Found system shaderc")
-    else()
-        message(STATUS "VVS: System shaderc not found")
-        if(WIN32)
-            message(STATUS "VVS: Make sure Vulkan SDK is installed and VULKAN_SDK environment variable is set")
-        endif()
-    endif()
-endif()
-
-if(USE_SYSTEM_SHADERC AND shaderc_FOUND)
-    message(STATUS "VVS: Using system shaderc")
-    set(SHADERC_LIB "")
-else()
-    set(SHADERC_LIB "shaderc_shared" CACHE PATH "The name of the shaderc library target decoder/encoder are using." FORCE)
-    message(STATUS "VVS: Building shaderc from source using existing dependencies")
     set(SHADERC_VERSION v2024.4)
 
     # Define minimum version requirements for shaderc v2024.4 compatibility
@@ -135,72 +91,88 @@ else()
         set(USE_EXISTING_GLSLANG FALSE)
     endif()
 
-    # If building standalone, need to fetch and build dependencies
-    if(NOT USE_EXISTING_SPIRV_TOOLS OR NOT USE_EXISTING_GLSLANG)
-        # VULKAN_SDK_VERSION already defined above with other version requirements
-
+    # SPIRV-Tools build block
+    if(NOT USE_EXISTING_SPIRV_TOOLS)
         # Fetch SPIRV-Headers first (needed by SPIRV-Tools)
         FetchContent_Declare(
             spirv-headers
             GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Headers.git
             GIT_TAG ${VULKAN_SDK_VERSION}
+            GIT_SHALLOW TRUE
         )
         FetchContent_MakeAvailable(spirv-headers)
 
-        if(NOT USE_EXISTING_SPIRV_TOOLS)
-            # SPIRV-Tools settings
-            set(SPIRV_SKIP_TESTS ON CACHE BOOL "Disable SPIRV-Tools tests" FORCE)
-            set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Disable SPIRV-Tools executables" FORCE)
-            set(SPIRV_BUILD_SHARED ON CACHE BOOL "Build shared SPIRV-Tools" FORCE)
-            set(SPIRV_USE_STATIC_LIBS OFF CACHE BOOL "Use dynamic CRT for SPIRV-Tools" FORCE)
-            set(SPIRV_TOOLS_INSTALL_EMACS_HELPERS OFF CACHE BOOL "Skip emacs helpers" FORCE)
-            set(SPIRV_TOOLS_BUILD_STATIC OFF CACHE BOOL "Build static SPIRV-Tools" FORCE)
-            set(SPIRV_TOOLS_BUILD_SHARED ON CACHE BOOL "Build shared SPIRV-Tools" FORCE)
-            set(SPIRV_WERROR OFF CACHE BOOL "Enable error on warning" FORCE)
+        # SPIRV-Tools settings
+        set(SPIRV_SKIP_TESTS ON CACHE BOOL "Disable SPIRV-Tools tests" FORCE)
+        set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Disable SPIRV-Tools executables" FORCE)
+        set(SPIRV_BUILD_SHARED ON CACHE BOOL "Build shared SPIRV-Tools" FORCE)
+        set(SPIRV_USE_STATIC_LIBS OFF CACHE BOOL "Use dynamic CRT for SPIRV-Tools" FORCE)
+        set(SPIRV_TOOLS_INSTALL_EMACS_HELPERS OFF CACHE BOOL "Skip emacs helpers" FORCE)
+        set(SPIRV_TOOLS_BUILD_STATIC OFF CACHE BOOL "Build static SPIRV-Tools" FORCE)
+        set(SPIRV_TOOLS_BUILD_SHARED ON CACHE BOOL "Build shared SPIRV-Tools" FORCE)
+        set(SPIRV_WERROR OFF CACHE BOOL "Disable error on warning" FORCE)
 
-            # Fetch SPIRV-Tools (required for Shaderc)
+        # Fetch SPIRV-Tools (required for Shaderc)
+        FetchContent_Declare(
+            spirv-tools
+            GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Tools.git
+            GIT_TAG ${VULKAN_SDK_VERSION}
+            GIT_SHALLOW TRUE
+        )
+        FetchContent_MakeAvailable(spirv-tools)
+
+        set(SPIRV_TOOLS_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/spirv-tools-build/lib")
+        set(SPIRV_TOOLS_BINARY_ROOT "${spirv-tools_BINARY_DIR}")
+
+        # Ensure the linker knows where to find SPIRV-Tools libraries
+        link_directories(${SPIRV_TOOLS_LIBRARY_DIR})
+    endif()
+
+    # glslang build block
+    if(NOT USE_EXISTING_GLSLANG)
+        # Fetch SPIRV-Headers if not already fetched (needed by glslang)
+        if(NOT spirv-headers_POPULATED)
             FetchContent_Declare(
-                spirv-tools
-                GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Tools.git
+                spirv-headers
+                GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Headers.git
                 GIT_TAG ${VULKAN_SDK_VERSION}
+                GIT_SHALLOW TRUE
             )
-            FetchContent_MakeAvailable(spirv-tools)
-
-            set(SPIRV_TOOLS_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/spirv-tools-build/lib")
-            set(SPIRV_TOOLS_BINARY_ROOT "${spirv-tools_BINARY_DIR}")
+            FetchContent_MakeAvailable(spirv-headers)
         endif()
 
-        if(NOT USE_EXISTING_GLSLANG)
-            # GLSLang settings
-            set(ENABLE_GLSLANG_BINARIES ON CACHE BOOL "Disable GLSLang binaries" FORCE)
-            set(ENABLE_SPVREMAPPER ON CACHE BOOL "Disable SPVREMAPPER" FORCE)
-            set(ENABLE_GLSLANG_JS OFF CACHE BOOL "Disable JavaScript" FORCE)
-            set(ENABLE_GLSLANG_WEBMIN OFF CACHE BOOL "Disable WebMin" FORCE)
-            set(ENABLE_GLSLANG_WEB OFF CACHE BOOL "Disable Web" FORCE)
-            set(ENABLE_GLSLANG_WEB_DEVEL OFF CACHE BOOL "Disable Web Development" FORCE)
-            set(ENABLE_HLSL ON CACHE BOOL "Enable HLSL" FORCE)
-            set(GLSLANG_ENABLE_WERROR OFF CACHE BOOL "Enable error on warning" FORCE)
+        # GLSLang settings
+        set(ENABLE_GLSLANG_BINARIES ON CACHE BOOL "Enable GLSLang binaries" FORCE)
+        set(ENABLE_SPVREMAPPER ON CACHE BOOL "Enable SPVREMAPPER" FORCE)
+        set(ENABLE_GLSLANG_JS OFF CACHE BOOL "Disable JavaScript" FORCE)
+        set(ENABLE_GLSLANG_WEBMIN OFF CACHE BOOL "Disable WebMin" FORCE)
+        set(ENABLE_GLSLANG_WEB OFF CACHE BOOL "Disable Web" FORCE)
+        set(ENABLE_GLSLANG_WEB_DEVEL OFF CACHE BOOL "Disable Web Development" FORCE)
+        set(ENABLE_HLSL ON CACHE BOOL "Enable HLSL" FORCE)
+        set(GLSLANG_ENABLE_WERROR OFF CACHE BOOL "Disable error on warning" FORCE)
 
-            # Configure glslang to find SPIRV-Tools
-            set(ENABLE_OPT ON CACHE BOOL "Enable SPIRV-Tools optimizer" FORCE)
-            set(ALLOW_EXTERNAL_SPIRV_TOOLS ON CACHE BOOL "Allow external SPIRV-Tools" FORCE)
+        # Configure glslang to find SPIRV-Tools
+        set(ENABLE_OPT ON CACHE BOOL "Enable SPIRV-Tools optimizer" FORCE)
+        set(ALLOW_EXTERNAL_SPIRV_TOOLS ON CACHE BOOL "Allow external SPIRV-Tools" FORCE)
+        # Only set SPIRV-Tools paths if we built it (not using external)
+        if(SPIRV_TOOLS_BINARY_ROOT)
             set(SPIRV_TOOLS_BINARY_ROOT "${SPIRV_TOOLS_BINARY_ROOT}" CACHE PATH "SPIRV-Tools binary root" FORCE)
             set(SPIRV_TOOLS_OPT_LIBRARY_PATH "${SPIRV_TOOLS_BINARY_ROOT}/source/opt" CACHE PATH "SPIRV-Tools opt library path" FORCE)
-
-            # Fetch GLSLang (required for Shaderc)
-            FetchContent_Declare(
-                glslang
-                GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
-                GIT_TAG ${VULKAN_SDK_VERSION}
-            )
-            FetchContent_MakeAvailable(glslang)
-
-            set(GLSLANG_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/glslang-build")
-            set(GLSLANG_BINARY_ROOT "${glslang_BINARY_DIR}")
         endif()
 
-        # Ensure the linker knows where to find these libraries
-        link_directories(${SPIRV_TOOLS_LIBRARY_DIR})
+        # Fetch GLSLang (required for Shaderc)
+        FetchContent_Declare(
+            glslang
+            GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
+            GIT_TAG ${VULKAN_SDK_VERSION}
+            GIT_SHALLOW TRUE
+        )
+        FetchContent_MakeAvailable(glslang)
+
+        set(GLSLANG_LIBRARY_DIR "${CMAKE_BINARY_DIR}/_deps/glslang-build")
+        set(GLSLANG_BINARY_ROOT "${glslang_BINARY_DIR}")
+
+        # Ensure the linker knows where to find glslang libraries
         link_directories(${GLSLANG_LIBRARY_DIR})
     endif()
 
@@ -210,7 +182,7 @@ else()
     set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip tests" FORCE)
     set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use shared CRT" FORCE)
     set(SHADERC_STATIC_CRT OFF CACHE BOOL "Don't use static CRT" FORCE)
-    set(SHADERC_ENABLE_WERROR OFF CACHE BOOL "Enable error on warning" FORCE)
+    set(SHADERC_ENABLE_WERROR OFF CACHE BOOL "Disable error on warning" FORCE)
 
     # Enable glslc build explicitly
     set(SHADERC_SKIP_INSTALL OFF CACHE BOOL "Don't skip installation" FORCE)
@@ -229,6 +201,7 @@ else()
         shaderc
         GIT_REPOSITORY https://github.com/google/shaderc.git
         GIT_TAG ${SHADERC_VERSION}
+        GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(shaderc)
 
@@ -277,58 +250,92 @@ else()
                 FILES_MATCHING
                 PATTERN "glslc.exe")
     endif()
+endmacro()
+
+if(USE_SYSTEM_SHADERC)
+    if(WIN32)
+        # Try to find shaderc in Vulkan SDK directory
+        if(DEFINED ENV{VULKAN_SDK})
+            # Normalize path
+            file(TO_CMAKE_PATH "$ENV{VULKAN_SDK}" VULKAN_SDK_PATH)
+
+            # Find shaderc include directory
+            find_path(SHADERC_INCLUDE_DIR
+                NAMES shaderc/shaderc.h
+                PATHS "${VULKAN_SDK_PATH}/Include" "${VULKAN_SDK_PATH}/include"
+                NO_DEFAULT_PATH)
+
+            # Look in the SDK's lib directory (shaderc_shared for dynamic linking)
+            find_library(SHADERC_SHARED_LIBRARY NAMES shaderc_shared
+                         PATHS "${VULKAN_SDK_PATH}/lib" "${VULKAN_SDK_PATH}/Lib"
+                         NO_DEFAULT_PATH)
+
+            if(SHADERC_SHARED_LIBRARY)
+                message(STATUS "VVS: Found shaderc at: ${SHADERC_SHARED_LIBRARY}")
+                set(shaderc_FOUND TRUE)
+                set(SHADERC_LIBRARY ${SHADERC_SHARED_LIBRARY})
+                # Store the lib directory for later use
+                get_filename_component(VULKAN_SDK_BIN_DIR "${SHADERC_SHARED_LIBRARY}" DIRECTORY)
+                message(STATUS "VVS: Vulkan SDK lib directory: ${VULKAN_SDK_BIN_DIR}")
+            else()
+                message(STATUS "VVS: Could not find shaderc library in ${VULKAN_SDK_PATH}/lib")
+            endif()
+        endif()
+    else()
+        # Non-WIN32: try VULKAN_SDK first (prefer shaderc_shared), then system paths
+        if(DEFINED ENV{VULKAN_SDK})
+            file(TO_CMAKE_PATH "$ENV{VULKAN_SDK}" VULKAN_SDK_PATH)
+
+            find_path(SHADERC_INCLUDE_DIR
+                NAMES shaderc/shaderc.h
+                PATHS "${VULKAN_SDK_PATH}/include"
+                NO_DEFAULT_PATH)
+
+            find_library(SHADERC_SHARED_LIBRARY NAMES shaderc_shared shaderc_combined
+                         PATHS "${VULKAN_SDK_PATH}/lib"
+                         NO_DEFAULT_PATH)
+        endif()
+
+        # Fall back to system paths if not found in SDK (shaderc_shared only)
+        if(NOT SHADERC_INCLUDE_DIR)
+            find_path(SHADERC_INCLUDE_DIR
+                NAMES shaderc/shaderc.h)
+        endif()
+
+        if(NOT SHADERC_SHARED_LIBRARY)
+            find_library(SHADERC_SHARED_LIBRARY NAMES shaderc_shared)
+        endif()
+
+        if(SHADERC_SHARED_LIBRARY)
+            message(STATUS "VVS: Found shaderc at: ${SHADERC_SHARED_LIBRARY}")
+            set(shaderc_FOUND TRUE)
+            set(SHADERC_LIBRARY ${SHADERC_SHARED_LIBRARY})
+            # Store the lib directory for later use
+            get_filename_component(VULKAN_SDK_BIN_DIR "${SHADERC_SHARED_LIBRARY}" DIRECTORY)
+            message(STATUS "VVS: Shaderc lib directory: ${VULKAN_SDK_BIN_DIR}")
+        else()
+            message(STATUS "VVS: Could not find libshaderc_shared.so in filesystem")
+        endif()
+    endif()
+
+    if(shaderc_FOUND)
+        message(STATUS "VVS: Found system shaderc")
+    else()
+        message(STATUS "VVS: System shaderc not found")
+        if(WIN32)
+            message(STATUS "VVS: Make sure Vulkan SDK is installed and VULKAN_SDK environment variable is set")
+        endif()
+    endif()
 endif()
 
-# Add after finding Vulkan SDK
-# Find Shaderc
-if(DEFINED ENV{VULKAN_SDK})
-    # Try to find shaderc in Vulkan SDK first
-    find_path(SHADERC_INCLUDE_DIR
-        NAMES shaderc/shaderc.h
-        PATHS
-        "$ENV{VULKAN_SDK}/Include"
-        "$ENV{VULKAN_SDK}/include"
-        NO_DEFAULT_PATH
-    )
-
-    find_library(SHADERC_LIBRARY
-        NAMES shaderc_combined
-        PATHS
-        "$ENV{VULKAN_SDK}/Lib"
-        "$ENV{VULKAN_SDK}/lib"
-        NO_DEFAULT_PATH
-    )
-endif()
-
-# If not found in SDK, try system paths
-if(NOT SHADERC_INCLUDE_DIR)
-    find_path(SHADERC_INCLUDE_DIR
-        NAMES shaderc/shaderc.h
-    )
-endif()
-
-if(NOT SHADERC_LIBRARY)
-    find_library(SHADERC_LIBRARY
-        NAMES shaderc_combined
-    )
-endif()
-
-# If still not found, build from source
-if(NOT SHADERC_INCLUDE_DIR OR NOT SHADERC_LIBRARY)
-    message(STATUS "VVS: Shaderc not found in SDK or system, building from source...")
-    include(FetchContent)
-    FetchContent_Declare(
-        shaderc
-        GIT_REPOSITORY https://github.com/google/shaderc
-        GIT_TAG ${SHADERC_VERSION}
-    )
-
-    set(SHADERC_SKIP_TESTS ON)
-    set(SHADERC_SKIP_EXAMPLES ON)
-    set(SHADERC_SKIP_COPYRIGHT_CHECK ON)
-
-    FetchContent_MakeAvailable(shaderc)
-
+if(USE_SYSTEM_SHADERC AND shaderc_FOUND)
+    message(STATUS "VVS: Using system shaderc")
+    set(SHADERC_LIB "")
+else()
+    set(SHADERC_LIB "shaderc_shared" CACHE PATH "The name of the shaderc library target decoder/encoder are using." FORCE)
+    message(STATUS "VVS: Building shaderc from source using existing dependencies")
+    download_shaderc_and_dependencies()
+    # Set SHADERC_LIBRARY to the built target
     set(SHADERC_INCLUDE_DIR ${shaderc_SOURCE_DIR}/libshaderc/include)
     set(SHADERC_LIBRARY shaderc)
 endif()
