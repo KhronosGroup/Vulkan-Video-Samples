@@ -3,96 +3,6 @@
   "description": "Test skip list for Vulkan Video Samples test framework",
   "decode": [
     {
-      "name": "av1_basic_10bit",
-      "source_filepath": "video/av1/av1-176x144-main-basic-10.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
-      "date_added": "2025-01-27"
-    },
-    {
-      "name": "av1_cdef_10bit",
-      "source_filepath": "video/av1/av1-176x144-main-cdef-10.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
-      "date_added": "2025-01-27"
-    },
-    {
-      "name": "av1_forward_key_frame_10bit",
-      "source_filepath": "video/av1/av1-176x144-main-forward-key-frame-10.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
-      "date_added": "2025-01-27"
-    },
-    {
-      "name": "av1_loop_filter_10bit",
-      "source_filepath": "video/av1/av1-176x144-main-loop-filter-10.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
-      "date_added": "2025-01-27"
-    },
-    {
-      "name": "av1_lossless_10bit",
-      "source_filepath": "video/av1/av1-176x144-main-lossless-10.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
-      "date_added": "2025-01-27"
-    },
-    {
-      "name": "av1_orderhint_10bit",
-      "source_filepath": "video/av1/av1-176x144-main-orderhint-10.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "10-bit AV1 decoding not yet supported, MD5 mismatch",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/122",
-      "date_added": "2025-01-27"
-    },
-    {
       "name": "av1_argon_test1019",
       "source_filepath": "video/av1/av1-argon_test1019.obu",
       "format": "vvs",
@@ -179,21 +89,6 @@
       ],
       "reproduction": "always",
       "reason": "VP9 dynamic resize not supported. MD5 mismatch",
-      "bug_url": "",
-      "date_added": "2025-01-27"
-    },
-    {
-      "name": "vp9_320x240_10bits",
-      "source_filepath": "video/vp9/vp9-320x240-10bits.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "10-bit VP9 decoding. MD5 mismatch",
       "bug_url": "",
       "date_added": "2025-01-27"
     },

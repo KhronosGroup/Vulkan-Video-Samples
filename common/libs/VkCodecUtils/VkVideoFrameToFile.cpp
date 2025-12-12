@@ -98,22 +98,33 @@ static void getCRC(uint32_t *checksum, const uint8_t *inputBytes, size_t length,
     }
 }
 
+// Rotate right for 16-bit unsigned integers.
+// Used to normalize MSB-aligned high bit-depth samples (10-bit, 12-bit) to LSB-aligned.
+inline uint16_t roru16(uint16_t x, uint16_t n) {
+    return n == 0 ? x : (x >> n) | (x << (-n & 15));
+}
+
 template<typename T>
 static void CopyPlaneData(const uint8_t* pSrc, uint8_t* pDst,
                          size_t srcRowPitch, size_t dstRowPitch,
                          int32_t width, int32_t height,
-                         size_t srcPixelStride = 1) {
+                         size_t srcPixelStride = 1,
+                         uint32_t bitShift = 0) {
     const T* src = reinterpret_cast<const T*>(pSrc);
     T* dst = reinterpret_cast<T*>(pDst);
     const size_t srcStride = srcRowPitch / sizeof(T);
     const size_t dstStride = dstRowPitch / sizeof(T);
 
     for (int32_t y = 0; y < height; y++) {
-        if (srcPixelStride == 1) {
+        if (srcPixelStride == 1 && bitShift == 0) {
             memcpy(dst, src, width * sizeof(T));
         } else {
             for (int32_t x = 0; x < width; x++) {
-                dst[x] = src[x * srcPixelStride];
+                T sample = src[x * srcPixelStride];
+                if (bitShift > 0 && sizeof(T) == sizeof(uint16_t)) {
+                    sample = static_cast<T>(roru16(static_cast<uint16_t>(sample), static_cast<uint16_t>(bitShift)));
+                }
+                dst[x] = sample;
             }
         }
         src += srcStride;
@@ -428,6 +439,16 @@ public:
         const uint32_t bytesPerPixel = is8Bit ? 1 : 2;
         const uint32_t numPlanes = 3;
 
+        // Determine bit shift for high bit-depth formats.
+        // 10-bit and 12-bit samples are stored MSB-aligned in 16-bit words,
+        // so we need to rotate right to normalize them to LSB-aligned.
+        uint32_t bitShift = 0;
+        if (mpInfo->planesLayout.bpp == YCBCRA_10BPP) {
+            bitShift = 6;  // 16 - 10 = 6
+        } else if (mpInfo->planesLayout.bpp == YCBCRA_12BPP) {
+            bitShift = 4;  // 16 - 12 = 4
+        }
+
         // Calculate plane layouts for output buffer
         VkSubresourceLayout yuvPlaneLayouts[3] = {};
         yuvPlaneLayouts[0].offset = 0;
@@ -448,7 +469,7 @@ public:
                                       frameWidth, imageHeight);
             } else {
                 CopyPlaneData<uint16_t>(pSrc, pDst, layouts[plane].rowPitch, yuvPlaneLayouts[plane].rowPitch,
-                                       frameWidth, imageHeight);
+                                       frameWidth, imageHeight, 1, bitShift);
             }
         }
 
@@ -471,7 +492,7 @@ public:
                                            planeWidth, 1, 2);
                 } else {
                     CopyPlaneData<uint16_t>(pSrc, pDst, layouts[srcPlane].rowPitch, yuvPlaneLayouts[plane].rowPitch,
-                                            planeWidth, 1, 2);
+                                            planeWidth, 1, 2, bitShift);
                 }
                 pDst += yuvPlaneLayouts[plane].rowPitch;
             }
