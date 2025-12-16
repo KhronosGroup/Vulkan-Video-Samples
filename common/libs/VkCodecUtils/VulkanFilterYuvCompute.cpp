@@ -2327,7 +2327,7 @@ uint32_t VulkanFilterYuvCompute::UpdateImageDescriptorSets(
 
     validImageAspects &= validAspects;
     uint32_t curImageAspect = 0;
-    const uint32_t numPlanes = imageView->GetNumberOfPlanes();
+    [[maybe_unused]] const uint32_t numPlanes = imageView->GetNumberOfPlanes();
     while(validImageAspects) {
 
         if (validImageAspects & (VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect) ) {
