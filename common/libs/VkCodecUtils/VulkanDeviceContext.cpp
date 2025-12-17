@@ -808,8 +808,13 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
             pNext = (VkBaseInStructure*)&videoDecodeVP9Feature;
         }
 
+        VkPhysicalDeviceSamplerYcbcrConversionFeatures samplerYcbcrConversionFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES,
+                                                                                       pNext,
+                                                                                       VK_FALSE
+        };
+
         VkPhysicalDeviceTimelineSemaphoreFeatures timelineSemaphoreFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
-                                                                              pNext,
+                                                                              &samplerYcbcrConversionFeatures,
                                                                               VK_FALSE
         };
 
