@@ -1,3 +1,44 @@
+# Contributing to Vulkan Video Samples
+
+## Commit Message Guidelines
+
+All commit messages must follow this format:
+
+```
+scope: description
+```
+
+### Scope
+
+The scope identifies the area of the codebase being changed:
+
+- **Lowercase** for general areas: `cmake`, `ci`, `docs`, `build`
+- **PascalCase** for components: `VkVideoDecoder`, `VkEncoderConfig`, `FindShaderc`
+- **Braces** for multiple components: `VkEncoderConfig{H264,H265}`
+
+### Rules
+
+- **Header length**: Maximum 100 characters
+- **Subject**: Must not be empty, must not end with a period
+- **No draft indicators**: Commits with WIP, fixup, squash, tmp, todo, hack, draft, or similar markers will be rejected
+
+### Examples
+
+```
+cmake: fix build issue with shaderc detection
+VkVideoDecoder: add support for AV1 profile
+docs: update build instructions for Fedora
+ci: add commit message validation workflow
+```
+
+### Validation
+
+Commit messages are automatically validated on pull requests via commitlint. See `commitlint.config.js` for the full ruleset.
+
+---
+
+## Developer Certificate of Origin
+
 https://developercertificate.org/
 
 Developer Certificate of Origin
