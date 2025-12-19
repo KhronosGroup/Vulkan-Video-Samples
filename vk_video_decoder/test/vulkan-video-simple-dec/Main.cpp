@@ -120,7 +120,7 @@ int main(int argc, const char** argv)
             std::cout << "Simple decoder does not support demuxing "
                       << "and the decoder type must be set with --codec <codec type>"
                       << std::endl;
-            return -1;
+            return EXIT_FAILURE;
     }
 
     VkSharedBaseObj<VideoStreamDemuxer> videoStreamDemuxer;
@@ -151,7 +151,7 @@ int main(int argc, const char** argv)
                                       vulkanVideoDecoder);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "Error creating video decoder\n");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     DumpDecoderStreamInfo(vulkanVideoDecoder);
