@@ -129,7 +129,7 @@ int main(int argc, const char** argv)
         vkDevCtxt.CreateVulkanDevice(numDecodeQueues,
                                      0, // num encode queues
                                      videoCodec,
-                                     false, //  createTransferQueue
+                                     ((vkDevCtxt.GetVideoDecodeQueueFlag() & VK_QUEUE_TRANSFER_BIT) == 0), //  createTransferQueue
                                      true,  // createGraphicsQueue
                                      true,  // createDisplayQueue
                                      requestVideoComputeQueueMask != 0  // createComputeQueue

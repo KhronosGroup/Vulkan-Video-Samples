@@ -549,6 +549,53 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     // There will be no more than VulkanVideoFrameBuffer::maxImages frames in the queue.
     m_decodeFramesData.resize(std::max<uint32_t>(maxDecodeFramesCount, VulkanVideoFrameBuffer::maxImages));
 
+    // Check if transfer queue is in a different family than video decode queue
+    // and initialize transfer queue resources if needed
+    if (m_useTransferOperation == VK_TRUE) {
+        int32_t txQueueFamilyIdx = m_vkDevCtx->GetTransferQueueFamilyIdx();
+        int32_t videoQueueFamilyIdx = m_vkDevCtx->GetVideoDecodeQueueFamilyIdx();
+
+        if (txQueueFamilyIdx != -1 && txQueueFamilyIdx != videoQueueFamilyIdx) {
+            m_useSeparateTransferQueue = VK_TRUE;
+
+            // Create command pool for transfer queue if not already created
+            if (m_transferCommandPool == VK_NULL_HANDLE) {
+                VkCommandPoolCreateInfo cmdPoolInfo = {};
+                cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+                cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+                cmdPoolInfo.queueFamilyIndex = txQueueFamilyIdx;
+                result = m_vkDevCtx->CreateCommandPool(*m_vkDevCtx, &cmdPoolInfo, nullptr, &m_transferCommandPool);
+                if (result != VK_SUCCESS) {
+                    fprintf(stderr, "\nERROR: CreateCommandPool() for transfer queue result: 0x%x\n", result);
+                    m_useSeparateTransferQueue = VK_FALSE;
+                }
+            }
+
+            // Allocate command buffers for transfer operations
+            if (m_transferCommandPool != VK_NULL_HANDLE && m_transferCommandBuffers.empty()) {
+                const uint32_t numTransferCmdBuffers = std::max<uint32_t>(maxDecodeFramesCount, VulkanVideoFrameBuffer::maxImages);
+                VkCommandBufferAllocateInfo cmdInfo = {};
+                cmdInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                cmdInfo.commandBufferCount = numTransferCmdBuffers;
+                cmdInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                cmdInfo.commandPool = m_transferCommandPool;
+
+                m_transferCommandBuffers.resize(numTransferCmdBuffers);
+                result = m_vkDevCtx->AllocateCommandBuffers(*m_vkDevCtx, &cmdInfo, m_transferCommandBuffers.data());
+                if (result != VK_SUCCESS) {
+                    fprintf(stderr, "\nERROR: AllocateCommandBuffers() for transfer queue result: 0x%x\n", result);
+                    m_transferCommandBuffers.clear();
+                    m_useSeparateTransferQueue = VK_FALSE;
+                }
+            }
+
+            if (m_useSeparateTransferQueue) {
+                std::cout << "\t Using separate transfer queue (family " << txQueueFamilyIdx
+                          << ") for decode output copy (video decode family: " << videoQueueFamilyIdx << ")" << std::endl;
+            }
+        }
+    }
+
     int32_t availableBuffers = (int32_t)m_decodeFramesData.GetBitstreamBuffersQueue().
                                                       GetAvailableNodesNumber();
     if (availableBuffers < m_numBitstreamBuffersToPreallocate) {
@@ -1137,12 +1184,42 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
         assert((pOutputPictureResource != nullptr) && (pOutputPictureResourceInfo != nullptr));
 
-        CopyOptimalToLinearImage(frameDataSlot.commandBuffer,
-                                 *pOutputPictureResource,
-                                 *pOutputPictureResourceInfo,
-                                 *pFrameFilterOutResource,
-                                 *pFrameFilterOutResourceInfo,
-                                 &frameSynchronizationInfo);
+        if (m_useSeparateTransferQueue == VK_FALSE) {
+            // Same queue family - record copy directly in decode command buffer
+            CopyOptimalToLinearImage(frameDataSlot.commandBuffer,
+                                     *pOutputPictureResource,
+                                     *pOutputPictureResourceInfo,
+                                     *pFrameFilterOutResource,
+                                     *pFrameFilterOutResourceInfo,
+                                     &frameSynchronizationInfo);
+        } else {
+            // Different queue families - add release barrier for queue ownership transfer
+            int32_t videoQueueFamilyIdx = m_vkDevCtx->GetVideoDecodeQueueFamilyIdx();
+            int32_t txQueueFamilyIdx = m_vkDevCtx->GetTransferQueueFamilyIdx();
+
+            const VkImageSubresourceRange imageSubresourceRange = {
+                VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, pOutputPictureResourceInfo->baseArrayLayer, 1
+            };
+
+            // Release barrier: release ownership from video decode queue to transfer queue
+            VkImageMemoryBarrier2KHR releaseBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR };
+            releaseBarrier.srcStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+            releaseBarrier.srcAccessMask = VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+            releaseBarrier.dstStageMask = VK_PIPELINE_STAGE_2_NONE;
+            releaseBarrier.dstAccessMask = 0;
+            releaseBarrier.oldLayout = pOutputPictureResourceInfo->currentImageLayout;
+            releaseBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            releaseBarrier.srcQueueFamilyIndex = videoQueueFamilyIdx;
+            releaseBarrier.dstQueueFamilyIndex = txQueueFamilyIdx;
+            releaseBarrier.image = pOutputPictureResourceInfo->image;
+            releaseBarrier.subresourceRange = imageSubresourceRange;
+
+            VkDependencyInfoKHR depInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR };
+            depInfo.imageMemoryBarrierCount = 1;
+            depInfo.pImageMemoryBarriers = &releaseBarrier;
+
+            m_vkDevCtx->CmdPipelineBarrier2KHR(frameDataSlot.commandBuffer, &depInfo);
+        }
     }
 
     m_vkDevCtx->EndCommandBuffer(frameDataSlot.commandBuffer);
@@ -1155,10 +1232,10 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         videoDecodeCompleteFence     = filterCmdBuffer->GetFence();
     }
 
-    const uint32_t waitSemaphoreMaxCount = 3;
+    const uint32_t waitSemaphoreMaxCount = 4;
     VkSemaphoreSubmitInfoKHR waitSemaphoreInfos[waitSemaphoreMaxCount]{};
 
-    const uint32_t signalSemaphoreMaxCount = 3;
+    const uint32_t signalSemaphoreMaxCount = 4;
     VkSemaphoreSubmitInfoKHR signalSemaphoreInfos[signalSemaphoreMaxCount]{};
 
     uint32_t waitSemaphoreCount = 0;
@@ -1321,6 +1398,101 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         m_currentVideoQueueIndx %= m_vkDevCtx->GetVideoDecodeNumQueues();
     }
     m_decodePicCount++;
+
+    // Submit transfer queue operation when using separate transfer queue for image copy
+    if (m_useSeparateTransferQueue == VK_TRUE && m_useTransferOperation == VK_TRUE) {
+        assert(pOutputPictureResource != nullptr);
+        assert(pOutputPictureResourceInfo != nullptr);
+        assert(frameDataSlot.slot < m_transferCommandBuffers.size());
+
+        VkCommandBuffer txCmdBuffer = m_transferCommandBuffers[frameDataSlot.slot];
+        int32_t videoQueueFamilyIdx = m_vkDevCtx->GetVideoDecodeQueueFamilyIdx();
+        int32_t txQueueFamilyIdx = m_vkDevCtx->GetTransferQueueFamilyIdx();
+
+        // Reset and begin transfer command buffer
+        m_vkDevCtx->ResetCommandBuffer(txCmdBuffer, 0);
+
+        const VkCommandBufferBeginInfo cmdBufBeginInfo = {
+            VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            nullptr,
+            0,
+            nullptr
+        };
+        m_vkDevCtx->BeginCommandBuffer(txCmdBuffer, &cmdBufBeginInfo);
+
+        // Acquire barrier: acquire ownership from video decode queue to transfer queue
+        const VkImageSubresourceRange imageSubresourceRange = {
+            VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, pOutputPictureResourceInfo->baseArrayLayer, 1
+        };
+
+        VkImageMemoryBarrier2KHR acquireBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR };
+        acquireBarrier.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+        acquireBarrier.srcAccessMask = 0;
+        acquireBarrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        acquireBarrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+        acquireBarrier.oldLayout = pOutputPictureResourceInfo->currentImageLayout;
+        acquireBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        acquireBarrier.srcQueueFamilyIndex = videoQueueFamilyIdx;
+        acquireBarrier.dstQueueFamilyIndex = txQueueFamilyIdx;
+        acquireBarrier.image = pOutputPictureResourceInfo->image;
+        acquireBarrier.subresourceRange = imageSubresourceRange;
+
+        VkDependencyInfoKHR acquireDependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR };
+        acquireDependencyInfo.imageMemoryBarrierCount = 1;
+        acquireDependencyInfo.pImageMemoryBarriers = &acquireBarrier;
+
+        m_vkDevCtx->CmdPipelineBarrier2KHR(txCmdBuffer, &acquireDependencyInfo);
+
+        // Perform the image copy in transfer queue
+        CopyOptimalToLinearImage(txCmdBuffer,
+                                 *pOutputPictureResource,
+                                 *pOutputPictureResourceInfo,
+                                 *pFrameFilterOutResource,
+                                 *pFrameFilterOutResourceInfo,
+                                 &frameSynchronizationInfo);
+
+        m_vkDevCtx->EndCommandBuffer(txCmdBuffer);
+
+        // Create a fence for this transfer operation
+        VkFence transferFence = VK_NULL_HANDLE;
+        const VkFenceCreateInfo fenceInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr };
+        result = m_vkDevCtx->CreateFence(*m_vkDevCtx, &fenceInfo, nullptr, &transferFence);
+        if (result != VK_SUCCESS) {
+            fprintf(stderr, "\nERROR: CreateFence() for transfer operation failed: 0x%x\n", result);
+        }
+
+        VkCommandBufferSubmitInfoKHR txCmdBufferInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR };
+        txCmdBufferInfo.commandBuffer = txCmdBuffer;
+
+        VkSubmitInfo2KHR txSubmitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR };
+        txSubmitInfo.waitSemaphoreInfoCount = signalSemaphoreCount;
+        txSubmitInfo.pWaitSemaphoreInfos = signalSemaphoreInfos;
+        txSubmitInfo.commandBufferInfoCount = 1;
+        txSubmitInfo.pCommandBufferInfos = &txCmdBufferInfo;
+        txSubmitInfo.signalSemaphoreInfoCount = 0;
+        txSubmitInfo.pSignalSemaphoreInfos = nullptr;
+
+        result = m_vkDevCtx->MultiThreadedQueueSubmit(VulkanDeviceContext::TRANSFER,
+                                                      0, // transfer queue index
+                                                      1,
+                                                      &txSubmitInfo,
+                                                      transferFence,
+                                                      "Transfer Copy",
+                                                      picNumInDecodeOrder);
+        if (result != VK_SUCCESS) {
+            fprintf(stderr, "\nERROR: Transfer queue submit failed: 0x%x\n", result);
+        }
+
+        result = m_vkDevCtx->WaitForFences(*m_vkDevCtx, 1, &transferFence, true, gFenceTimeout);
+        if (result != VK_SUCCESS) {
+            fprintf(stderr, "\nERROR: WaitForFences() for transfer operation failed: 0x%x\n", result);
+        }
+        m_vkDevCtx->DestroyFence(*m_vkDevCtx, transferFence, nullptr);
+
+        if (m_dumpDecodeData) {
+            std::cout << "\t => Transfer queue submitted for frame copy" << std::endl;
+        }
+    }
 
     if (m_enableDecodeComputeFilter) {
 
@@ -1526,6 +1698,24 @@ void VkVideoDecoder::Deinitialize()
         m_vkDevCtx->DestroySemaphore(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, NULL);
         m_hwLoadBalancingTimelineSemaphore = VK_NULL_HANDLE;
     }
+
+    // Wait for transfer queue to complete before cleanup
+    if (m_useSeparateTransferQueue == VK_TRUE) {
+        m_vkDevCtx->MultiThreadedQueueWaitIdle(VulkanDeviceContext::TRANSFER, 0);
+    }
+
+    // Clean up transfer queue resources
+    if (m_transferCommandPool != VK_NULL_HANDLE) {
+        if (!m_transferCommandBuffers.empty()) {
+            m_vkDevCtx->FreeCommandBuffers(*m_vkDevCtx, m_transferCommandPool,
+                                           (uint32_t)m_transferCommandBuffers.size(),
+                                           m_transferCommandBuffers.data());
+            m_transferCommandBuffers.clear();
+        }
+        m_vkDevCtx->DestroyCommandPool(*m_vkDevCtx, m_transferCommandPool, nullptr);
+        m_transferCommandPool = VK_NULL_HANDLE;
+    }
+    m_useSeparateTransferQueue = VK_FALSE;
 
     m_videoFrameBuffer = nullptr;
     m_decodeFramesData.deinit();
