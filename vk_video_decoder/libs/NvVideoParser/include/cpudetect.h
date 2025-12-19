@@ -1,6 +1,8 @@
 #ifndef CPUDETECT_H
 #define CPUDETECT_H
 
+#include <assert.h>
+
 enum SIMD_ISA
 {
     NOSIMD = 0,
@@ -13,16 +15,21 @@ enum SIMD_ISA
 
 static int inline count_trailing_zeros(unsigned long long resmask)
 {
+    assert(resmask != 0ULL); // result is undefined if resmask is zero
+
 #ifdef _WIN64
     unsigned long offset = 0;
-    const unsigned char dummyIsNonZero =_BitScanForward64(&offset, resmask); // resmask can't be 0 in this if
+    (void)_BitScanForward64(&offset, resmask);
 #elif _WIN32
     unsigned long offset = 0;
-    const unsigned char isNonZero = _BitScanForward(&offset, (unsigned long)(resmask >> 32U)); // resmask can't be 0 in this if
-    if (isNonZero) {
+    unsigned long resmaskLsb = (unsigned long)(resmask & 0xFFFFFFFFULL);
+    if (resmaskLsb != 0U) {
+        (void)_BitScanForward(&offset, resmaskLsb);
+    }
+    else {
+        unsigned long resmaskMsb = (unsigned long)(resmask >> 32U);
+        (void)_BitScanForward(&offset, resmaskMsb);
         offset += 32U;
-    } else {
-        _BitScanForward(&offset, (unsigned long)resmask); // resmask can't be 0 in this if
     }
 #else
     int offset = __builtin_ctzll(resmask);
