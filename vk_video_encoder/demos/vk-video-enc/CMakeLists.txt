@@ -80,6 +80,7 @@ set(sources
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/nvVkFormats.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.h
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.cpp
+    ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/crcgenerator.cpp
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.h
     ${VK_VIDEO_DECODER_LIBS_SOURCE_ROOT}/VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.cpp
     )
@@ -116,6 +117,10 @@ endif()
 
 if(TARGET vulkan)
     list(APPEND definitions PRIVATE -DUNINSTALLED_LOADER="$<TARGET_FILE:vulkan>")
+endif()
+
+if(USE_SHADERC)
+    list(APPEND definitions PRIVATE -DSHADERC_SUPPORT)
 endif()
 
 if(WIN32)

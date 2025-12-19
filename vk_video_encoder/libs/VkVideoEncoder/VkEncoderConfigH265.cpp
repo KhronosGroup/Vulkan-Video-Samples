@@ -68,7 +68,7 @@ uint32_t EncoderConfigH265::GetCpbVclFactor()
     return baseFactor + depthFactor;
 }
 
-int EncoderConfigH265::DoParseArguments(int argc, char* argv[])
+int EncoderConfigH265::DoParseArguments(int argc, const char* argv[])
 {
     std::vector<std::string> args(argv, argv + argc);
 

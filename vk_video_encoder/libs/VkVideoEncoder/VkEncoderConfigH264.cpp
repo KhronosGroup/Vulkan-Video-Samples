@@ -17,7 +17,7 @@
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkVideoEncoderH264.h"
 
-int EncoderConfigH264::DoParseArguments(int argc, char* argv[])
+int EncoderConfigH264::DoParseArguments(int argc, const char* argv[])
 {
     std::vector<std::string> args(argv, argv + argc);
 

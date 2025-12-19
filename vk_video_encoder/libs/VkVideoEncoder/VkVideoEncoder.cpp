@@ -164,96 +164,22 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
 
     const uint8_t* pInputFrameData = m_encoderConfig->inputFileHandler.GetMappedPtr(m_encoderConfig->input.fullImageSize, encodeFrameInfo->frameInputOrderNum);
 
+    // NOTE: Get image layout
     const VkSubresourceLayout* dstSubresourceLayout = dstImageResource->GetSubresourceLayout();
 
-    int yCbCrConvResult = 0;
-    if (m_encoderConfig->input.bpp == 8) {
+    // Direct plane copy - no color space conversion needed
+    CopyYCbCrPlanesDirectCPU(
+            pInputFrameData,                                               // Source buffer
+            m_encoderConfig->input.planeLayouts,                           // Source layouts
+            writeImagePtr,                                                 // Destination buffer
+            dstSubresourceLayout,                                          // Destination layouts
+            std::min(m_encoderConfig->encodeWidth, m_encoderConfig->input.width),    // Width
+            std::min(m_encoderConfig->encodeHeight, m_encoderConfig->input.height),  // Height
+            m_encoderConfig->input.numPlanes,                              // Number of planes
+            m_encoderConfig->input.vkFormat);                              // Format for subsampling detection
 
-        if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
-            // Load current 8-bit frame from file and convert to 2-plane YUV444
-            yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I444ToP444(
-                    pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,         // src_y
-                    (int)m_encoderConfig->input.planeLayouts[0].rowPitch,                    // src_stride_y
-                    pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,         // src_u
-                    (int)m_encoderConfig->input.planeLayouts[1].rowPitch,                    // src_stride_u
-                    pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,         // src_v
-                    (int)m_encoderConfig->input.planeLayouts[2].rowPitch,                    // src_stride_v
-                    writeImagePtr + dstSubresourceLayout[0].offset,                          // dst_y
-                    (int)dstSubresourceLayout[0].rowPitch,                                   // dst_stride_y
-                    writeImagePtr + dstSubresourceLayout[1].offset,                          // dst_uv
-                    (int)dstSubresourceLayout[1].rowPitch,                                   // dst_stride_uv
-                    std::min(m_encoderConfig->encodeWidth,  m_encoderConfig->input.width),   // width
-                    std::min(m_encoderConfig->encodeHeight, m_encoderConfig->input.height)); // height
-        } else {
-            // Load current 8-bit frame from file and convert to NV12
-            yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I420ToNV12(
-                    pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,         // src_y,
-                    (int)m_encoderConfig->input.planeLayouts[0].rowPitch,                    // src_stride_y,
-                    pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,         // src_u,
-                    (int)m_encoderConfig->input.planeLayouts[1].rowPitch,                    // src_stride_u,
-                    pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,         // src_v,
-                    (int)m_encoderConfig->input.planeLayouts[2].rowPitch,                    // src_stride_v,
-                    writeImagePtr + dstSubresourceLayout[0].offset,                          // dst_y,
-                    (int)dstSubresourceLayout[0].rowPitch,                                   // dst_stride_y,
-                    writeImagePtr + dstSubresourceLayout[1].offset,                          // dst_uv,
-                    (int)dstSubresourceLayout[1].rowPitch,                                   // dst_stride_uv,
-                    std::min(m_encoderConfig->encodeWidth,  m_encoderConfig->input.width),   // width
-                    std::min(m_encoderConfig->encodeHeight, m_encoderConfig->input.height)); // height
-        }
-
-    } else if (m_encoderConfig->input.bpp == 10) { // 10-bit - actually 16-bit only for now.
-
-        int shiftBits = 0;
-        if (m_encoderConfig->input.msbShift >= 0) {
-            shiftBits = m_encoderConfig->input.msbShift;
-        } else {
-            shiftBits = 16 - m_encoderConfig->input.bpp;
-        }
-
-        if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
-            // Load current 10-bit frame from file and convert to 2-plane YUV444
-            yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I444ToP444(
-                    (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset), // src_y
-                    (int)m_encoderConfig->input.planeLayouts[0].rowPitch,                               // src_stride_y
-                    (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset), // src_u
-                    (int)m_encoderConfig->input.planeLayouts[1].rowPitch,                               // src_stride_u
-                    (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset), // src_v
-                    (int)m_encoderConfig->input.planeLayouts[2].rowPitch,                               // src_stride_v
-                    (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),                        // dst_y
-                    (int)dstSubresourceLayout[0].rowPitch,                                              // dst_stride_y
-                    (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),                        // dst_uv
-                    (int)dstSubresourceLayout[1].rowPitch,                                              // dst_stride_uv
-                    std::min(m_encoderConfig->encodeWidth,  m_encoderConfig->input.width),              // width
-                    std::min(m_encoderConfig->encodeHeight, m_encoderConfig->input.height),             // height
-                    shiftBits);
-        } else {
-            // Load current 10-bit frame from file and convert to P010/P016
-            yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I420ToNV12(
-                    (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset), // src_y,
-                    (int)m_encoderConfig->input.planeLayouts[0].rowPitch,                               // src_stride_y,
-                    (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset), // src_u,
-                    (int)m_encoderConfig->input.planeLayouts[1].rowPitch,                               // src_stride_u,
-                    (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset), // src_v,
-                    (int)m_encoderConfig->input.planeLayouts[2].rowPitch,                               // src_stride_v,
-                    (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),                        // dst_y,
-                    (int)dstSubresourceLayout[0].rowPitch,                                              // dst_stride_y,
-                    (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),                        // dst_uv,
-                    (int)dstSubresourceLayout[1].rowPitch,                                              // dst_stride_uv,
-                    std::min(m_encoderConfig->encodeWidth,  m_encoderConfig->input.width),              // width
-                    std::min(m_encoderConfig->encodeHeight, m_encoderConfig->input.height),             // height
-                    shiftBits);
-        }
-
-    } else {
-        assert(!"Requested bit-depth is not supported!");
-    }
-
-    if (yCbCrConvResult == 0) {
-        // On success, stage the input frame for the encoder video input
-        return StageInputFrame(encodeFrameInfo);
-    }
-
-    return VK_ERROR_INITIALIZATION_FAILED;
+    // Now stage the input frame for the encoder video input
+    return StageInputFrame(encodeFrameInfo);
 }
 
 VkResult VkVideoEncoder::StageInputFrameQpMap(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo,
@@ -479,6 +405,123 @@ VkResult VkVideoEncoder::SubmitStagedQpMap(VkSharedBaseObj<VkVideoEncodeFrameInf
     return result;
 }
 
+/**
+ * @brief Copies YCbCr planes directly from input buffer to output buffer when formats are the same
+ *
+ * This function efficiently copies YCbCr data between buffers when the number of planes
+ * and bit depth are identical, but potentially with different pitch values. It handles
+ * 1, 2, or 3 plane formats and supports 8-bit and high bit-depth formats (10, 12, 16 bit).
+ * Properly handles different chroma subsampling (4:4:4, 4:2:2, 4:2:0).
+ *
+ * @param pInputFrameData Source buffer containing YCbCr planes
+ * @param inputPlaneLayouts Array of source buffer plane layouts (offset, pitch, etc.)
+ * @param writeImagePtr Destination buffer for the YCbCr planes
+ * @param dstSubresourceLayout Array of destination buffer plane layouts
+ * @param width Width of the image in pixels
+ * @param height Height of the image in pixels
+ * @param numPlanes Number of planes in the format (1, 2, or 3)
+ * @param format The VkFormat of the image for proper subsampling and bit depth detection
+ */
+void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
+    const uint8_t* pInputFrameData,
+    const VkSubresourceLayout* inputPlaneLayouts,
+    uint8_t* writeImagePtr,
+    const VkSubresourceLayout* dstSubresourceLayout,
+    uint32_t width,
+    uint32_t height,
+    uint32_t numPlanes,
+    VkFormat format)
+{
+    // Get format information
+    const VkMpFormatInfo* formatInfo = YcbcrVkFormatInfo(format);
+
+    // Determine bit depth and bytes per pixel from format
+    const uint32_t bitDepth = (formatInfo != nullptr) ? GetBitsPerChannel(formatInfo->planesLayout) : 8; // Default to 8-bit
+    const uint32_t bytesPerPixel = (bitDepth > 8) ? 2 : 1;
+
+    // Determine chroma subsampling ratios
+    const uint32_t chromaHorzRatio = (formatInfo != nullptr) ? (1 << formatInfo->planesLayout.secondaryPlaneSubsampledX) : 1;
+    const uint32_t chromaVertRatio = (formatInfo != nullptr) ? (1 << formatInfo->planesLayout.secondaryPlaneSubsampledY) : 1;
+
+    // Log the format subsampling for debugging
+    if (m_encoderConfig->verbose) {
+        const char* subsamplingDesc = "4:4:4";
+        if (chromaHorzRatio == 2 && chromaVertRatio == 2) {
+            subsamplingDesc = "4:2:0";
+        } else if (chromaHorzRatio == 2 && chromaVertRatio == 1) {
+            subsamplingDesc = "4:2:2";
+        }
+        printf("YCbCr copy with %s subsampling (chromaHorzRatio=%d, chromaVertRatio=%d), %d-bit\n",
+               subsamplingDesc, chromaHorzRatio, chromaVertRatio, bitDepth);
+    }
+
+    // Handle all planes
+    for (uint32_t plane = 0; plane < numPlanes; plane++) {
+        // Source and destination plane pointers
+        const uint8_t* srcPlane = pInputFrameData + inputPlaneLayouts[plane].offset;
+        uint8_t* dstPlane = writeImagePtr + dstSubresourceLayout[plane].offset;
+
+        // Get plane dimensions - adjust for chroma planes
+        uint32_t planeWidth = width;
+        uint32_t planeHeight = height;
+
+        // Adjust dimensions for chroma planes based on format subsampling
+        if (plane > 0) {
+            if (chromaHorzRatio > 1) {
+                planeWidth = (width + chromaHorzRatio - 1) / chromaHorzRatio;
+            }
+            if (chromaVertRatio > 1) {
+                planeHeight = (height + chromaVertRatio - 1) / chromaVertRatio;
+            }
+        }
+
+        // Source and destination strides
+        assert(inputPlaneLayouts[plane].rowPitch <= SIZE_MAX);
+        assert(dstSubresourceLayout[plane].rowPitch <= SIZE_MAX);
+        const size_t srcStride = (size_t)inputPlaneLayouts[plane].rowPitch;
+        const size_t dstStride = (size_t)dstSubresourceLayout[plane].rowPitch;
+
+        // Line width in bytes
+        const size_t lineBytes = planeWidth * bytesPerPixel;
+
+        // Get the starting pointers for this plane
+        const uint8_t* srcRow = srcPlane;
+        uint8_t* dstRow = dstPlane;
+
+        if (false && (bitDepth > 8)) {
+
+            const int shiftBits = 16 - bitDepth;
+
+            // Copy each line, incrementing pointers by stride amounts
+            for (uint32_t y = 0; y < planeHeight; y++) {
+
+                // Get the starting pointers for this row
+                const uint16_t* srcRow16 = (const uint16_t*)srcRow;
+                uint16_t* dstRow16 = (uint16_t*)dstRow;
+
+                for (uint32_t i = 0; i < planeWidth; i++) {
+                    *dstRow16++ = (*srcRow16++ << shiftBits);
+                }
+
+                // Advance to the next line using pointer arithmetic
+                srcRow += srcStride;
+                dstRow += dstStride;
+            }
+
+        } else {
+
+            // Copy each line, incrementing pointers by stride amounts
+            for (uint32_t y = 0; y < planeHeight; y++) {
+                // Copy the current line
+                memcpy(dstRow, srcRow, lineBytes);
+
+                // Advance to the next line using pointer arithmetic
+                srcRow += srcStride;
+                dstRow += dstStride;
+            }
+        }
+    }
+}
 
 VkResult VkVideoEncoder::SubmitStagedInputFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo)
 {
@@ -939,6 +982,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                              VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     const VkImageUsageFlags dpbImageUsage = VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR;
 
+    // NOTE: Create linearInputImage
     result =  VulkanVideoImagePool::Create(m_vkDevCtx, m_linearInputImagePool);
     if(result != VK_SUCCESS) {
         fprintf(stderr, "\nInitEncoder Error: Failed to create linearInputImagePool.\n");
@@ -952,7 +996,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     result = m_linearInputImagePool->Configure( m_vkDevCtx,
                                                 encoderConfig->numInputImages,
-                                                m_imageInFormat,
+                                                encoderConfig->input.vkFormat,
                                                 linearInputImageExtent,
                                                   ( VK_IMAGE_USAGE_SAMPLED_BIT |
                                                     VK_IMAGE_USAGE_STORAGE_BIT |
@@ -1213,8 +1257,10 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                 0, // queueIndex
                                                 encoderConfig->filterType,
                                                 encoderConfig->numInputImages,
-                                                m_imageInFormat,  // in filter format (can be RGB)
+                                                encoderConfig->input.vkFormat,  // in filter format (can be RGB)
                                                 m_imageInFormat,  // out filter - same as input for now.
+                                                false, // inputEnableMsbToLsbShift
+                                                (encoderConfig->input.msbShift > 0),
                                                 &ycbcrConversionCreateInfo,
                                                 &ycbcrPrimariesConstants,
                                                 &samplerInfo,
@@ -1401,7 +1447,9 @@ VkImageLayout VkVideoEncoder::TransitionImageLayout(VkCommandBuffer cmdBuf,
         imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR;
         imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR;
     } else {
+#ifdef __cpp_exceptions
         throw std::invalid_argument("unsupported layout transition!");
+#endif
     }
 
     const VkDependencyInfoKHR dependencyInfo = {
@@ -1606,12 +1654,9 @@ VkResult VkVideoEncoder::HandleCtrlCmd(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
         encodeFrameInfo->qualityLevelInfo.sType  = VK_STRUCTURE_TYPE_VIDEO_ENCODE_QUALITY_LEVEL_INFO_KHR;
         encodeFrameInfo->qualityLevelInfo.qualityLevel = encodeFrameInfo->qualityLevel;
         if (pNext != nullptr) {
-            if (encodeFrameInfo->rateControlInfo.pNext == nullptr) {
-                encodeFrameInfo->rateControlInfo.pNext = pNext;
-            } else {
-                ((VkBaseInStructure*)(encodeFrameInfo->rateControlInfo.pNext))->pNext = pNext;
-            }
+            vk::ChainNextVkStruct(encodeFrameInfo->rateControlInfo, *pNext);
         }
+
         pNext = (VkBaseInStructure*)&encodeFrameInfo->qualityLevelInfo;
     }
 
@@ -1634,12 +1679,9 @@ VkResult VkVideoEncoder::HandleCtrlCmd(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
         m_beginRateControlInfo = encodeFrameInfo->rateControlInfo;
 
         if (pNext != nullptr) {
-            if (encodeFrameInfo->rateControlInfo.pNext == nullptr) {
-                encodeFrameInfo->rateControlInfo.pNext = pNext;
-            } else {
-                ((VkBaseInStructure*)(encodeFrameInfo->rateControlInfo.pNext))->pNext = pNext;
-            }
+            vk::ChainNextVkStruct(encodeFrameInfo->rateControlInfo, *pNext);
         }
+
         pNext = (VkBaseInStructure*)&encodeFrameInfo->rateControlInfo;
     }
 
@@ -1719,7 +1761,8 @@ VkResult VkVideoEncoder::RecordVideoCodingCmd(VkSharedBaseObj<VkVideoEncodeFrame
         vkDevCtx->CmdControlVideoCodingKHR(cmdBuf, &renderControlInfo);
 
         m_beginRateControlInfo = *(VkVideoEncodeRateControlInfoKHR*)encodeFrameInfo->pControlCmdChain;
-        ((VkBaseInStructure*)(m_beginRateControlInfo.pNext))->pNext = NULL;
+        // Do not walk the chain, otherwise we end up creating a loop here.
+        m_beginRateControlInfo.pNext = (VkBaseInStructure*)(&encodeFrameInfo->pControlCmdChain);
     }
 
     if (m_videoMaintenance1FeaturesSupported)
@@ -1731,10 +1774,12 @@ VkResult VkVideoEncoder::RecordVideoCodingCmd(VkSharedBaseObj<VkVideoEncodeFrame
         videoInlineQueryInfoKHR.firstQuery = querySlotId;
         videoInlineQueryInfoKHR.queryCount = numQuerySamples;
         VkBaseInStructure* pStruct = (VkBaseInStructure*)&encodeFrameInfo->encodeInfo;
-        while (pStruct->pNext) pStruct = (VkBaseInStructure*)pStruct->pNext;
-        pStruct->pNext = (VkBaseInStructure*)&videoInlineQueryInfoKHR;
+        vk::ChainNextVkStruct(*pStruct, videoInlineQueryInfoKHR);
 
         vkDevCtx->CmdEncodeVideoKHR(cmdBuf, &encodeFrameInfo->encodeInfo);
+
+        // Remove the stack pointer from the chain, causes a use after free otherwise in GetEncodeFrameInfoH264
+        encodeFrameInfo->encodeInfo.pNext = videoInlineQueryInfoKHR.pNext;
     }
     else
     {
