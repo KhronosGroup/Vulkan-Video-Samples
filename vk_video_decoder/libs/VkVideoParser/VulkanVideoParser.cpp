@@ -1812,7 +1812,7 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     }
 
     for (uint32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
-        int8_t picIdx = isKeyFrame ? -1 : pin->pic_idx[inIdx];
+        int8_t picIdx = pin->pic_idx[inIdx];
         int8_t dpbSlot = -1;
         if ((picIdx >= 0) && !(refDpbUsedAndValidMask & (1 << picIdx))) {
             dpbSlot = GetPicDpbSlot(picIdx);
