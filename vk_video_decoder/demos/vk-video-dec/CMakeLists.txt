@@ -104,7 +104,7 @@ if(FFMPEG_AVAILABLE)
     if(WIN32)
         list(APPEND libraries PUBLIC ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB})
     else()
-        list(APPEND libraries PRIVATE -lavcodec -lavutil -lavformat)
+        list(APPEND libraries PRIVATE ${FFMPEG_LIBAVCODEC_LIBRARIES} ${FFMPEG_LIBAVUTIL_LIBRARIES} ${FFMPEG_LIBAVFORMAT_LIBRARIES})
     endif()
 endif()
 

@@ -8,7 +8,7 @@
 
 #include <cpudetect.h>
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) && defined(__linux__)
 
 #include <asm/hwcap.h>
 #include <sys/auxv.h>
@@ -100,10 +100,13 @@ SIMD_ISA check_simd_support()
     if (__builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512bw")) { return SIMD_ISA::AVX512; }
     else if (__builtin_cpu_supports("avx2")) { return SIMD_ISA::AVX2; }
     else if (__builtin_cpu_supports("ssse3")) { return SIMD_ISA::SSSE3; };
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) && defined(__linux__)
     long hwcaps = getauxval(AT_HWCAP);
     if(hwcaps & HWCAP_SVE) { return SIMD_ISA::SVE; }
     else if(hwcaps & HWCAP_ASIMD) { return SIMD_ISA::NEON; }
+#elif defined(__aarch64__) && defined(__APPLE__)
+    // Apple Silicon always supports NEON (ASIMD)
+    return SIMD_ISA::NEON;
 #elif defined(__ARM_ARCH_7A__) || defined(_M_ARM64)
     return SIMD_ISA::NEON;
 #endif
