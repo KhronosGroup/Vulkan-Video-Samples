@@ -2,6 +2,9 @@
 #define CPUDETECT_H
 
 #include <assert.h>
+#ifdef _WIN32
+#include <intrin.h>
+#endif
 
 enum SIMD_ISA
 {
