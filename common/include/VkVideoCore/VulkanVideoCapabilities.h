@@ -256,7 +256,19 @@ public:
         }
 
         if (dumpData) {
-            std::cout << "\t\t\t" << ((videoProfile.GetCodecType() == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR) ? "h264" : "h265") << "decode capabilities: " << std::endl;
+            const char* codecName = "unknown";
+            switch ((uint32_t)videoProfile.GetCodecType()) {
+                case VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR: codecName = "h264"; break;
+                case VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR: codecName = "h265"; break;
+                case VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR:  codecName = "av1";  break;
+                case VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR:  codecName = "vp9";  break;
+                case VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR: codecName = "h264"; break;
+                case VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR: codecName = "h265"; break;
+                case VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR:  codecName = "av1";  break;
+                default: break;
+            }
+            const char* opType = videoProfile.IsEncodeCodecType() ? "encode" : "decode";
+            std::cout << "\t\t\t" << codecName << " " << opType << " capabilities: " << std::endl;
 
             if (pVideoCapabilities->flags & VK_VIDEO_CAPABILITY_SEPARATE_REFERENCE_IMAGES_BIT_KHR) {
                 std::cout << "\t\t\t" << "Use separate reference images" << std::endl;
