@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <vector>
 #include <functional>
@@ -114,7 +113,7 @@ struct DecoderConfig {
                     return rtn;
                 }},
             {"--version", "-v", 0, "Show the version",
-                [argv](const char **, const ProgramArgs &a) {
+                [](const char **, const ProgramArgs &) {
                     fprintf(stdout, "%s\n", VKVS_VERSION_STRING);
                     exit(EXIT_SUCCESS);
                     return true;

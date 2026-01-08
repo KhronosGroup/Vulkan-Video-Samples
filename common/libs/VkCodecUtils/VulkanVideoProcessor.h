@@ -123,7 +123,7 @@ private:
     int32_t   m_loopCount;
     uint32_t  m_startFrame;
     int32_t   m_maxFrameCount;
-    const DecoderConfig& m_settings;
+    [[maybe_unused]] const DecoderConfig& m_settings;
 };
 
 #endif /* _VULKANVIDEOPROCESSOR_H_ */

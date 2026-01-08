@@ -19,6 +19,7 @@
 #include <atomic>
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 #include "VkCodecUtils/VulkanDeviceContext.h"
+#include "VkVideoCore/VkVideoCoreProfile.h"
 
 class VulkanVideoSession : public VkVideoRefCountBase
 {
