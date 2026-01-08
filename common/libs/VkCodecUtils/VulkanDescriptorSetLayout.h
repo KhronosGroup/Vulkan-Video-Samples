@@ -270,29 +270,31 @@ public:
             switch (pDescriptorWrite->descriptorType) {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
                 descriptorSize = m_descriptorBufferProperties.samplerDescriptorSize;
-                [[fallthrough]];
+                break;
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                 descriptorSize = m_descriptorBufferProperties.combinedImageSamplerDescriptorSize;
-                [[fallthrough]];
+                break;
             case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
                 descriptorSize = m_descriptorBufferProperties.sampledImageDescriptorSize;
-                [[fallthrough]];
+                break;
             case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-            {
-                assert((dstBindingOffset + descriptorSize) < m_descriptorLayoutSize);
-
-                VkDescriptorGetInfoEXT descriptorInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
-                descriptorInfo.type = pDescriptorWrite->descriptorType;
-                descriptorInfo.data.pCombinedImageSampler = pDescriptorWrite->pImageInfo;
-
-                m_vkDevCtx->GetDescriptorEXT(*m_vkDevCtx, &descriptorInfo, descriptorSize,
-                                             imageDescriptorBufPtr + dstBindingOffset);
-            }
-            break;
+                descriptorSize = m_descriptorBufferProperties.storageImageDescriptorSize;
+                break;
             default:
                 assert(!"Unknown descriptor type");
+                break;
             }
+
+            assert((dstBindingOffset + descriptorSize) < m_descriptorLayoutSize);
+
+            VkDescriptorGetInfoEXT descriptorInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT };
+            descriptorInfo.type = pDescriptorWrite->descriptorType;
+            descriptorInfo.data.pCombinedImageSampler = pDescriptorWrite->pImageInfo;
+
+            m_vkDevCtx->GetDescriptorEXT(*m_vkDevCtx, &descriptorInfo, descriptorSize,
+                                         imageDescriptorBufPtr + dstBindingOffset);
         }
+
         VkBuffer imageDescriptorBuffer = m_resourceDescriptorBuffer->GetBuffer();
         assert(imageDescriptorBuffer);
         VkDeviceOrHostAddressConstKHR imageDescriptorBufferDeviceAddress;
