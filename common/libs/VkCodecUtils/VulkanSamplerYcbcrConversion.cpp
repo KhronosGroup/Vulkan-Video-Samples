@@ -20,7 +20,7 @@
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
 
 bool VulkanSamplerYcbcrConversion::SamplerRequiresUpdate(const VkSamplerCreateInfo* pSamplerCreateInfo,
-                                                         const VkSamplerYcbcrConversionCreateInfo* pSamplerYcbcrConversionCreateInfo)
+                                                         const VkSamplerYcbcrConversionCreateInfo* pSamplerYcbcrConversionCreateInfo) const
 {
     if (pSamplerCreateInfo) {
         if (memcmp(&m_samplerInfo, pSamplerCreateInfo, sizeof(m_samplerInfo))) {

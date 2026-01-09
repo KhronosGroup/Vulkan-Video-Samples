@@ -93,7 +93,7 @@ public:
 
     // sampler requires update if the function were to return true.
     bool SamplerRequiresUpdate(const VkSamplerCreateInfo* pSamplerCreateInfo,
-            const VkSamplerYcbcrConversionCreateInfo* pSamplerYcbcrConversionCreateInfo);
+            const VkSamplerYcbcrConversionCreateInfo* pSamplerYcbcrConversionCreateInfo) const;
 
 private:
     const VulkanDeviceContext*         m_vkDevCtx;

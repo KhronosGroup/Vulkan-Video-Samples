@@ -80,6 +80,38 @@ public:
     VkResult Init(const VkSamplerYcbcrConversionCreateInfo* pYcbcrConversionCreateInfo,
                   const VkSamplerCreateInfo* pSamplerCreateInfo);
 
+    bool IsCompatible(FilterType filterType,
+                      uint32_t maxNumFrames,
+                      VkFormat inputFormat,
+                      VkFormat outputFormat,
+                      const VkSamplerYcbcrConversionCreateInfo* pYcbcrConversionCreateInfo,
+                      const VkSamplerCreateInfo* pSamplerCreateInfo,
+                      const YcbcrPrimariesConstants* pYcbcrPrimariesConstants) const
+    {
+        if (filterType != m_filterType) {
+            return false;
+        }
+        if (maxNumFrames > m_maxNumFrames) {
+            return false;
+        }
+        if (inputFormat != m_inputFormat) {
+            return false;
+        }
+        if (outputFormat != m_outputFormat) {
+            return false;
+        }
+        if (pYcbcrPrimariesConstants &&
+            (pYcbcrPrimariesConstants->kb != m_ycbcrPrimariesConstants.kb ||
+             pYcbcrPrimariesConstants->kr != m_ycbcrPrimariesConstants.kr)) {
+            return false;
+        }
+        // Use existing SamplerRequiresUpdate() - returns true if update needed (i.e., NOT compatible)
+        if (m_samplerYcbcrConversion.SamplerRequiresUpdate(pSamplerCreateInfo, pYcbcrConversionCreateInfo)) {
+            return false;
+        }
+        return true;
+    }
+
     virtual ~VulkanFilterYuvCompute() {
         assert(m_vkDevCtx != nullptr);
     }
