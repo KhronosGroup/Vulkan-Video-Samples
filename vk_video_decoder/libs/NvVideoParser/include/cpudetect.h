@@ -20,7 +20,7 @@ static int inline count_trailing_zeros(unsigned long long resmask)
 #ifdef _WIN64
     unsigned long offset = 0;
     (void)_BitScanForward64(&offset, resmask);
-#elif _WIN32
+#elif defined(_WIN32)
     unsigned long offset = 0;
     unsigned long resmaskLsb = (unsigned long)(resmask & 0xFFFFFFFFULL);
     if (resmaskLsb != 0U) {
