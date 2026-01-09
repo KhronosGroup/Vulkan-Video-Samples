@@ -307,7 +307,7 @@ bool VulkanDeviceContext::HasAllDeviceExtensions(VkPhysicalDevice physDevice, co
     return hasAllRequiredExtensions;
 }
 
-#ifndef _WIN32
+#if defined(__linux__)
 #include <link.h>
 static int DumpSoLibs()
 {
@@ -327,6 +327,19 @@ static int DumpSoLibs()
       map = map->l_next;
     }
 
+    return 0;
+}
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+static int DumpSoLibs()
+{
+    uint32_t count = _dyld_image_count();
+    for (uint32_t i = 0; i < count; i++) {
+        const char* name = _dyld_get_image_name(i);
+        if (name) {
+            std::cout << name << std::endl;
+        }
+    }
     return 0;
 }
 #endif

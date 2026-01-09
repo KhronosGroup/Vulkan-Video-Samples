@@ -82,7 +82,7 @@ if(FFMPEG_AVAILABLE)
     if(WIN32)
         list(APPEND VULKAN_VIDEO_DEC_LIBRARIES PRIVATE ${AVCODEC_LIB} ${AVFORMAT_LIB} ${AVUTIL_LIB})
     else()
-        list(APPEND VULKAN_VIDEO_DEC_LIBRARIES PRIVATE -lavcodec -lavutil -lavformat)
+        list(APPEND VULKAN_VIDEO_DEC_LIBRARIES PRIVATE ${FFMPEG_LIBAVCODEC_LIBRARIES} ${FFMPEG_LIBAVUTIL_LIBRARIES} ${FFMPEG_LIBAVFORMAT_LIBRARIES})
     endif()
 endif()
 ######## END of TODO make FFMPEG linbraries and demuxer optional. ###################
