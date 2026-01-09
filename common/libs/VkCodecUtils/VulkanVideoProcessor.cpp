@@ -265,19 +265,21 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
     /* These below token numbers are based on "chroma_format_idc" from the spec. */
     /* Also, mind the separate_colour_plane_flag, as well. */
     static const char* nvVideoChromaFormat[] = {
-        nullptr,
+        "Invalid",
         "Monochrome",
         "420",
-        nullptr,
+        "Invalid",
         "422",
-        nullptr,
-        nullptr,
-        nullptr,
+        "Invalid",
+        "Invalid",
+        "Invalid",
         "444",
     };
+    const char* pVideoChromaFormat = "Invalid";
     assert(videoFormat->chromaSubsampling < sizeof(nvVideoChromaFormat)/sizeof(nvVideoChromaFormat[0]));
-    assert(nvVideoChromaFormat[videoFormat->chromaSubsampling] != nullptr);
-    const char* pVideoChromaFormat = nvVideoChromaFormat[videoFormat->chromaSubsampling];
+    if (videoFormat->chromaSubsampling < sizeof(nvVideoChromaFormat)/sizeof(nvVideoChromaFormat[0])) {
+        pVideoChromaFormat = nvVideoChromaFormat[videoFormat->chromaSubsampling];
+    }
     if (dumpData) {
         std::cout << "VideoChromaFormat : " << pVideoChromaFormat << std::endl;
     }
@@ -294,8 +296,11 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
         "Reserved6",
         "Reserved7",
     };
+    const char* pVideoFormat = "Invalid";
     assert(videoFormat->video_signal_description.video_format < sizeof(VideoFormat)/sizeof(VideoFormat[0]));
-    const char* pVideoFormat = VideoFormat[videoFormat->video_signal_description.video_format];
+    if (videoFormat->video_signal_description.video_format < sizeof(VideoFormat)/sizeof(VideoFormat[0])) {
+        pVideoFormat = VideoFormat[videoFormat->video_signal_description.video_format];
+    }
     if (dumpData) {
         std::cout << "VideoFormat : " << pVideoFormat << std::endl;
     }
@@ -313,9 +318,25 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
         "SMPTE240M",
         "GenericFilm",
         "BT2020",
+        "XYZ",
+        "SMPTE431",
+        "SMPTE432",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "Reserved",
+        "EBU3213",
+        "Reserved",
     };
-    assert(videoFormat->video_signal_description.color_primaries < sizeof(ColorPrimaries)/sizeof(ColorPrimaries[0]));
-    const char* pColorPrimaries = ColorPrimaries[videoFormat->video_signal_description.color_primaries];
+    const char* pColorPrimaries = "Reserved";
+    if (videoFormat->video_signal_description.color_primaries < sizeof(ColorPrimaries)/sizeof(ColorPrimaries[0])) {
+        pColorPrimaries = ColorPrimaries[videoFormat->video_signal_description.color_primaries];
+    }
     if (dumpData) {
         std::cout << "ColorPrimaries : " << pColorPrimaries << std::endl;
     }
@@ -339,9 +360,12 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
         "BT2020_2",
         "ST2084",
         "ST428_1",
+        "HLG",
     };
-    assert(videoFormat->video_signal_description.transfer_characteristics < sizeof(TransferCharacteristics)/sizeof(TransferCharacteristics[0]));
-    const char* pTransferCharacteristics = TransferCharacteristics[videoFormat->video_signal_description.transfer_characteristics];
+    const char* pTransferCharacteristics = "Reserved";
+    if (videoFormat->video_signal_description.transfer_characteristics < sizeof(TransferCharacteristics)/sizeof(TransferCharacteristics[0])) {
+        pTransferCharacteristics = TransferCharacteristics[videoFormat->video_signal_description.transfer_characteristics];
+    }
     if (dumpData) {
         std::cout << "TransferCharacteristics : " << pTransferCharacteristics << std::endl;
     }
@@ -358,9 +382,15 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
         "YCgCo",
         "BT2020_NCL",
         "BT2020_CL",
+        "SMPTE2085",
+        "CHROMAT_NCL",
+        "CHROMAT_CL",
+        "ICTCP",
     };
-    assert(videoFormat->video_signal_description.matrix_coefficients < sizeof(MatrixCoefficients)/sizeof(MatrixCoefficients[0]));
-    const char* pMatrixCoefficients = MatrixCoefficients[videoFormat->video_signal_description.matrix_coefficients];
+    const char* pMatrixCoefficients = "Reserved";
+    if (videoFormat->video_signal_description.matrix_coefficients < sizeof(MatrixCoefficients)/sizeof(MatrixCoefficients[0])) {
+        pMatrixCoefficients = MatrixCoefficients[videoFormat->video_signal_description.matrix_coefficients];
+    }
     if (dumpData) {
         std::cout << "MatrixCoefficients : " << pMatrixCoefficients << std::endl;
     }
