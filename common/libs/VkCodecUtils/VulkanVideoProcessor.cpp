@@ -265,19 +265,21 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
     /* These below token numbers are based on "chroma_format_idc" from the spec. */
     /* Also, mind the separate_colour_plane_flag, as well. */
     static const char* nvVideoChromaFormat[] = {
-        nullptr,
+        "Invalid",
         "Monochrome",
         "420",
-        nullptr,
+        "Invalid",
         "422",
-        nullptr,
-        nullptr,
-        nullptr,
+        "Invalid",
+        "Invalid",
+        "Invalid",
         "444",
     };
+    const char* pVideoChromaFormat = "Invalid";
     assert(videoFormat->chromaSubsampling < sizeof(nvVideoChromaFormat)/sizeof(nvVideoChromaFormat[0]));
-    assert(nvVideoChromaFormat[videoFormat->chromaSubsampling] != nullptr);
-    const char* pVideoChromaFormat = nvVideoChromaFormat[videoFormat->chromaSubsampling];
+    if (videoFormat->chromaSubsampling < sizeof(nvVideoChromaFormat)/sizeof(nvVideoChromaFormat[0])) {
+        pVideoChromaFormat = nvVideoChromaFormat[videoFormat->chromaSubsampling];
+    }
     if (dumpData) {
         std::cout << "VideoChromaFormat : " << pVideoChromaFormat << std::endl;
     }
@@ -294,8 +296,11 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
         "Reserved6",
         "Reserved7",
     };
+    const char* pVideoFormat = "Invalid";
     assert(videoFormat->video_signal_description.video_format < sizeof(VideoFormat)/sizeof(VideoFormat[0]));
-    const char* pVideoFormat = VideoFormat[videoFormat->video_signal_description.video_format];
+    if (videoFormat->video_signal_description.video_format < sizeof(VideoFormat)/sizeof(VideoFormat[0])) {
+        pVideoFormat = VideoFormat[videoFormat->video_signal_description.video_format];
+    }
     if (dumpData) {
         std::cout << "VideoFormat : " << pVideoFormat << std::endl;
     }
