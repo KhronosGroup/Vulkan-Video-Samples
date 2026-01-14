@@ -19,23 +19,17 @@
 #include <assert.h>
 #include <atomic>
 #include <iostream>
-#include <queue>
-#include <sstream>
 #include <stdint.h>
 #include <string.h>
-#include <string>
 #include <vector>
 
 #include "vulkan_interfaces.h"
 #include "VkCodecUtils/VulkanVideoReferenceCountedPool.h"
 #include "VkCodecUtils/VulkanDeviceContext.h"
-#include "VkCodecUtils/Helpers.h"
 #include "VkCodecUtils/VulkanFilterYuvCompute.h"
 #include "VkCodecUtils/VulkanBistreamBufferImpl.h"
-#include "VkVideoCore/VkVideoCoreProfile.h"
 #include "VkCodecUtils/VulkanVideoSession.h"
 #include "VulkanVideoFrameBuffer/VulkanVideoFrameBuffer.h"
-#include "vkvideo_parser/VulkanVideoParser.h"
 #include "vkvideo_parser/VulkanVideoParserIf.h"
 #include "VkParserVideoPictureParameters.h"
 #include "vkvideo_parser/StdVideoPictureParametersSet.h"
@@ -329,7 +323,7 @@ private:
     uint32_t m_useImageViewArray : 1;
     uint32_t m_useSeparateOutputImages : 1;
     uint32_t m_useLinearOutput : 1;
-    uint32_t m_useSeparateLinearImages : 1;
+    [[maybe_unused]] uint32_t m_useSeparateLinearImages : 1;
     uint32_t m_useTransferOperation : 1;
     uint32_t m_resetDecoder : 1;
     uint32_t m_dumpDecodeData : 1;

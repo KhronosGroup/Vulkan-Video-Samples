@@ -21,8 +21,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <algorithm>
-#include <cstdint>
-#include <climits>
 #include "VulkanVideoParserIf.h"
 
 #include "VulkanAV1Decoder.h"
@@ -2369,7 +2367,8 @@ bool VulkanAV1Decoder::ParseOneFrame(const uint8_t*const pFrameStart, const int3
             if (hdr.type != AV1_OBU_FRAME) break;
 
 			byte_alignment();
-        }   // fall through
+        }
+        [[fallthrough]];
 
         case AV1_OBU_TILE_GROUP:
         {

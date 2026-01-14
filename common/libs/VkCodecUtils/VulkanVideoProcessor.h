@@ -72,7 +72,7 @@ public:
 
 private:
 
-    VulkanVideoProcessor(const DecoderConfig& settings, const VulkanDeviceContext* vkDevCtx)
+    VulkanVideoProcessor(const DecoderConfig&, const VulkanDeviceContext* vkDevCtx)
         : m_refCount(0),
           m_vkDevCtx(vkDevCtx),
           m_videoStreamDemuxer()
@@ -88,7 +88,6 @@ private:
         , m_loopCount(1)
         , m_startFrame(0)
         , m_maxFrameCount(-1)
-        , m_settings(settings)
     {
     }
 
@@ -123,7 +122,6 @@ private:
     int32_t   m_loopCount;
     uint32_t  m_startFrame;
     int32_t   m_maxFrameCount;
-    const DecoderConfig& m_settings;
 };
 
 #endif /* _VULKANVIDEOPROCESSOR_H_ */
