@@ -1153,7 +1153,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     VkVideoEndCodingInfoKHR decodeEndInfo = { VK_STRUCTURE_TYPE_VIDEO_END_CODING_INFO_KHR };
     m_vkDevCtx->CmdEndVideoCodingKHR(frameDataSlot.commandBuffer, &decodeEndInfo);
 
-    if (m_useTransferOperation == VK_TRUE) {
+    if (m_useTransferOperation == VK_TRUE && m_transferCommandPool == VK_NULL_HANDLE) {
 
         assert((pOutputPictureResource != nullptr) && (pOutputPictureResourceInfo != nullptr));
 
@@ -1286,6 +1286,47 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                 assert(result == VK_SUCCESS);
             }
         }
+    }
+
+    if (m_useTransferOperation == VK_TRUE && m_transferCommandPool != VK_NULL_HANDLE) {
+        VkFence transferCompleteFence = VkFence();
+        VkFenceCreateInfo fence_info = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        assert(m_vkDevCtx->CreateFence(*m_vkDevCtx, &fence_info, nullptr, &transferCompleteFence) == VK_SUCCESS);
+        const VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        assert((pOutputPictureResource != nullptr) && (pOutputPictureResourceInfo != nullptr));
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        beginInfo.pInheritanceInfo = nullptr;
+
+        m_vkDevCtx->BeginCommandBuffer(m_transferCommandBuffers[0], &beginInfo);
+
+        CopyOptimalToLinearImage(m_transferCommandBuffers[0],
+                                 *pOutputPictureResource,
+                                 *pOutputPictureResourceInfo,
+                                 *pFrameFilterOutResource,
+                                 *pFrameFilterOutResourceInfo,
+                                 &frameSynchronizationInfo);
+        m_vkDevCtx->EndCommandBuffer(m_transferCommandBuffers[0]);
+
+        const VkSubmitInfo transferSubmitInfo{
+            VK_STRUCTURE_TYPE_SUBMIT_INFO, // VkStructureType                              sType;
+            nullptr,                       // const void*                                  pNext;
+            1u,                            // uint32_t                                             waitSemaphoreCount;
+            &videoDecodeCompleteSemaphore,                   // const VkSemaphore*                   pWaitSemaphores;
+            &waitDstStageMask,             // const VkPipelineStageFlags*  pWaitDstStageMask;
+            1u,                            // uint32_t                                             commandBufferCount;
+            &m_transferCommandBuffers[0],           // const VkCommandBuffer*               pCommandBuffers;
+            1u,                            // uint32_t                                             signalSemaphoreCount;
+            &videoDecodeCompleteSemaphore,                   // const VkSemaphore*                   pSignalSemaphores;
+        };
+        assert(VK_NOT_READY == m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, transferCompleteFence));
+        VkResult result = m_vkDevCtx->MultiThreadedQueueSubmit(VulkanDeviceContext::TRANSFER, m_vkDevCtx->GetTransferQueueFamilyIdx(),
+                                                               1, &transferSubmitInfo, transferCompleteFence);
+        result = m_vkDevCtx->WaitForFences(*m_vkDevCtx, 1, &transferCompleteFence, true, gFenceTimeout);
+        assert(result == VK_SUCCESS);
+        result = m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, transferCompleteFence);
+        assert(result == VK_SUCCESS);
     }
 
     if (m_dumpDecodeData && (m_hwLoadBalancingTimelineSemaphore != VK_NULL_HANDLE)) { // For TL semaphore debug
