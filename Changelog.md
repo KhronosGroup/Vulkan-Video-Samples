@@ -1,3 +1,12 @@
+v0.3.9:
+  - Add clang compiler support for Linux and Windows builds
+  - Add -Wundef warning flag and fix undefined macro usage
+  - Fix clang compiler warnings
+  - Fix VkSharedBaseObj re-entrancy issue in Reset()
+  - Fix VkVideoDecoder computeFilter on resolution change
+  - Fix correct descriptor size for each descriptor type
+  - Fix inverted noPresent flag in InitVulkanDecoderDevice call
+
 v0.3.8:
   - Fix the build when no shaderc package is available on the host system
   - Optimize package download in FindShaderc and FindVulkanSDK
