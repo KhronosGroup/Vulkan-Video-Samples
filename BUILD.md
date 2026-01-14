@@ -47,6 +47,7 @@ cmake -DBUILD_DECODER=ON -DBUILD_ENCODER=OFF -DBUILD_VIDEO_PARSER=ON ...
 Windows 10 or Windows 11 with the following software packages:
 
 - Microsoft Visual Studio VS2019 or later (any version)
+  - C++ Standard: C++17
 - [CMake](http://www.cmake.org/download/)
   - Tell the installer to "Add CMake to the system PATH" environment variable
 - [Python 3](https://www.python.org/downloads)
@@ -101,7 +102,8 @@ cmake --build build --config Release --target INSTALL
 
 This repository has been tested on recent Ubuntu LTS versions. Minimum requirements:
 - Ubuntu 18.04.5 LTS or later
-- GCC 7.5.0 or Clang 6.0.0
+- GCC 9.1 or Clang 6.0.0
+  - C++ Standard: C++17
 - Vulkan SDK vulkansdk-linux-x86_64-1.4.304.0.tar.xz or later for x86_64
 
 Required packages:
