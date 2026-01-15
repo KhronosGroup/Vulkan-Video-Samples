@@ -232,6 +232,8 @@ private:
         , m_maxStreamBufferSize(2097152) // 2MB max bitstream by default
         , m_filterType(filterType)
     {
+        // FIXME: m_useSeparateLinearImages is currently unused - remove or implement
+        (void)m_useSeparateLinearImages;
 
         assert(m_vkDevCtx->GetVideoDecodeQueueFamilyIdx() != -1);
         assert(m_vkDevCtx->GetVideoDecodeNumQueues() > 0);
@@ -323,7 +325,7 @@ private:
     uint32_t m_useImageViewArray : 1;
     uint32_t m_useSeparateOutputImages : 1;
     uint32_t m_useLinearOutput : 1;
-    [[maybe_unused]] uint32_t m_useSeparateLinearImages : 1;
+    uint32_t m_useSeparateLinearImages : 1;
     uint32_t m_useTransferOperation : 1;
     uint32_t m_resetDecoder : 1;
     uint32_t m_dumpDecodeData : 1;
