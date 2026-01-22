@@ -276,7 +276,7 @@
       "name": "av1_argon_test1019",
       "codec": "av1",
       "description": "Test AV1 decoding with Argon test 1019 sample",
-      "expected_output_md5": "089cb0cf1de83445f9b90f83743706c8",
+      "expected_output_md5": "45dad5686d1111b48a05aac90996bb61",
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/av1/av1-argon_test1019.obu",
       "source_checksum": "c11d5f0dcebb5def9d24752bca1594d3182e19661d3bf4b53473b2da935cd7d8",
       "source_filepath": "video/av1/av1-argon_test1019.obu"
@@ -285,7 +285,7 @@
       "name": "av1_argon_test787",
       "codec": "av1",
       "description": "Test AV1 decoding with Argon test 787 sample",
-      "expected_output_md5": "efe28ed614b697e6d3cd50b46a04ff8e",
+      "expected_output_md5": "1cb4bfcbb7ee85024f983705d077b38e",
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/av1/av1-argon_test787.obu",
       "source_checksum": "3c2df56e296cf387efb0474d7c588d68eca55592e15d4731bb85e2122059d367",
       "source_filepath": "video/av1/av1-argon_test787.obu"
@@ -294,7 +294,7 @@
       "name": "av1_argon_test9354_2",
       "codec": "av1",
       "description": "Test AV1 decoding with Argon test 9354_2 sample",
-      "expected_output_md5": "2d10309e790091bef9fcee3dea2c44dd",
+      "expected_output_md5": "0362854aa2edbb06770569c02d6d9cb9",
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/av1/av1-argon_test9354_2.obu",
       "source_checksum": "23cc663c961262f4417adcd8f25ef6c92ba47f76bdfb3cafe6f1e78c27a03211",
       "source_filepath": "video/av1/av1-argon_test9354_2.obu"
