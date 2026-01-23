@@ -26,6 +26,23 @@ from pathlib import Path
 DEFAULT_TEST_TIMEOUT = 120  # seconds
 
 
+def normalize_test_name(test_name: str) -> str:
+    """
+    Normalize test name by removing decode_/encode_ prefix if present.
+
+    Args:
+        test_name: Original test name
+
+    Returns:
+        Normalized test name without decode_/encode_ prefix
+    """
+    if test_name.startswith("decode_"):
+        return test_name[7:]  # len("decode_") == 7
+    if test_name.startswith("encode_"):
+        return test_name[7:]  # len("encode_") == 7
+    return test_name
+
+
 class ZipSlipError(Exception):
     """Raised when a zip file contains unsafe paths (zip slip attack)"""
 
