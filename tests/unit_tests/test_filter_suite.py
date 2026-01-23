@@ -171,8 +171,8 @@ class TestFilterByPattern:
 class TestFilterBySkipList:
     """Tests for skip list filtering"""
 
-    def test_skip_mode_enabled_skips_skipped(self):
-        """Test ENABLED mode skips skipped tests"""
+    def test_skip_mode_enabled_marks_skipped(self):
+        """Test ENABLED mode includes skipped tests but marks them"""
         skip_rules = [
             SkipRule(name="skipped_test", test_type="decode", format="vvs")
         ]
@@ -188,8 +188,10 @@ class TestFilterBySkipList:
             samples, skip_filter=SkipFilter.ENABLED,
             test_format="vvs", test_type="decode"
         )
-        assert len(result) == 1
-        assert result[0].name == "allowed_test"
+        # Both tests are in the result, but skipped_test is marked
+        assert len(result) == 2
+        assert "skipped_test" in framework.skipped_samples
+        assert "allowed_test" not in framework.skipped_samples
 
     def test_skip_mode_skipped_only_skipped(self):
         """Test SKIPPED mode runs only skipped tests"""
@@ -248,6 +250,8 @@ class TestFilterBySkipList:
         )
         assert len(result) == 1
         assert result[0].name == "skipped_test"
+        # Verify it's NOT marked as skipped (so it will actually run)
+        assert "skipped_test" not in framework.skipped_samples
 
 
 class TestFilterCombined:
