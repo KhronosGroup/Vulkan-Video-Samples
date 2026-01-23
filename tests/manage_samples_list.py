@@ -33,6 +33,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
+# Allow running both as package and as script (exception for this file only)
+if __package__ is None or __package__ == "":
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from tests.libs.video_test_utils import normalize_test_name  # noqa: E402
+
 
 # Default file paths
 DEFAULT_SKIP_LIST = Path(__file__).parent / "skipped_samples.json"
@@ -200,23 +206,6 @@ def get_list_input(prompt: str, default: Optional[List[str]] = None,
                 continue
 
         return items
-
-
-def normalize_test_name(test_name: str) -> str:
-    """
-    Normalize test name by removing decode_/encode_ prefix if present.
-
-    Args:
-        test_name: Original test name
-
-    Returns:
-        Normalized test name without decode_/encode_ prefix
-    """
-    if test_name.startswith("decode_"):
-        return test_name[7:]  # len("decode_") == 7
-    if test_name.startswith("encode_"):
-        return test_name[7:]  # len("encode_") == 7
-    return test_name
 
 
 def add_skip_entry(  # pylint: disable=too-many-locals

@@ -23,7 +23,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from tests.libs.video_test_config_base import (
     BaseTestConfig,
@@ -101,6 +101,12 @@ class VulkanVideoTestFrameworkBase:
         self.results: List[TestResult] = []
         self._detected_driver: Optional[str] = None
         self._test_pattern_active = False
+        self._skipped_samples: Dict[str, Optional[SkipRule]] = {}
+
+    @property
+    def skipped_samples(self) -> Dict[str, Optional[SkipRule]]:
+        """Samples marked as skipped during filtering (read-only access)."""
+        return dict(self._skipped_samples)
 
     @property
     def keep_files(self) -> bool:
@@ -329,7 +335,7 @@ class VulkanVideoTestFrameworkBase:
 
     def print_summary(  # pylint: disable=too-many-locals
             self, results: List[TestResult] = None,
-            test_type: str = "TEST", all_samples: list = None) -> bool:
+            test_type: str = "TEST") -> bool:
         """Print comprehensive test results summary with codec breakdown"""
         if results is None:
             results = self.results
@@ -350,31 +356,14 @@ class VulkanVideoTestFrameworkBase:
 
         print("-" * 70)
 
-        skipped_count = 0
-        non_skipped_count = 0
-        if not self._test_pattern_active:
-            if self.skip_filter == SkipFilter.SKIPPED and all_samples:
-                non_skipped_count = self._count_non_skipped_tests(all_samples)
-            elif self.skip_filter == SkipFilter.ENABLED and all_samples:
-                skipped_count = self._count_skipped_tests(all_samples)
-
-        total_including_all = len(results) + skipped_count + non_skipped_count
-        print(f"Total Tests:   {total_including_all:3}")
-        if not self._test_pattern_active:
-            only_skipped = self.skip_filter == SkipFilter.SKIPPED
-            if only_skipped and non_skipped_count > 0:
-                print(f"Non-skipped (skipped): {non_skipped_count:3} "
-                      "(--only-skipped mode)")
-            elif self.skip_filter == SkipFilter.ENABLED and skipped_count > 0:
-                print(f"Skipped:       {skipped_count:3} "
-                      "(use --ignore-skip-list to run)")
-
+        # Skipped tests are now included in results, so just use len(results)
+        print(f"Total Tests:   {len(results):3}")
         print(f"Passed:        {passed:3}")
         print(f"Crashed:       {crashed:3}")
         print(f"Failed:        {failed:3}")
         print(f"Not Supported: {not_supported:3}")
         if skipped_hw > 0:
-            print(f"Skipped (HW):  {skipped_hw:3} (in skip list for driver)")
+            print(f"Skipped:       {skipped_hw:3} (in skip list)")
         effective_total = len(results) - not_supported - skipped_hw
         if effective_total > 0:
             print(f"Success Rate: {passed/effective_total*100:.1f}%")
@@ -652,6 +641,7 @@ class VulkanVideoTestFrameworkBase:
     ) -> list:
         """Filter test samples based on codec, pattern, and skip list."""
         self._test_pattern_active = test_pattern is not None
+        self._skipped_samples = {}  # Maps sample name to skip_rule
         filtered_samples = []
 
         for sample in samples:
@@ -682,14 +672,36 @@ class VulkanVideoTestFrameworkBase:
             # When user explicitly requests a test (exact or pattern match),
             # bypass skip list filtering
             user_requested = exact_match or pattern_match
-            if skipped_mode and not is_universal_skip and not user_requested:
+            if skipped_mode and not is_all_drivers_skip and not user_requested:
                 continue
-            if enabled_mode and is_universal_skip and not user_requested:
+            if enabled_mode and is_all_drivers_skip and not user_requested:
+                # Track skipped samples - they will be shown but not run
+                self._skipped_samples[sample.name] = skip_rule
+                filtered_samples.append(sample)
                 continue
 
             filtered_samples.append(sample)
 
         return filtered_samples
+
+    def _should_mask_as_skipped(
+        self, skip_rule: Optional[SkipRule], result: TestResult
+    ) -> bool:
+        """Check if a failing test should be masked as SKIPPED (skip list).
+
+        A test is masked when:
+        - It has a skip rule (in the skip list)
+        - We're not in only_skipped mode
+        - The user didn't explicitly request this test with -t pattern
+        - The test failed (CRASH or ERROR status)
+        """
+        if skip_rule is None:
+            return False
+        if self.only_skipped:
+            return False
+        if self._test_pattern_active:
+            return False
+        return result.status in (VideoTestStatus.CRASH, VideoTestStatus.ERROR)
 
     def run_test_suite_base(self, test_configs: list,
                             test_type: str = "decode") -> List[TestResult]:
@@ -707,6 +719,26 @@ class VulkanVideoTestFrameworkBase:
 
         for i, config in enumerate(test_configs, 1):
             test_name = getattr(config, 'display_name', config.name)
+
+            # Check if this test is in the universal skip list
+            if config.name in self._skipped_samples:
+                skip_rule = self._skipped_samples[config.name]
+                reason = skip_rule.reason if skip_rule else "In skip list"
+                print(f"[{i}/{total}] Skipping: {test_name} ({reason})")
+                skipped_result = TestResult(
+                    config=config,
+                    returncode=0,
+                    execution_time=0,
+                    status=VideoTestStatus.SKIPPED,
+                    stdout="",
+                    stderr="",
+                    error_message=f"Skipped: {reason}",
+                )
+                results.append(skipped_result)
+                self.results.append(skipped_result)
+                print()
+                continue
+
             print(f"[{i}/{total}] Running: {test_name}")
 
             try:
@@ -719,13 +751,7 @@ class VulkanVideoTestFrameworkBase:
                     current_driver=self.current_driver, test_type=test_type
                 )
 
-                # Mark failed tests as skipped if in skip list for this driver
-                # But don't mask results when user explicitly requests a test
-                # with -t pattern
-                if (skip_rule is not None and not self.only_skipped and
-                        not self._test_pattern_active and
-                        result.status in (VideoTestStatus.CRASH,
-                                          VideoTestStatus.ERROR)):
+                if self._should_mask_as_skipped(skip_rule, result):
                     driver_info = (f"driver '{self.current_driver}'"
                                    if self._detected_driver
                                    else f"drivers {skip_rule.drivers}")

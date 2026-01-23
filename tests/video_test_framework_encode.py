@@ -428,12 +428,9 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
         return self.run_test_suite_base(test_configs, test_type="encode")
 
     def print_summary(self, results: List[TestResult] = None,
-                      test_type: str = "ENCODER",
-                      all_samples: list = None) -> bool:
+                      test_type: str = "ENCODER") -> bool:
         """Print comprehensive test results summary"""
-        if all_samples is None:
-            all_samples = self.encode_samples
-        return super().print_summary(results, test_type, all_samples)
+        return super().print_summary(results, test_type)
 
 
 def list_encoder_samples(test_suite: str = "encode_samples.json"):
