@@ -35,15 +35,14 @@
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
 #include "crcgenerator.h"
 
-int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
-                                         VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
-                                         VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
-                                         DecoderConfig& programConfig)
+VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
+                                          VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
+                                          VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
+                                          DecoderConfig& programConfig)
 {
 
     int32_t videoQueueIndx =  programConfig.queueId;
     const uint32_t loopCount = programConfig.loopCount;
-    const uint32_t startFrame = 0;
     const int32_t  maxFrameCount = programConfig.maxFrameCount;
     const int32_t numDecodeImagesInFlight = std::max(programConfig.numDecodeImagesInFlight, 4);
     const int32_t numDecodeImagesToPreallocate = programConfig.numDecodeImagesToPreallocate;
@@ -59,8 +58,7 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     if (vkDevCtx->GetVideoDecodeQueue(videoQueueIndx) == VkQueue()) {
         std::cerr << "videoQueueIndx is out of bounds: " << videoQueueIndx <<
                      " Max decode queues: " << vkDevCtx->GetVideoDecodeNumQueues() << std::endl;
-        assert(!"Invalid Video Queue");
-        return -1;
+        return VK_ERROR_FEATURE_NOT_PRESENT;
     }
 
     Deinit();
@@ -79,9 +77,9 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     }
 
     VkResult result =  VulkanVideoFrameBuffer::Create(vkDevCtx, m_vkVideoFrameBuffer);
-    assert(result == VK_SUCCESS);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nERROR: Create VulkanVideoFrameBuffer result: 0x%x\n", result);
+        return result;
     }
 
     m_frameToFile = frameToFile;
@@ -112,9 +110,9 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
                                     numDecodeImagesToPreallocate,
                                     numBitstreamBuffersToPreallocate,
                                     m_vkVideoDecoder);
-    assert(result == VK_SUCCESS);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nERROR: Create VkVideoDecoder result: 0x%x\n", result);
+        return result;
     }
 
     VkVideoCoreProfile videoProfile(m_videoStreamDemuxer->GetVideoCodec(),
@@ -127,8 +125,7 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
                                                        vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        m_videoStreamDemuxer->GetVideoCodec())) {
         std::cout << "*** The video codec " << VkVideoCoreProfile::CodecToName(m_videoStreamDemuxer->GetVideoCodec()) << " is not supported! ***" << std::endl;
-        assert(!"The video codec is not supported");
-        return -1;
+        return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 
     VkVideoCapabilitiesKHR videoCapabilities;
@@ -140,8 +137,7 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     if (result != VK_SUCCESS) {
         std::cerr << "FATAL ERROR: Video decode capabilities not supported for this codec/profile!" << std::endl;
         std::cerr << "GetVideoDecodeCapabilities failed with error: " << string_VkResult_Extended(result) << std::endl;
-        // Return negated VkResult to preserve error information for caller
-        return -static_cast<int32_t>(result);
+        return result;
     }
 
     // Validate video dimensions against hardware capabilities
@@ -154,8 +150,7 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
                   << " is outside supported range ["
                   << videoCapabilities.minCodedExtent.width << ", "
                   << videoCapabilities.maxCodedExtent.width << "] ***" << std::endl;
-        // Return negated VK_ERROR_FORMAT_NOT_SUPPORTED to indicate unsupported dimensions
-        return -static_cast<int32_t>(VK_ERROR_FORMAT_NOT_SUPPORTED);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
     }
 
     if (videoHeight < videoCapabilities.minCodedExtent.height ||
@@ -164,8 +159,7 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
                   << " is outside supported range ["
                   << videoCapabilities.minCodedExtent.height << ", "
                   << videoCapabilities.maxCodedExtent.height << "] ***" << std::endl;
-        // Return negated VK_ERROR_FORMAT_NOT_SUPPORTED to indicate unsupported dimensions
-        return -static_cast<int32_t>(VK_ERROR_FORMAT_NOT_SUPPORTED);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
     }
 
     const uint32_t defaultMinBufferSize = 2 * 1024 * 1024; // 2MB
@@ -174,16 +168,16 @@ int32_t VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
                           defaultMinBufferSize,
                           (uint32_t)videoCapabilities.minBitstreamBufferOffsetAlignment,
                           (uint32_t)videoCapabilities.minBitstreamBufferSizeAlignment);
-    assert(result == VK_SUCCESS);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nERROR: CreateParser() result: 0x%x\n", result);
+        return result;
     }
 
     m_loopCount = loopCount;
-    m_startFrame = startFrame;
+    m_startFrame = 0;
     m_maxFrameCount = maxFrameCount;
 
-    return 0;
+    return VK_SUCCESS;
 }
 
 VkResult VulkanVideoProcessor::Create(const DecoderConfig& settings, const VulkanDeviceContext* vkDevCtx,

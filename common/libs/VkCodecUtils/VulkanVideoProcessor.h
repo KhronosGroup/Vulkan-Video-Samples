@@ -41,10 +41,10 @@ public:
     static VkResult Create(const DecoderConfig& settings, const VulkanDeviceContext* vkDevCtx,
                            VkSharedBaseObj<VulkanVideoProcessor>& vulkanVideoProcessor = invalidVulkanVideoProcessor);
 
-    int32_t Initialize(const VulkanDeviceContext* vkDevCtx,
-                       VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
-                       VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
-                       DecoderConfig& programConfig);
+    VkResult Initialize(const VulkanDeviceContext* vkDevCtx,
+                        VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer,
+                        VkSharedBaseObj<VkVideoFrameOutput>& frameToFile,
+                        DecoderConfig& programConfig);
 
     void Deinit();
 
