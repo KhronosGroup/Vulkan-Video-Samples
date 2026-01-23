@@ -155,11 +155,10 @@ int main(int argc, const char **argv)
             }
         }
 
-        int32_t initResult = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
-        if (initResult != 0) {
+        result = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        if (result != VK_SUCCESS) {
             fprintf(stderr, "Failed to initialize video processor\n");
-            // Check if the error indicates "unsupported" (negated VkResult values)
-            if (initResult < 0 && IsVideoProfileNotSupportedError(static_cast<VkResult>(-initResult))) {
+            if (IsVideoProfileNotSupportedError(result)) {
                 return VVS_EXIT_UNSUPPORTED;
             }
             return EXIT_FAILURE;
@@ -241,11 +240,10 @@ int main(int argc, const char **argv)
             }
         }
 
-        int32_t initResult = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
-        if (initResult != 0) {
+        result = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
+        if (result != VK_SUCCESS) {
             fprintf(stderr, "Failed to initialize video processor\n");
-            // Check if the error indicates "unsupported" (negated VkResult values)
-            if (initResult < 0 && IsVideoProfileNotSupportedError(static_cast<VkResult>(-initResult))) {
+            if (IsVideoProfileNotSupportedError(result)) {
                 return VVS_EXIT_UNSUPPORTED;
             }
             return EXIT_FAILURE;
