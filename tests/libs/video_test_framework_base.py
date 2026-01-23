@@ -660,7 +660,8 @@ class VulkanVideoTestFrameworkBase:
 
             display_name = getattr(sample, 'display_name', sample.name)
             base_name = sample.name
-            exact_match = test_pattern in (display_name, base_name)
+            exact_match = (test_pattern and
+                           test_pattern in (display_name, base_name))
             pattern_match = test_pattern and (
                 fnmatch.fnmatch(display_name, test_pattern) or
                 fnmatch.fnmatch(base_name, test_pattern)
@@ -673,14 +674,17 @@ class VulkanVideoTestFrameworkBase:
                 sample.name, test_format, self._skip_rules,
                 current_driver=None, test_type=test_type
             )
-            is_universal_skip = (skip_rule is not None and
-                                 "all" in skip_rule.drivers)
+            is_all_drivers_skip = (skip_rule is not None and
+                                   "all" in skip_rule.drivers)
 
             skipped_mode = skip_filter == SkipFilter.SKIPPED
             enabled_mode = skip_filter == SkipFilter.ENABLED
-            if skipped_mode and not is_universal_skip and not exact_match:
+            # When user explicitly requests a test (exact or pattern match),
+            # bypass skip list filtering
+            user_requested = exact_match or pattern_match
+            if skipped_mode and not is_universal_skip and not user_requested:
                 continue
-            if enabled_mode and is_universal_skip and not exact_match:
+            if enabled_mode and is_universal_skip and not user_requested:
                 continue
 
             filtered_samples.append(sample)
@@ -716,7 +720,10 @@ class VulkanVideoTestFrameworkBase:
                 )
 
                 # Mark failed tests as skipped if in skip list for this driver
+                # But don't mask results when user explicitly requests a test
+                # with -t pattern
                 if (skip_rule is not None and not self.only_skipped and
+                        not self._test_pattern_active and
                         result.status in (VideoTestStatus.CRASH,
                                           VideoTestStatus.ERROR)):
                     driver_info = (f"driver '{self.current_driver}'"
