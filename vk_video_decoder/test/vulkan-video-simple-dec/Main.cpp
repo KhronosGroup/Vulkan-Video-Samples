@@ -157,6 +157,9 @@ int main(int argc, const char** argv)
                                       vulkanVideoDecoder);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "Error creating video decoder\n");
+        if (IsVideoUnsupportedResult(result)) {
+            return VVS_EXIT_UNSUPPORTED;
+        }
         return EXIT_FAILURE;
     }
 
