@@ -158,7 +158,7 @@ int main(int argc, const char **argv)
         result = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
         if (result != VK_SUCCESS) {
             fprintf(stderr, "Failed to initialize video processor\n");
-            if (IsVideoProfileNotSupportedError(result)) {
+            if (IsVideoUnsupportedResult(result)) {
                 return VVS_EXIT_UNSUPPORTED;
             }
             return EXIT_FAILURE;
@@ -243,7 +243,7 @@ int main(int argc, const char **argv)
         result = vulkanVideoProcessor->Initialize(&vkDevCtxt, videoStreamDemuxer, frameToFile, decoderConfig);
         if (result != VK_SUCCESS) {
             fprintf(stderr, "Failed to initialize video processor\n");
-            if (IsVideoProfileNotSupportedError(result)) {
+            if (IsVideoUnsupportedResult(result)) {
                 return VVS_EXIT_UNSUPPORTED;
             }
             return EXIT_FAILURE;
