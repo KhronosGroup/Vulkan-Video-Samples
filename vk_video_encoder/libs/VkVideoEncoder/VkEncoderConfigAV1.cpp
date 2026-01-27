@@ -201,7 +201,7 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
                                                          intraRefreshCapabilities);
     if (result != VK_SUCCESS) {
         // Distinguish between "not supported" and "actual error"
-        if (IsVideoProfileNotSupportedError(result)) {
+        if (IsVideoUnsupportedResult(result)) {
             // Not supported by hardware/driver - return VK_ERROR_INCOMPATIBLE_DRIVER
             std::cerr << "*** Video encode capabilities not supported by hardware/driver ("
                       << string_VkResult_Extended(result) << ") ***" << std::endl;
