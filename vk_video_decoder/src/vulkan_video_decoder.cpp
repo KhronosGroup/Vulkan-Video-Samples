@@ -222,14 +222,10 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
         return result;
     }
 
-    int32_t initStatus = m_vulkanVideoProcessor->Initialize(&m_vkDevCtxt,
+    result = m_vulkanVideoProcessor->Initialize(&m_vkDevCtxt,
                                                             videoStreamDemuxer,
                                                             frameToFile,
                                                             m_decoderConfig);
-    if (initStatus != 0) {
-        return VK_ERROR_INITIALIZATION_FAILED;
-    }
-
     return result;
 }
 

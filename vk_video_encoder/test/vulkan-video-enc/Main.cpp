@@ -27,6 +27,9 @@ int main(int argc, char** argv)
 
     if (result != VK_SUCCESS) {
         std::cerr << "Error creating the encoder instance: " << result << std::endl;
+        if (IsVideoUnsupportedResult(result)) {
+            return VVS_EXIT_UNSUPPORTED;
+        }
         return EXIT_FAILURE;
     }
 
