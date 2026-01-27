@@ -17,6 +17,7 @@
 #include <iostream>
 
 #include "VkCodecUtils/DecoderConfig.h"
+#include "VkVSCommon.h"
 #include "vulkan_video_decoder.h"
 #include "VkVideoCore/VkVideoCoreProfile.h"
 #include "VkCodecUtils/VulkanFrame.h"
@@ -77,6 +78,9 @@ int main(int argc, const char** argv)
 
     if (result != VK_SUCCESS) {
         printf("Could not initialize the Vulkan decoder device!\n");
+        if (IsVideoUnsupportedResult(result)) {
+            return VVS_EXIT_UNSUPPORTED;
+        }
         return EXIT_FAILURE;
     }
 
@@ -125,7 +129,10 @@ int main(int argc, const char** argv)
                                               VK_NULL_HANDLE,
                                               decoderConfig.verbose);
         if (result != VK_SUCCESS) {
-            assert(!"Can't initialize the Vulkan physical device!");
+            fprintf(stderr, "Can't initialize the Vulkan physical device!\n");
+            if (IsVideoUnsupportedResult(result)) {
+                return VVS_EXIT_UNSUPPORTED;
+            }
             return EXIT_FAILURE;
         }
         assert(displayShell->PhysDeviceCanPresent(vkDevCtxt.getPhysicalDevice(),
@@ -167,6 +174,9 @@ int main(int argc, const char** argv)
                                         vulkanVideoDecoder);
         if (result != VK_SUCCESS) {
             fprintf(stderr, "Error creating video decoder\n");
+            if (IsVideoUnsupportedResult(result)) {
+                return VVS_EXIT_UNSUPPORTED;
+            }
             return EXIT_FAILURE;
         }
 
@@ -192,7 +202,10 @@ int main(int argc, const char** argv)
                                               VK_NULL_HANDLE,
                                               decoderConfig.verbose);
         if (result != VK_SUCCESS) {
-            assert(!"Can't initialize the Vulkan physical device!");
+            fprintf(stderr, "Can't initialize the Vulkan physical device!\n");
+            if (IsVideoUnsupportedResult(result)) {
+                return VVS_EXIT_UNSUPPORTED;
+            }
             return EXIT_FAILURE;
         }
 
@@ -208,7 +221,10 @@ int main(int argc, const char** argv)
                                               requestVideoComputeQueueMask != 0   // createComputeQueue
                                               );
         if (result != VK_SUCCESS) {
-            assert(!"Failed to create Vulkan device!");
+            fprintf(stderr, "Failed to create Vulkan device!\n");
+            if (IsVideoUnsupportedResult(result)) {
+                return VVS_EXIT_UNSUPPORTED;
+            }
             return EXIT_FAILURE;
         }
 
@@ -238,6 +254,9 @@ int main(int argc, const char** argv)
                                         vulkanVideoDecoder);
         if (result != VK_SUCCESS) {
             fprintf(stderr, "Error creating video decoder\n");
+            if (IsVideoUnsupportedResult(result)) {
+                return VVS_EXIT_UNSUPPORTED;
+            }
             return EXIT_FAILURE;
         }
 
