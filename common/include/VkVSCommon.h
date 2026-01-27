@@ -78,9 +78,9 @@ inline const char* string_VkResult_Extended(VkResult result) {
 }
 
 // Helper function to check if a VkResult indicates video profile/feature not supported
-// Returns true if the error indicates the hardware/driver doesn't support the requested
-// video codec profile or feature (as opposed to an actual runtime error)
-inline bool IsVideoProfileNotSupportedError(VkResult result) {
+// Returns true for video-specific KHR errors (profile, format, codec, std version)
+// and general Vulkan capability errors (format, feature, driver, extension)
+inline bool IsVideoUnsupportedResult(VkResult result) {
     return result == VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR ||
            result == VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR ||
            result == VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR ||
