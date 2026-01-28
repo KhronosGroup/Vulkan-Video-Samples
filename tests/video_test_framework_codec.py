@@ -382,58 +382,22 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
         total_failed = sum(1 for r in self.all_results
                            if r.status == VideoTestStatus.ERROR)
         # Count tests skipped due to driver-specific skip rules
-        total_skipped_hw = sum(1 for r in self.all_results
-                               if r.status == VideoTestStatus.SKIPPED)
-
-        # Count skipped tests for display and total calculation
-        # When a test pattern filter is active, don't add skipped tests
-        # from the full suite - only show filtered results
-        if self._test_pattern_active:
-            total_skipped = 0
-        else:
-            total_skipped = self._count_skipped_tests()
-
-        # Calculate total_including_skipped based on mode
-        if self._test_pattern_active:
-            # When filtering by test pattern, only show filtered test count
-            total_including_skipped = total_tests
-        elif self.ignore_skip_list:
-            # When --ignore-skip-list is used, skipped tests are already
-            # included in all_results, so don't add them again
-            total_including_skipped = total_tests
-        elif self.only_skipped:
-            # When --only-skipped is used, only skipped tests were run,
-            # so add non-skipped tests to show total suite size
-            non_skipped_count = self._count_non_skipped_tests()
-            total_including_skipped = total_tests + non_skipped_count
-        else:
-            # Normal mode: total_tests is non-skipped tests, add skipped count
-            total_including_skipped = total_tests + total_skipped
+        total_skipped = sum(1 for r in self.all_results
+                            if r.status == VideoTestStatus.SKIPPED)
 
         print("\n" + "=" * 70)
         print("OVERALL SUMMARY")
         print("=" * 70)
-        print(f"Total Tests:   {total_including_skipped:3}")
-        if self.only_skipped:
-            # When running only skipped tests, show how many enabled were
-            # skipped
-            non_skipped = self._count_non_skipped_tests()
-            if non_skipped > 0:
-                print(f"Skipped (enabled): {non_skipped:3} "
-                      "(remove --only-skipped to run)")
-        elif not self.ignore_skip_list and (total_skipped > 0 or
-                                            self.show_skipped):
-            # Show skipped count when not using --ignore-skip-list
-            print(f"Skipped:       {total_skipped:3} "
-                  "(use --ignore-skip-list to run)")
+        # Skipped tests are now included in all_results
+        print(f"Total Tests:   {total_tests:3}")
         print(f"Passed:        {total_passed:3}")
         print(f"Crashed:       {total_crashed:3}")
         print(f"Failed:        {total_failed:3}")
         print(f"Not Supported: {total_not_supported:3}")
-        if total_skipped_hw > 0:
-            print(f"Skipped (HW):  {total_skipped_hw:3} (in skip list)")
+        if total_skipped > 0:
+            print(f"Skipped:       {total_skipped:3} (in skip list)")
         # Calculate success rate excluding not supported and skipped tests
-        effective_total = total_tests - total_not_supported - total_skipped_hw
+        effective_total = total_tests - total_not_supported - total_skipped
         if effective_total > 0:
             success_rate = total_passed / effective_total * 100
             print(f"Success Rate: {success_rate:.1f}%")

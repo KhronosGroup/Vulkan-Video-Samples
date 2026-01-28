@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Optional
 
 from tests.libs.video_test_fetch_sample import FetchableResource, SampleFetcher
 from tests.libs.video_test_utils import (
+    normalize_test_name,
     verify_file_checksum,
     ZipSlipError,
     TestSuiteFormatError,
@@ -169,26 +170,6 @@ def load_skip_list(skip_list_path: Optional[str] = None) -> List[SkipRule]:
             skip_rules.append(_parse_skip_entry(entry, test_type))
 
     return skip_rules
-
-
-def normalize_test_name(test_name: str) -> str:
-    """
-    Normalize test name by removing decode_/encode_ prefix if present.
-
-    This allows skip list entries to use names without the prefix while
-    test configs may have the prefix added.
-
-    Args:
-        test_name: Original test name
-
-    Returns:
-        Normalized test name without decode_/encode_ prefix
-    """
-    if test_name.startswith("decode_"):
-        return test_name[7:]  # len("decode_") == 7
-    if test_name.startswith("encode_"):
-        return test_name[7:]  # len("encode_") == 7
-    return test_name
 
 
 def is_test_skipped(

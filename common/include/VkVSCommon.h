@@ -80,12 +80,15 @@ inline const char* string_VkResult_Extended(VkResult result) {
 // Helper function to check if a VkResult indicates video profile/feature not supported
 // Returns true if the error indicates the hardware/driver doesn't support the requested
 // video codec profile or feature (as opposed to an actual runtime error)
-inline bool IsVideoProfileNotSupportedError(VkResult result) {
+inline bool IsVideoUnsupportedResult(VkResult result) {
     return result == VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR ||
            result == VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR ||
            result == VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR ||
+           result == VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR ||
            result == VK_ERROR_FORMAT_NOT_SUPPORTED ||
-           result == VK_ERROR_FEATURE_NOT_PRESENT;
+           result == VK_ERROR_FEATURE_NOT_PRESENT ||
+           result == VK_ERROR_INCOMPATIBLE_DRIVER ||
+           result == VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
 #endif // __cplusplus

@@ -268,8 +268,11 @@ int main(int argc, char** argv)
                                                (encoderConfig->enablePreprocessComputeFilter == VK_TRUE))
                                               );
         if (result != VK_SUCCESS) {
-
-            assert(!"Failed to create Vulkan device!");
+            if (IsVideoUnsupportedResult(result)) {
+                printf("Failed to create Vulkan device: unsupported feature\n");
+                return VVS_EXIT_UNSUPPORTED;
+            }
+            printf("Failed to create Vulkan device!\n");
             return EXIT_FAILURE;
         }
 
