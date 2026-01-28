@@ -189,9 +189,14 @@ public:
         return ret;
     }
 
-    virtual size_t OutputFrame(VulkanDecodedFrame* pFrame, const VulkanDeviceContext* vkDevCtx) override {
+    virtual bool OutputFrame(VulkanDecodedFrame* pFrame, const VulkanDeviceContext* vkDevCtx, size_t* bytesWritten = nullptr) override {
+        if (bytesWritten) {
+            *bytesWritten = 0;
+        }
+
         if (!IsFileStreamValid()) {
-            return (size_t)-1;
+            std::cerr << "ERROR: Output file stream is not valid\n";
+            return false;
         }
 
         assert(pFrame != nullptr);
@@ -218,6 +223,10 @@ public:
         const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(format);
         size_t usedBufferSize = ConvertFrameToNv12(vkDevCtx, pFrame->displayWidth, pFrame->displayHeight,
                                                   imageResource, pOutputBuffer, mpInfo);
+        if (usedBufferSize == 0) {
+            std::cerr << "ERROR: Failed to convert frame to NV12. Output size is 0\n";
+            return false;
+        }
 
         if (m_outputcrcPerFrame && m_crcOutputFile) {
             fprintf(m_crcOutputFile, "CRC Frame[%" PRId64 "]:", pFrame->displayOrder);
@@ -239,9 +248,9 @@ public:
         }
 
         if (m_outputy4m) {
-            return WriteFrameToFileY4M(0, usedBufferSize, pFrame->displayWidth, pFrame->displayHeight, mpInfo);
+            return WriteFrameToFileY4M(0, usedBufferSize, pFrame->displayWidth, pFrame->displayHeight, mpInfo, bytesWritten);
         } else {
-            return WriteDataToFile(0, usedBufferSize);
+            return WriteDataToFile(0, usedBufferSize, bytesWritten);
         }
     }
 
@@ -269,53 +278,93 @@ public:
         return IsFileStreamValid();
     }
 
-    size_t WriteDataToFile(size_t offset, size_t size) {
-        return fwrite(m_pLinearMemory + offset, size, 1, m_outputFile);
+    bool WriteDataToFile(size_t offset, size_t size, size_t* bytesWritten) {
+        size_t totalBytesWritten = 0;
+        while (totalBytesWritten < size) {
+            size_t remainingBytes = size - totalBytesWritten;
+            size_t written = fwrite(m_pLinearMemory + offset + totalBytesWritten, 1, remainingBytes, m_outputFile);
+            if (ferror(m_outputFile)) {
+                fprintf(stderr, "ERROR: fwrite failed (wrote %zu of %zu bytes)\n",
+                        totalBytesWritten + written, size);
+                if (bytesWritten) {
+                    *bytesWritten = totalBytesWritten + written;
+                }
+                return false;
+            }
+            if (written == 0) {
+                fprintf(stderr, "ERROR: fwrite wrote 0 bytes unexpectedly (wrote %zu of %zu bytes)\n",
+                        totalBytesWritten, size);
+                if (bytesWritten) {
+                    *bytesWritten = totalBytesWritten;
+                }
+                return false;
+            }
+            totalBytesWritten += written;
+        }
+        if (bytesWritten) {
+            *bytesWritten = totalBytesWritten;
+        }
+        return true;
     }
 
     size_t GetMaxFrameSize() {
         return m_allocationSize;
     }
 
-    size_t WriteFrameToFileY4M(size_t offset, size_t size, size_t width, size_t height,
-                              const VkMpFormatInfo* mpInfo) {
+    bool WriteFrameToFileY4M(size_t offset, size_t size, size_t width, size_t height,
+                             const VkMpFormatInfo* mpInfo, size_t* bytesWritten) {
+
+        auto setErrorAndReturn = [&bytesWritten]() {
+            if (bytesWritten) {
+                *bytesWritten = 0;
+            }
+            return false;
+        };
+
+        if (mpInfo == nullptr) {
+            fprintf(stderr, "ERROR: mpInfo is required for Y4M output\n");
+            return setErrorAndReturn();;
+        }
+
         if (m_firstFrame != false) {
             m_firstFrame = false;
-            fprintf(m_outputFile, "YUV4MPEG2 ");
-            fprintf(m_outputFile, "W%i H%i ", (int)width, (int)height);
             m_height = height;
             m_width = width;
-            fprintf(m_outputFile, "F24:1 ");
-            fprintf(m_outputFile, "Ip ");
-            fprintf(m_outputFile, "A1:1 ");
-            if (mpInfo->planesLayout.secondaryPlaneSubsampledX == false) {
-                fprintf(m_outputFile, "C444");
-            } else {
-                fprintf(m_outputFile, "C420");
-            }
 
-            if (mpInfo->planesLayout.bpp != YCBCRA_8BPP) {
-                fprintf(m_outputFile, "p16");
-            }
+            const char* chromaFormat = mpInfo->planesLayout.secondaryPlaneSubsampledX ? "C420" : "C444";
+            const char* bitDepth = (mpInfo->planesLayout.bpp != YCBCRA_8BPP) ? "p16" : "";
 
-            fprintf(m_outputFile, "\n");
+            if (fprintf(m_outputFile, "YUV4MPEG2 W%i H%i F24:1 Ip A1:1 %s%s\n",
+                        (int)width, (int)height, chromaFormat, bitDepth) < 0) {
+                fprintf(stderr, "ERROR: fprintf failed writing Y4M header\n");
+                return setErrorAndReturn();
+            }
         }
 
-        fprintf(m_outputFile, "FRAME");
         if ((m_width != width) || (m_height != height)) {
-            fprintf(m_outputFile, " ");
-            fprintf(m_outputFile, "W%i H%i", (int)width, (int)height);
+            if (fprintf(m_outputFile, "FRAME W%i H%i\n", (int)width, (int)height) < 0) {
+                fprintf(stderr, "ERROR: fprintf failed writing Y4M frame header\n");
+                return setErrorAndReturn();
+            }
             m_height = height;
             m_width = width;
+        } else {
+            if (fprintf(m_outputFile, "FRAME\n") < 0) {
+                fprintf(stderr, "ERROR: fprintf failed writing Y4M frame marker\n");
+                return setErrorAndReturn();
+            }
         }
 
-        fprintf(m_outputFile, "\n");
-        return WriteDataToFile(offset, size);
+        return WriteDataToFile(offset, size, bytesWritten);
     }
 
     size_t ConvertFrameToNv12(const VulkanDeviceContext* vkDevCtx, int32_t frameWidth, int32_t frameHeight,
                              VkSharedBaseObj<VkImageResource>& imageResource,
                              uint8_t* pOutBuffer, const VkMpFormatInfo* mpInfo) {
+        if (mpInfo == nullptr) {
+            fprintf(stderr, "ERROR: mpInfo is required for NV12 conversion. Unable to convert frame, return 0.\n");
+            return 0;
+        }
         size_t outputBufferSize = 0;
         VkDevice device   = imageResource->GetDevice();
         VkImage  srcImage = imageResource->GetImage();
@@ -331,21 +380,21 @@ public:
         int32_t secondaryPlaneHeight = frameHeight;
         int32_t imageHeight = frameHeight;
         bool isUnnormalizedRgba = false;
-        if (mpInfo && (mpInfo->planesLayout.layout == YCBCR_SINGLE_PLANE_UNNORMALIZED) && !(mpInfo->planesLayout.disjoint)) {
+        if ((mpInfo->planesLayout.layout == YCBCR_SINGLE_PLANE_UNNORMALIZED) && !(mpInfo->planesLayout.disjoint)) {
             isUnnormalizedRgba = true;
         }
 
-        if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledX) {
+        if (mpInfo->planesLayout.secondaryPlaneSubsampledX) {
             secondaryPlaneWidth = (secondaryPlaneWidth + 1) / 2;
         }
-        if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledY) {
+        if (mpInfo->planesLayout.secondaryPlaneSubsampledY) {
             secondaryPlaneHeight = (secondaryPlaneHeight + 1) / 2;
         }
 
         VkImageSubresource subResource = {};
         VkSubresourceLayout layouts[3] = {};
 
-        if (mpInfo && !isUnnormalizedRgba) {
+        if (!isUnnormalizedRgba) {
             switch (mpInfo->planesLayout.layout) {
                 case YCBCR_SINGLE_PLANE_UNNORMALIZED:
                 case YCBCR_SINGLE_PLANE_INTERLEAVED:

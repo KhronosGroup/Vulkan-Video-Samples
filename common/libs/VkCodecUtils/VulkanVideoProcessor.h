@@ -33,7 +33,7 @@ public:
     virtual uint32_t GetProfileIdc() const;
     virtual VkFormat GetFrameImageFormat()  const;
     virtual VkExtent3D GetVideoExtent() const;
-    virtual int32_t GetNextFrame(VulkanDecodedFrame* pFrame, bool* endOfStream);
+    virtual VkVideoQueueResult GetNextFrame(VulkanDecodedFrame* pFrame);
     virtual int32_t ReleaseFrame(VulkanDecodedFrame* pDisplayedFrame);
 
     static VkSharedBaseObj<VulkanVideoProcessor>& invalidVulkanVideoProcessor;
@@ -67,7 +67,7 @@ public:
 
     int32_t ParserProcessNextDataChunk();
 
-    size_t OutputFrameToFile(VulkanDecodedFrame* pFrame);
+    bool OutputFrameToFile(VulkanDecodedFrame* pFrame, size_t* bytesWritten = nullptr);
     uint32_t Restart(int64_t& bitstreamOffset);
 
 private:

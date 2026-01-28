@@ -39,7 +39,7 @@ public:
 
     virtual uint32_t GetProfileIdc() const { return 0; }
     virtual VkExtent3D GetVideoExtent() const;
-    virtual int32_t GetNextFrame(FrameDataType* pFrame, bool* endOfStream);
+    virtual VkVideoQueueResult GetNextFrame(FrameDataType* pFrame);
     virtual int32_t ReleaseFrame(FrameDataType* pDisplayedFrame);
 
     static VkSharedBaseObj<VulkanVideoDisplayQueue>& invalidVulkanVideoDisplayQueue;
@@ -175,20 +175,23 @@ int32_t VulkanVideoDisplayQueue<FrameDataType>::EnqueueFrame(FrameDataType* pFra
 }
 
 template<class FrameDataType>
-int32_t VulkanVideoDisplayQueue<FrameDataType>::GetNextFrame(FrameDataType* pFrame, bool* endOfStream)
+VkVideoQueueResult VulkanVideoDisplayQueue<FrameDataType>::GetNextFrame(FrameDataType* pFrame)
 {
     if (m_exitQueueRequested) {
         m_queue.SetFlushAndExit();
         m_queueIsEnabled = false;
     }
 
-    *endOfStream = !m_queue.WaitAndPop(*pFrame) && !m_queueIsEnabled;
+    bool gotFrame = m_queue.WaitAndPop(*pFrame);
 
-    if (*endOfStream) {
-        return -1;
+    if (!gotFrame) {
+        if (!m_queueIsEnabled) {
+            return VkVideoQueueResult::EndOfStream;
+        }
+        return VkVideoQueueResult::NoFrame;
     }
 
-    return 1;
+    return VkVideoQueueResult::NewFrame;
 }
 
 template<class FrameDataType>

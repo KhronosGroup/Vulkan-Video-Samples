@@ -359,17 +359,16 @@ bool VulkanFrame<FrameDataType>::OnFrame( int32_t renderIndex,
 
         pLastDecodedFrame->Reset();
 
-        bool endOfStream = false;
-        int32_t numVideoFrames = 0;
-
-        numVideoFrames = m_videoQueue->GetNextFrame(pLastDecodedFrame, &endOfStream);
-        if (endOfStream && (numVideoFrames < 0)) {
+        VkVideoQueueResult result = m_videoQueue->GetNextFrame(pLastDecodedFrame);
+        if (result == VkVideoQueueResult::EndOfStream || result == VkVideoQueueResult::Error) {
             continueLoop = false;
             bool displayTimeNow = true;
             float fps = GetFrameRateFps(displayTimeNow);
             if (displayTimeNow) {
                 std::cout << "\t\tFrame " << m_frameCount << ", FPS: " << fps << std::endl;
             }
+        } else if (dumpDebug && result == VkVideoQueueResult::NoFrame) {
+            std::cout << "No frame available, waiting for more data" << std::endl;
         }
     }
 
