@@ -1848,6 +1848,23 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
         printf("\n");
     }
 
+    // For key frames with show_frame=0 and refresh_frame_flags!=0xFF,
+    // DPB slots not specified in the flags should remain valid so subsequent inter frames can reference them.
+    if (isKeyFrame && !pin->showFrame && pin->std_info.refresh_frame_flags != 0xFF) {
+        uint8_t preserveMask = ~pin->std_info.refresh_frame_flags;
+        for (uint32_t inIdx = 0; inIdx < STD_VIDEO_AV1_NUM_REF_FRAMES; inIdx++) {
+            if (preserveMask & (1 << inIdx)) {
+                int8_t picIdx = pin->pic_idx[inIdx];
+                if (picIdx >= 0) {
+                    refDpbUsedAndValidMask |= (1 << picIdx);
+                    if (m_dumpDpbData) {
+                        printf("Preserving DPB slot %d for picIdx %d\n", inIdx, picIdx);
+                    }
+                }
+            }
+        }
+    }
+
     ResetPicDpbSlots(refDpbUsedAndValidMask);
 
     // Take into account the reference picture now.
