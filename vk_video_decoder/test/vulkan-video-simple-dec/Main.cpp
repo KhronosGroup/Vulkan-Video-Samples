@@ -49,6 +49,8 @@ static bool GetNextFrame(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder
                          uint32_t& curFrameDataQueueIndex)
 {
     bool continueLoop = true;
+    bool gotFrame = false;
+    const bool dumpDebug = true;
 
     VulkanDecodedFrame& data = frameDataQueue[curFrameDataQueueIndex];
     VulkanDecodedFrame* pLastDecodedFrame = nullptr;
@@ -61,18 +63,20 @@ static bool GetNextFrame(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder
 
         pLastDecodedFrame->Reset();
 
-        bool endOfStream = false;
-        int32_t numVideoFrames = 0;
-
-        numVideoFrames = vulkanVideoDecoder->GetNextFrame(pLastDecodedFrame, &endOfStream);
-        if (endOfStream && (numVideoFrames < 0)) {
+        VkVideoQueueResult result = vulkanVideoDecoder->GetNextFrame(pLastDecodedFrame);
+        if (result == VkVideoQueueResult::EndOfStream || result == VkVideoQueueResult::Error) {
             continueLoop = false;
+        } else if (result == VkVideoQueueResult::NoFrame) {
+            if (dumpDebug) {
+                std::cout << "No frame available, waiting for more data" << std::endl;
+            }
+        } else {
+            gotFrame = true;
         }
     }
 
     // wait for the last submission since we reuse frame data
-    const bool dumpDebug = true;
-    if (dumpDebug && pLastDecodedFrame) {
+    if (dumpDebug && gotFrame && pLastDecodedFrame) {
 
         VkSharedBaseObj<VkImageResourceView> imageResourceView;
         pLastDecodedFrame->imageViews[VulkanDecodedFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].GetImageResourceView(imageResourceView);
@@ -87,7 +91,9 @@ static bool GetNextFrame(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder
                   << std::endl;
     }
 
-    curFrameDataQueueIndex = (curFrameDataQueueIndex + 1) % frameDataQueue.size();
+    if (gotFrame) {
+        curFrameDataQueueIndex = (curFrameDataQueueIndex + 1) % frameDataQueue.size();
+    }
 
     return continueLoop;
 }

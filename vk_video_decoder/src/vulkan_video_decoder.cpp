@@ -44,9 +44,9 @@ public:
         return m_vulkanVideoProcessor->GetFrameImageFormat();
     }
 
-    virtual int32_t  GetNextFrame(VulkanDecodedFrame* pNewDecodedFrame, bool* endOfStream)
+    virtual VkVideoQueueResult GetNextFrame(VulkanDecodedFrame* pNewDecodedFrame)
     {
-        return m_vulkanVideoProcessor->GetNextFrame(pNewDecodedFrame, endOfStream);
+        return m_vulkanVideoProcessor->GetNextFrame(pNewDecodedFrame);
     }
 
     virtual int32_t  ReleaseFrame(VulkanDecodedFrame* pDoneDecodedFrame)

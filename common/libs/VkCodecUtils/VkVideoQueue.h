@@ -21,6 +21,17 @@
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 
 /**
+ * @enum VkVideoQueueResult
+ * @brief Result codes for VkVideoQueue::GetNextFrame operations.
+ */
+enum class VkVideoQueueResult {
+    NewFrame,
+    NoFrame,
+    EndOfStream,
+    Error
+};
+
+/**
  * @class VkVideoQueue
  * @brief Interface for retrieving frames from a Vulkan-based video queue.
  *
@@ -137,17 +148,15 @@ public:
      *                         information about the newly decoded frame, if available.
      *                         If no frame is currently available or it was the end of the stream,
      *                         there will be no data filled in pNewFrame.
-     * @param[out] endOfStream Set to `true` if the end of the stream has been reached (i.e., no more
-     *                         frames will ever be available), or `false` otherwise.
      *
      * @return
-     * - `1` if a decoded frame is successfully retrieved.
-     * - `0` if no frame is currently available (but not an error, you may need to parse more data or
-     *        wait for pending frames to be reordered because of the B-frames are present).
-     * - `-1` if an error occurs or if the end of the stream is reached. In either case, decoding should
-     *         be terminated or reset accordingly.
+     * - `VkVideoQueueResult::NewFrame` if a decoded frame is successfully retrieved.
+     * - `VkVideoQueueResult::NoFrame` if no frame is currently available (need more parsing
+     *    or B-frame reordering).
+     * - `VkVideoQueueResult::EndOfStream` if the end of stream has been reached.
+     * - `VkVideoQueueResult::Error` if an error occurs during frame retrieval.
      */
-    virtual int32_t  GetNextFrame(FrameDataType* pNewFrame, bool* endOfStream) = 0;
+    virtual VkVideoQueueResult GetNextFrame(FrameDataType* pNewFrame) = 0;
 
     /**
      * @brief Release a previously retrieved decoded frame.

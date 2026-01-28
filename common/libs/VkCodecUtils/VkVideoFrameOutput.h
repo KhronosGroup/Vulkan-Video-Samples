@@ -62,9 +62,10 @@ public:
      *
      * @param pFrame Pointer to the decoded frame
      * @param vkDevCtx Vulkan device context
-     * @return size_t Number of bytes written, (size_t)-1 on error
+     * @param bytesWritten Optional pointer to receive number of bytes written
+     * @return bool true on success, false on error
      */
-    virtual size_t OutputFrame(VulkanDecodedFrame* pFrame, const VulkanDeviceContext* vkDevCtx) = 0;
+    virtual bool OutputFrame(VulkanDecodedFrame* pFrame, const VulkanDeviceContext* vkDevCtx, size_t* bytesWritten = nullptr) = 0;
 
 protected:
     VkVideoFrameOutput() = default;

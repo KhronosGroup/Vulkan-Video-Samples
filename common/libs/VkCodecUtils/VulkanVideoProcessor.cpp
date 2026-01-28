@@ -416,13 +416,17 @@ void VulkanVideoProcessor::DumpVideoFormat(const VkParserDetectedVideoFormat* vi
     }
 }
 
-size_t VulkanVideoProcessor::OutputFrameToFile(VulkanDecodedFrame* pFrame)
+bool VulkanVideoProcessor::OutputFrameToFile(VulkanDecodedFrame* pFrame, size_t* bytesWritten)
 {
     if (!m_frameToFile) {
-        return (size_t)-1;
+        std::cerr << "ERROR: Frame to file is not set\n";
+        if (bytesWritten) {
+            *bytesWritten = 0;
+        }
+        return false;
     }
 
-    return m_frameToFile->OutputFrame(pFrame, m_vkDevCtx);
+    return m_frameToFile->OutputFrame(pFrame, m_vkDevCtx, bytesWritten);
 }
 
 uint32_t VulkanVideoProcessor::Restart(int64_t& bitstreamOffset)
@@ -492,7 +496,7 @@ int32_t VulkanVideoProcessor::ParserProcessNextDataChunk()
     return retValue;
 }
 
-int32_t VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame, bool* endOfStream)
+VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame)
 {
     // The below call to DequeueDecodedPicture allows returning the next frame without parsing of the stream.
     // Parsing is only done when there are no more frames in the queue.
@@ -513,7 +517,10 @@ int32_t VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame, bool* end
         }
 
         if (m_frameToFile) {
-            OutputFrameToFile(pFrame);
+            if (!OutputFrameToFile(pFrame)) {
+                fprintf(stderr, "ERROR: Failed to output frame %u to file\n", m_videoFrameNum);
+                return VkVideoQueueResult::Error;
+            }
         }
 
         m_videoFrameNum++;
@@ -524,17 +531,18 @@ int32_t VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame, bool* end
         std::cout << "Number of video frames " << m_videoFrameNum
                   << " of max frame number " << m_maxFrameCount << std::endl;
         m_videoStreamsCompleted = StreamCompleted();
-        *endOfStream = m_videoStreamsCompleted;
-        return -1;
+        return VkVideoQueueResult::EndOfStream;
     }
-
-    *endOfStream = m_videoStreamsCompleted;
 
     if ((framesInQueue == 0) && m_videoStreamsCompleted) {
-        return -1;
+        return VkVideoQueueResult::EndOfStream;
     }
 
-    return 1;
+    if (framesInQueue == 0) {
+        return VkVideoQueueResult::NoFrame;
+    }
+
+    return VkVideoQueueResult::NewFrame;
 }
 
 int32_t VulkanVideoProcessor::ReleaseFrame(VulkanDecodedFrame* pDisplayedFrame)
