@@ -297,34 +297,6 @@
       "date_added": "2026-01-19"
     },
     {
-      "name": "av1_superres_8bit",
-      "format": "vvs",
-      "drivers": [
-        "radv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "md5 mismatch",
-      "bug_url": "",
-      "date_added": "2026-01-19"
-    },
-    {
-      "name": "av1_superres_8bit",
-      "format": "vvs",
-      "drivers": [
-        "amd"
-      ],
-      "platforms": [
-        "windows"
-      ],
-      "reproduction": "always",
-      "reason": "md5 mismatch",
-      "bug_url": "",
-      "date_added": "2026-01-20"
-    },
-    {
       "name": "h265_itu_slist_b",
       "format": "vvs",
       "drivers": [
