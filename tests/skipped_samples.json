@@ -469,20 +469,6 @@
       "date_added": "2026-01-19"
     },
     {
-      "name": "h264_*",
-      "format": "vvs",
-      "drivers": [
-        "radv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "memory alignment",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/51",
-      "date_added": "2026-01-19"
-    },
-    {
       "name": "h265_main10_profile",
       "format": "vvs",
       "drivers": [
