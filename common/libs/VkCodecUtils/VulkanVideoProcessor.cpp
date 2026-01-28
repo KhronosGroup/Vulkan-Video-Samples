@@ -421,6 +421,10 @@ size_t ConvertFrameToNv12(const VulkanDeviceContext *vkDevCtx, int32_t frameWidt
                                                     VkSharedBaseObj<VkImageResource>& imageResource,
                                                     uint8_t* pOutBuffer, const VkMpFormatInfo* mpInfo)
 {
+    if (mpInfo == nullptr) {
+        fprintf(stderr, "ERROR: mpInfo is required for NV12 conversion\n");
+        return 0;
+    }
     size_t outputBufferSize = 0;
     VkDevice device   = imageResource->GetDevice();
     VkImage  srcImage = imageResource->GetImage ();
@@ -436,14 +440,14 @@ size_t ConvertFrameToNv12(const VulkanDeviceContext *vkDevCtx, int32_t frameWidt
     int32_t secondaryPlaneHeight = frameHeight;
     int32_t imageHeight = frameHeight;
     bool isUnnormalizedRgba = false;
-    if (mpInfo && (mpInfo->planesLayout.layout == YCBCR_SINGLE_PLANE_UNNORMALIZED) && !(mpInfo->planesLayout.disjoint)) {
+    if ((mpInfo->planesLayout.layout == YCBCR_SINGLE_PLANE_UNNORMALIZED) && !(mpInfo->planesLayout.disjoint)) {
         isUnnormalizedRgba = true;
     }
 
-    if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledX) {
+    if (mpInfo->planesLayout.secondaryPlaneSubsampledX) {
         secondaryPlaneWidth = (secondaryPlaneWidth + 1) / 2;
     }
-    if (mpInfo && mpInfo->planesLayout.secondaryPlaneSubsampledY) {
+    if (mpInfo->planesLayout.secondaryPlaneSubsampledY) {
         secondaryPlaneHeight = (secondaryPlaneHeight + 1) / 2;
     }
 
@@ -451,7 +455,7 @@ size_t ConvertFrameToNv12(const VulkanDeviceContext *vkDevCtx, int32_t frameWidt
     VkSubresourceLayout layouts[3];
     memset(layouts, 0x00, sizeof(layouts));
 
-    if (mpInfo && !isUnnormalizedRgba) {
+    if (!isUnnormalizedRgba) {
         switch (mpInfo->planesLayout.layout) {
             case YCBCR_SINGLE_PLANE_UNNORMALIZED:
             case YCBCR_SINGLE_PLANE_INTERLEAVED:
@@ -484,7 +488,7 @@ size_t ConvertFrameToNv12(const VulkanDeviceContext *vkDevCtx, int32_t frameWidt
 
     // Treat all non 8bpp formats as 16bpp for output to prevent any loss.
     uint32_t bytesPerPixel = 1;
-    if (mpInfo && mpInfo->planesLayout.bpp != YCBCRA_8BPP) {
+    if (mpInfo->planesLayout.bpp != YCBCRA_8BPP) {
         bytesPerPixel = 2;
     }
 
