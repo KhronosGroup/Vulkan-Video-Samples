@@ -37,6 +37,29 @@ Commit messages are automatically validated on pull requests via commitlint. See
 
 ---
 
+## Testing Hardware Information
+
+Every PR must include a section describing the hardware configuration used to run the [testing framework](tests/README.md). This helps maintainers understand the test coverage and identify potential hardware-specific issues.
+
+Please include in your PR description:
+
+```
+## Test Results
+
+### [GPU Model] / [Driver Version] / [OS]
+
+Total Tests:     70
+Passed:          48
+Crashed:          0
+Failed:           0
+Not Supported:    5
+Skipped:         17 (in skip list)
+Success Rate: 100.0%
+```
+
+This information is essential for tracking codec support across different hardware vendors and driver versions.
+
+
 ## Developer Certificate of Origin
 
 https://developercertificate.org/
