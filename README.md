@@ -133,3 +133,7 @@ python3 tests/video_test_framework_encode.py --test "encode_h264_*"
 ```
 
 For complete documentation, command-line options, and advanced usage examples, see **[tests/README.md](tests/README.md)**.
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING](CONTRIBUTING) for guidelines on commit messages, pull requests, and testing requirements.
