@@ -307,8 +307,8 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
         if self.device_id is not None:
             cmd.extend(["--deviceID", self.device_id])
 
-        # Always add no-device-fallback flag to ensure correct GPU
-        cmd.append("--no-device-fallback")
+        # Always add noDeviceFallback flag to ensure correct GPU
+        cmd.append("--noDeviceFallback")
 
         # Add extra arguments
         if config.extra_args:

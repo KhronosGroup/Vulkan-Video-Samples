@@ -603,7 +603,7 @@ class VulkanVideoTestFrameworkBase:
             cmd.append("--noPresent")
         if self.device_id is not None:
             cmd.extend(["--deviceID", str(self.device_id)])
-        cmd.append("--no-device-fallback")
+        cmd.append("--noDeviceFallback")
         if extra_decoder_args:
             cmd.extend(extra_decoder_args)
 

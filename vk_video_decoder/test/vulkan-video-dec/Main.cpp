@@ -123,7 +123,8 @@ int main(int argc, const char** argv)
                                               0,
                                               VK_VIDEO_CODEC_OPERATION_NONE_KHR,
                                               VK_NULL_HANDLE,
-                                              decoderConfig.verbose);
+                                              decoderConfig.verbose,
+                                              decoderConfig.noDeviceFallback);
         if (result != VK_SUCCESS) {
             assert(!"Can't initialize the Vulkan physical device!");
             return EXIT_FAILURE;
@@ -190,7 +191,8 @@ int main(int argc, const char** argv)
                                               0,
                                               VK_VIDEO_CODEC_OPERATION_NONE_KHR,
                                               VK_NULL_HANDLE,
-                                              decoderConfig.verbose);
+                                              decoderConfig.verbose,
+                                              decoderConfig.noDeviceFallback);
         if (result != VK_SUCCESS) {
             assert(!"Can't initialize the Vulkan physical device!");
             return EXIT_FAILURE;
