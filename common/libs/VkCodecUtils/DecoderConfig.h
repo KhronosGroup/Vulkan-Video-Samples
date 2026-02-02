@@ -288,7 +288,7 @@ struct DecoderConfig {
                     }
                     return true;
                 }},
-            {"--no-device-fallback", nullptr, 0, "Don't try other GPUs if first device doesn't meet requirements",
+            {"--noDeviceFallback", nullptr, 0, "Don't try other GPUs if first device doesn't meet requirements",
                 [this](const char **args, const ProgramArgs &a) {
                     noDeviceFallback = true;
                     return true;

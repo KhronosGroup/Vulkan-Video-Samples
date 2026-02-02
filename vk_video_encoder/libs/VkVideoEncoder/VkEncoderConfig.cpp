@@ -68,7 +68,7 @@ void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
     --qpB                           <integer> : QP or QIndex (for AV1) used for B-frames when RC disabled\n\
     --deviceID                      <hexadec> : deviceID to be used, \n\
     --deviceUuid                    <string>  : deviceUuid to be used \n\
-    --no-device-fallback                      : don't try other GPUs if first device doesn't meet requirements \n\
+    --noDeviceFallback                        : don't try other GPUs if first device doesn't meet requirements \n\
     --enableHwLoadBalancing                   : enables HW load balancing using multiple encoder devices when available \n\
     --testOutOfOrderRecording                 : Testing only - enable testing for out-of-order-recording\n\
     --intraRefreshCycleDuration     <integer> : Duration of (number of frames in) an intra-refresh cycle\n\
@@ -485,7 +485,7 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
                                "deviceUuid must be represented by 16 hex (32 bytes) values.", args[i].c_str(), args[i].length());
                 return -1;
             }
-        } else if (args[i] == "--no-device-fallback") {
+        } else if (args[i] == "--noDeviceFallback") {
             noDeviceFallback = true;
         } else if (args[i] == "--qpMap") {
             if (++i >= argc) {
