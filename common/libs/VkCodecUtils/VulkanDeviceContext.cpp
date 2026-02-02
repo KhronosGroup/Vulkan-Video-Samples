@@ -740,24 +740,24 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                                                  bool createComputeQueue,
                                                  VkDevice vkDevice)
 {
+    if (numDecodeQueues < 0) {
+        numDecodeQueues = m_videoDecodeNumQueues;
+    } else {
+        numDecodeQueues = std::min(numDecodeQueues, m_videoDecodeNumQueues);
+    }
+
+    if (numEncodeQueues < 0) {
+        numEncodeQueues = m_videoEncodeNumQueues;
+    } else {
+        numEncodeQueues = std::min(numEncodeQueues, m_videoEncodeNumQueues);
+    }
+
     if (vkDevice == VK_NULL_HANDLE) {
         std::unordered_set<int32_t> uniqueQueueFamilies;
         VkDeviceCreateInfo devInfo = {};
         devInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         devInfo.pNext = nullptr;
         devInfo.queueCreateInfoCount = 0;
-
-        if (numDecodeQueues < 0) {
-            numDecodeQueues = m_videoDecodeNumQueues;
-        } else {
-            numDecodeQueues = std::min(numDecodeQueues, m_videoDecodeNumQueues);
-        }
-
-        if (numEncodeQueues < 0) {
-            numEncodeQueues = m_videoEncodeNumQueues;
-        } else {
-            numEncodeQueues = std::min(numEncodeQueues, m_videoEncodeNumQueues);
-        }
 
         const int32_t maxQueueInstances = std::max(numDecodeQueues, numEncodeQueues);
         assert(maxQueueInstances <= MAX_QUEUE_INSTANCES);
