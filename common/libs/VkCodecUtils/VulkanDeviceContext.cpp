@@ -691,6 +691,7 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                               << ", and device ID: " << devProp2.properties.deviceID << std::dec
                               << ", driver ID: " << deviceDriverProperties.driverID
                               << ", driver name: " << deviceDriverProperties.driverName
+                              << ", driver info: " << deviceDriverProperties.driverInfo
                               << ", Num Decode Queues: " << m_videoDecodeNumQueues
                               << ", Num Encode Queues: " << m_videoEncodeNumQueues
                               << " ***" << std::endl << std::flush;
