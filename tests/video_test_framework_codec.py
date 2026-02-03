@@ -388,6 +388,18 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
         print("\n" + "=" * 70)
         print("OVERALL SUMMARY")
         print("=" * 70)
+
+        # Get system info from whichever framework ran tests
+        system_info = None
+        if self.decode_framework:
+            system_info = self.decode_framework.system_info
+        elif self.encode_framework:
+            system_info = self.encode_framework.system_info
+        if system_info:
+            print()
+            print(f"### {system_info.get_header()}")
+            print()
+
         # Skipped tests are now included in all_results
         print(f"Total Tests:   {total_tests:3}")
         print(f"Passed:        {total_passed:3}")

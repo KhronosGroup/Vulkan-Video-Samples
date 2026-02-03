@@ -19,7 +19,61 @@ limitations under the License.
 
 import platform
 import re
+from dataclasses import dataclass
 from typing import Optional
+
+
+@dataclass
+class SystemInfo:
+    """System information detected from test output."""
+    gpu_name: str = ""
+    driver_name: str = ""
+    driver_version: str = ""
+    os_name: str = ""
+
+    def get_header(self) -> str:
+        """Generate header string: GPU Model / Driver Version / OS"""
+        parts = []
+        if self.gpu_name:
+            parts.append(self.gpu_name)
+        if self.driver_name or self.driver_version:
+            driver_str = self.driver_name
+            if self.driver_version:
+                driver_str = f"{driver_str} {self.driver_version}".strip()
+            if driver_str:
+                parts.append(driver_str)
+        if self.os_name:
+            parts.append(self.os_name)
+        return " / ".join(parts) if parts else "Unknown System"
+
+    def is_empty(self) -> bool:
+        """Check if system info has any data."""
+        return not any([self.gpu_name, self.driver_name,
+                       self.driver_version, self.os_name])
+
+
+def get_os_info() -> str:
+    """Get OS name and version string."""
+    system = platform.system()
+    if system == "Linux":
+        try:
+            # Try to get distro info from /etc/os-release
+            with open("/etc/os-release", encoding="utf-8") as f:
+                os_release = {}
+                for line in f:
+                    if "=" in line:
+                        key, value = line.strip().split("=", 1)
+                        os_release[key] = value.strip('"')
+                distro = os_release.get("PRETTY_NAME",
+                                        os_release.get("NAME", "Linux"))
+                return distro
+        except (OSError, IOError):
+            return f"Linux {platform.release()}"
+    elif system == "Windows":
+        return f"Windows {platform.release()}"
+    elif system == "Darwin":
+        return f"macOS {platform.mac_ver()[0]}"
+    return system
 
 
 # Vulkan Vendor IDs (PCI vendor IDs)
@@ -248,6 +302,59 @@ class DriverMapping:
             VENDOR_MESA: "Mesa Software Renderer"
         }
         return vendor_names.get(vendor_id, f"Unknown (0x{vendor_id:04X})")
+
+
+def parse_system_info_from_output(stdout: str, stderr: str = "") -> SystemInfo:
+    """
+    Parse full system information from test executable output.
+
+    Extracts GPU name, driver name, driver version, and OS info.
+
+    Args:
+        stdout: Standard output from test executable
+        stderr: Standard error from test executable (optional)
+
+    Returns:
+        SystemInfo object with detected information
+
+    Example output line:
+        *** Selected Vulkan physical device with name: NVIDIA GeForce RTX 3080,
+        vendor ID: 0x10de, device UUID: ..., and device ID: 0x2206,
+        driver ID: 5, driver name: NVIDIA,
+        Num Decode Queues: 16, Num Encode Queues: 3 ***
+    """
+    combined_output = stdout + "\n" + stderr
+    info = SystemInfo(os_name=get_os_info())
+
+    # Extract GPU name from "device with name: XXX,"
+    gpu_pattern = r'device with name:\s*([^,]+)'
+    gpu_match = re.search(gpu_pattern, combined_output, re.IGNORECASE)
+    if gpu_match:
+        info.gpu_name = gpu_match.group(1).strip()
+
+    # Extract driver name
+    driver_name_pattern = r'driver name:\s*([^,\n*]+)'
+    driver_match = re.search(driver_name_pattern, combined_output,
+                             re.IGNORECASE)
+    if driver_match:
+        info.driver_name = driver_match.group(1).strip()
+
+    # Extract driver version if present (format varies by vendor)
+    # NVIDIA format: "driver version: 550.120"
+    # Mesa format: "driver info: Mesa 24.0.0"
+    version_pattern = r'driver version:\s*([^\n,*]+)'
+    version_match = re.search(version_pattern, combined_output, re.IGNORECASE)
+    if version_match:
+        info.driver_version = version_match.group(1).strip()
+    else:
+        # Try driver info pattern (Mesa)
+        driver_info_pattern = r'driver info:\s*([^\n,*]+)'
+        info_match = re.search(driver_info_pattern, combined_output,
+                               re.IGNORECASE)
+        if info_match:
+            info.driver_version = info_match.group(1).strip()
+
+    return info
 
 
 def parse_driver_from_output(stdout: str, stderr: str = "") -> Optional[str]:
