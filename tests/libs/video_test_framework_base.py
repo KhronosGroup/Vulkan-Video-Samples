@@ -37,7 +37,10 @@ from tests.libs.video_test_config_base import (
 )
 
 from tests.libs.video_test_platform_utils import PlatformUtils
-from tests.libs.video_test_driver_detect import parse_driver_from_output
+from tests.libs.video_test_driver_detect import (
+    parse_driver_from_output, parse_system_info_from_output, SystemInfo,
+    get_os_info
+)
 from tests.libs.video_test_result_reporter import (
     get_status_display, print_codec_breakdown, print_detailed_results,
     print_final_summary, print_command_output)
@@ -100,6 +103,7 @@ class VulkanVideoTestFrameworkBase:
 
         self.results: List[TestResult] = []
         self._detected_driver: Optional[str] = None
+        self._system_info: Optional[SystemInfo] = None
         self._test_pattern_active = False
         self._skipped_samples: Dict[str, Optional[SkipRule]] = {}
 
@@ -158,9 +162,22 @@ class VulkanVideoTestFrameworkBase:
         """
         return self._detected_driver or "all"
 
+    @property
+    def system_info(self) -> SystemInfo:
+        """
+        Get the detected system information.
+
+        Returns SystemInfo with OS info even if GPU info hasn't been detected.
+        GPU/driver info is populated from the first test run output.
+        """
+        if self._system_info is None:
+            self._system_info = SystemInfo(os_name=get_os_info())
+        return self._system_info
+
     def _detect_driver_from_output(
             self, stdout: str, stderr: str = "") -> None:
-        """Detect and cache driver from test output (first call only)."""
+        """Detect and cache driver and system info from test output
+        (first call only)."""
         if self._detected_driver is not None:
             return
 
@@ -169,6 +186,12 @@ class VulkanVideoTestFrameworkBase:
             self._detected_driver = driver
             if self.verbose:
                 print(f"✓ Detected driver: {driver}")
+
+        # Also capture full system info
+        if self._system_info is None or self._system_info.gpu_name == "":
+            self._system_info = parse_system_info_from_output(stdout, stderr)
+            if self.verbose and self._system_info.gpu_name:
+                print(f"✓ Detected GPU: {self._system_info.gpu_name}")
 
     def _validate_executable(self) -> bool:
         """Validate that the test executable exists in filesystem or PATH."""
@@ -356,6 +379,11 @@ class VulkanVideoTestFrameworkBase:
 
         print("-" * 70)
 
+        # Print system info header
+        print()
+        print(f"### {self.system_info.get_header()}")
+        print()
+
         # Skipped tests are now included in results, so just use len(results)
         print(f"Total Tests:   {len(results):3}")
         print(f"Passed:        {passed:3}")
@@ -422,8 +450,15 @@ class VulkanVideoTestFrameworkBase:
             ]
             Path(output_file).parent.mkdir(parents=True, exist_ok=True)
 
+            sys_info = self.system_info
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump({
+                    "system_info": {
+                        "gpu_name": sys_info.gpu_name,
+                        "driver_name": sys_info.driver_name,
+                        "driver_version": sys_info.driver_version,
+                        "os_name": sys_info.os_name,
+                    },
                     "summary": {
                         "total_tests": len(self.results),
                         "passed": sum(
