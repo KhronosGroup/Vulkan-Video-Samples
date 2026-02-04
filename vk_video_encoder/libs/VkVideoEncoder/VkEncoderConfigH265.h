@@ -176,6 +176,9 @@ struct EncoderConfigH265 : public EncoderConfig {
         return ((h265EncodeCapabilities.flags & VK_VIDEO_ENCODE_H265_CAPABILITY_B_PICTURE_INTRA_REFRESH_BIT_KHR) != 0);
     }
 
+    void SetMaxCtbSize();
+    void SetTransformBlockSize();
+
     bool GetRateControlParameters(VkVideoEncodeRateControlInfoKHR *rcInfo,
                                   VkVideoEncodeRateControlLayerInfoKHR *pRcLayerInfo,
                                   VkVideoEncodeH265RateControlInfoKHR *rcInfoH265,
