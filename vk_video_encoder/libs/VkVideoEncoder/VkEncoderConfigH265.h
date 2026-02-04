@@ -94,10 +94,10 @@ struct EncoderConfigH265 : public EncoderConfig {
       , vpsId(0)
       , spsId(0)
       , ppsId(0)
-      , cuMinSize(CU_SIZE_16x16)            // TODO: adjust based on device capabilities
-      , cuSize(CU_SIZE_32x32)               // TODO: adjust based on device capabilities
-      , minTransformUnitSize(TU_SIZE_4x4)   // TODO: adjust based on device capabilities
-      , maxTransformUnitSize(TU_SIZE_32x32) // TODO: adjust based on device capabilities
+      , cuMinSize(CU_SIZE_8x8)
+      , cuSize(CU_SIZE_8x8)
+      , minTransformUnitSize(TU_SIZE_4x4)
+      , maxTransformUnitSize(TU_SIZE_4x4)
       , vbvBufferSize()
       , vbvInitialDelay()
       , minQp{}
