@@ -1,0 +1,23 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Write PR body to file
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr_body.md"
+
+      - name: Validate PR title and body
+        run: >
+          python3 scripts/validate_pr.py
+          --title "${{ github.event.pull_request.title }}"
+          --body-file "$RUNNER_TEMP/pr_body.md"
