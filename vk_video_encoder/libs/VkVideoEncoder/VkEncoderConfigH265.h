@@ -28,14 +28,16 @@ struct EncoderConfigH265 : public EncoderConfig {
     enum { MAX_NUM_REF_PICS = 15 };
     enum { LOG2_MB_SIZE = 4 };
 
+    // represents (log2(size) - 3)
     enum CuSize
     {
         CU_SIZE_8x8   = 0U,
         CU_SIZE_16x16 = 1U,
         CU_SIZE_32x32 = 2U,
-        CU_SIZE_64x64 = 4U,
+        CU_SIZE_64x64 = 3U,
     };
 
+    // represents (log2(size) - 2)
     enum TransformUnitSize
     {
         TU_SIZE_4x4   = 0U,
