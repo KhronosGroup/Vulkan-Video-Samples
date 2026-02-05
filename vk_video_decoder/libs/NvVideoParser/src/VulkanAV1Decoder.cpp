@@ -295,6 +295,11 @@ bool VulkanAV1Decoder::BeginPicture(VkParserPictureData* pnvpd)
     // Allocate a buffer for the current picture
     if (m_pCurrPic == nullptr) {
         m_pClient->AllocPictureBuffer(&m_pCurrPic);
+        assert(m_pCurrPic);
+
+        m_pCurrPic->decodeWidth = frame_width;
+        m_pCurrPic->decodeHeight = frame_height;
+        m_pCurrPic->decodeSuperResWidth = upscaled_width;
     }
 
     pnvpd->PicWidthInMbs    = nvsi.nCodedWidth >> 4;
@@ -1196,6 +1201,7 @@ bool VulkanAV1Decoder::DecodeTileInfo()
         for (uint32_t off = 0, i = 0; off < sb_cols; off += tile_width_sb)
             pic_data->MiColStarts[i++] = off;
 
+        assert(tile_width_sb != 0);
         pic_data->tileInfo.TileCols = (sb_cols + tile_width_sb - 1) / tile_width_sb;
 
         min_log2_tile_rows = std::max(int(min_log2_tiles - log2_tile_cols), 0);
@@ -1210,6 +1216,7 @@ bool VulkanAV1Decoder::DecodeTileInfo()
         for (uint32_t off = 0, i = 0; off < sb_rows; off += tile_height_sb)
             pic_data->MiRowStarts[i++] = off;
 
+        assert(tile_height_sb != 0);
         pic_data->tileInfo.TileRows = (sb_rows + tile_height_sb - 1) / tile_height_sb;
 
         // Derive tile_width_in_sbs_minus_1 and tile_height_in_sbs_minus_1
