@@ -500,7 +500,7 @@ public:
         return OpenFile();
     }
 
-    const char* GetFileName()
+    const char* GetFileName() const
     {
         return m_fileName;
     }
@@ -715,6 +715,7 @@ public:
     VkVideoEncodeCapabilitiesKHR videoEncodeCapabilities;
     VkVideoEncodeQuantizationMapCapabilitiesKHR quantizationMapCapabilities;
     VkVideoEncodeIntraRefreshCapabilitiesKHR intraRefreshCapabilities;
+    VkVideoEncodeFeedback2CapabilitiesKHR videoEncodeFeedback2Capabilities;
     VkVideoEncodeQualityLevelPropertiesKHR qualityLevelProperties;
     VkVideoEncodeRateControlModeFlagBitsKHR rateControlMode;
     uint32_t averageBitrate; // kbits/sec
@@ -822,6 +823,7 @@ public:
     , videoEncodeCapabilities()
     , quantizationMapCapabilities()
     , intraRefreshCapabilities()
+    , videoEncodeFeedback2Capabilities()
     , rateControlMode(VK_VIDEO_ENCODE_RATE_CONTROL_MODE_FLAG_BITS_MAX_ENUM_KHR)
     , averageBitrate()
     , maxBitrate()
