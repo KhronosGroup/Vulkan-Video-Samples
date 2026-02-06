@@ -225,6 +225,9 @@ private:
         , m_useTransferOperation(VK_FALSE)
         , m_resetDecoder(VK_TRUE)
         , m_dumpDecodeData(VK_FALSE)
+        , m_useSeparateTransferQueue(VK_FALSE)
+        , m_transferCommandPool(VK_NULL_HANDLE)
+        , m_transferCommandBuffers()
         , m_numImageTypes(1) // At least the decoder requires images for DPB
         , m_numImageTypesEnabled(DecodeFrameBufferIf::IMAGE_TYPE_MASK_DECODE_DPB)
         , m_imageSpecsIndex()
@@ -329,6 +332,12 @@ private:
     uint32_t m_useTransferOperation : 1;
     uint32_t m_resetDecoder : 1;
     uint32_t m_dumpDecodeData : 1;
+    uint32_t m_useSeparateTransferQueue : 1; // True when video decode and transfer queues are different families
+
+    // Transfer queue resources for cross-queue family image copy operations
+    VkCommandPool                m_transferCommandPool;
+    std::vector<VkCommandBuffer> m_transferCommandBuffers;
+
     uint32_t m_numImageTypes;
     uint32_t m_numImageTypesEnabled;
     DecodeFrameBufferIf::ImageSpecsIndex m_imageSpecsIndex;
