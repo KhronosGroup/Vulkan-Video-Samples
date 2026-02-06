@@ -1501,10 +1501,67 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     VkQueryPoolVideoEncodeFeedbackCreateInfoKHR encodeFeedbackCreateInfo =
         {VK_STRUCTURE_TYPE_QUERY_POOL_VIDEO_ENCODE_FEEDBACK_CREATE_INFO_KHR};
+    VkQueryPoolVideoEncodePerPartitionFeedbackCreateInfoKHR perPartitionFeedbackCreateInfo =
+        {VK_STRUCTURE_TYPE_QUERY_POOL_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_CREATE_INFO_KHR};
 
-    encodeFeedbackCreateInfo.pNext = encoderConfig->videoCoreProfile.GetProfile();
-    encodeFeedbackCreateInfo.encodeFeedbackFlags = VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
-                                                   VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR;
+    VkVideoEncodeFeedbackFlagsKHR encodeFeedbackFlags =
+        VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
+        VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR;
+    const VkVideoEncodeFeedbackFlagsKHR supportedFeedbackFlags =
+        encoderConfig->videoEncodeCapabilities.supportedEncodeFeedbackFlags;
+    const void* feedbackPNext = encoderConfig->videoCoreProfile.GetProfile();
+    bool perPartitionFeedbackEnabled = false;
+
+    const EncoderConfigAV1* av1Config = encoderConfig->GetEncoderConfigAV1();
+    if (av1Config != nullptr) {
+        if (av1Config->enablePictureFeedback) {
+            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR;
+            encodeFeedbackFlags |=
+                (supportedFeedbackFlags & (VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR |
+                                           VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR));
+        }
+        if (av1Config->enablePixelFeedback) {
+            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR |
+                                   VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR;
+        }
+        if (av1Config->enableSkippedPixelFeedback) {
+            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR;
+        }
+
+        if (av1Config->enablePerPartitionFeedback) {
+            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR;
+
+            perPartitionFeedbackCreateInfo.pNext = feedbackPNext;
+            perPartitionFeedbackCreateInfo.maxPerPartitionFeedbackEntries =
+                std::max(1u, av1Config->maxPerPartitionFeedbackEntries);
+            perPartitionFeedbackCreateInfo.perPartitionEncodeFeedbackFlags =
+                VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR |
+                VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
+                VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR;
+            feedbackPNext = &perPartitionFeedbackCreateInfo;
+            perPartitionFeedbackEnabled = true;
+        }
+    }
+
+    encodeFeedbackCreateInfo.pNext = feedbackPNext;
+    encodeFeedbackCreateInfo.encodeFeedbackFlags = encodeFeedbackFlags;
+
+    const VkVideoEncodeFeedbackFlagsKHR unsupportedFeedbackFlags =
+        encodeFeedbackFlags & ~supportedFeedbackFlags;
+    if (unsupportedFeedbackFlags != 0) {
+        std::cerr << "Requested encode feedback flags are not supported: 0x"
+                  << std::hex << unsupportedFeedbackFlags << std::dec << std::endl;
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    m_encodeFeedbackFlags = encodeFeedbackFlags;
+    if (perPartitionFeedbackEnabled) {
+        m_perPartitionFeedbackFlags = perPartitionFeedbackCreateInfo.perPartitionEncodeFeedbackFlags;
+        m_maxPerPartitionFeedbackEntries = perPartitionFeedbackCreateInfo.maxPerPartitionFeedbackEntries;
+    } else {
+        m_perPartitionFeedbackFlags = 0;
+        m_maxPerPartitionFeedbackEntries = 0;
+    }
 
     result = m_encodeCommandBufferPool->Configure( m_vkDevCtx,
                                                    encoderConfig->numInputImages, // numPoolNodes

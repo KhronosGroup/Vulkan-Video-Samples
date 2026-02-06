@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <chrono>
+#include <cstring>
 #include "VkVideoEncoder/VkVideoEncoderAV1.h"
 #include "VkVideoCore/VulkanVideoCapabilities.h"
 
@@ -84,6 +86,12 @@ VkResult VkVideoEncoderAV1::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& enc
     VkResult result = InitEncoder(encoderConfig);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nERROR: InitEncoder() failed with ret(%d)\n", result);
+        return result;
+    }
+
+    result = m_feedback2Output.Init(*m_encoderConfig);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "\nERROR: Feedback2 output init failed with ret(%d)\n", result);
         return result;
     }
 
@@ -832,12 +840,175 @@ VkResult VkVideoEncoderAV1::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeF
     return VkVideoEncoder::SubmitVideoCodingCmds(encodeFrameInfo, frameIdx, ofTotalFrames);
 }
 
+size_t VkVideoEncoderAV1::GetEncodeFeedbackResultsSize() const
+{
+    size_t dataSize = 0;
+    const VkVideoEncodeFeedbackFlagsKHR flags = m_encodeFeedbackFlags;
+
+    auto addU32 = [&dataSize]() { dataSize += sizeof(uint32_t); };
+    auto addI32 = [&dataSize]() { dataSize += sizeof(int32_t); };
+    auto addStatus = [&dataSize]() { dataSize += sizeof(VkQueryResultStatusKHR); };
+
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_HAS_OVERRIDES_BIT_KHR) {
+        dataSize += sizeof(VkBool32);
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR) {
+        addI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR) {
+        addI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR) {
+        addI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR) {
+        addU32();
+    }
+
+    // Status is appended when VK_QUERY_RESULT_WITH_STATUS_BIT_KHR is used.
+    addStatus();
+
+    if (m_perPartitionFeedbackFlags != 0 && m_maxPerPartitionFeedbackEntries > 0) {
+        size_t perPartitionSize = 0;
+        if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR) {
+            perPartitionSize += sizeof(VkQueryResultStatusKHR);
+        }
+        if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+            perPartitionSize += sizeof(uint32_t);
+        }
+        if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+            perPartitionSize += sizeof(uint32_t);
+        }
+
+        dataSize += perPartitionSize * m_maxPerPartitionFeedbackEntries;
+    }
+
+    return dataSize;
+}
+
+VkResult VkVideoEncoderAV1::GetEncodeFeedbackResults(VkQueryPool queryPool, uint32_t querySlotId,
+                                                     EncodeFeedbackResults& results)
+{
+    const size_t dataSize = GetEncodeFeedbackResultsSize();
+    std::vector<uint8_t> buffer(dataSize);
+
+    VkResult result = m_vkDevCtx->GetQueryPoolResults(*m_vkDevCtx, queryPool, querySlotId,
+                                                      1, dataSize, buffer.data(), dataSize,
+                                                      VK_QUERY_RESULT_WITH_STATUS_BIT_KHR |
+                                                      VK_QUERY_RESULT_WAIT_BIT);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    results = EncodeFeedbackResults{};
+
+    const VkVideoEncodeFeedbackFlagsKHR flags = m_encodeFeedbackFlags;
+    const uint8_t* cursor = buffer.data();
+
+    auto readU32 = [&cursor]() -> uint32_t {
+        uint32_t value = 0;
+        memcpy(&value, cursor, sizeof(value));
+        cursor += sizeof(value);
+        return value;
+    };
+    auto readI32 = [&cursor]() -> int32_t {
+        int32_t value = 0;
+        memcpy(&value, cursor, sizeof(value));
+        cursor += sizeof(value);
+        return value;
+    };
+    auto readStatus = [&cursor]() -> VkQueryResultStatusKHR {
+        VkQueryResultStatusKHR value = VK_QUERY_RESULT_STATUS_NOT_READY_KHR;
+        memcpy(&value, cursor, sizeof(value));
+        cursor += sizeof(value);
+        return value;
+    };
+
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+        results.bitstreamStartOffset = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+        results.bitstreamSize = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_HAS_OVERRIDES_BIT_KHR) {
+        results.hasOverrides = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR) {
+        results.hasAverageQuantization = true;
+        results.averageQuantization = readI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR) {
+        results.hasMinQuantization = true;
+        results.minQuantization = readI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR) {
+        results.hasMaxQuantization = true;
+        results.maxQuantization = readI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR) {
+        results.hasIntraPixels = true;
+        results.intraPixels = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR) {
+        results.hasInterPixels = true;
+        results.interPixels = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR) {
+        results.hasSkippedPixels = true;
+        results.skippedPixels = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR) {
+        results.hasPicturePartitionCount = true;
+        results.picturePartitionCount = readU32();
+    }
+
+    results.status = readStatus();
+
+    if (m_perPartitionFeedbackFlags != 0 && m_maxPerPartitionFeedbackEntries > 0) {
+        results.partitions.reserve(m_maxPerPartitionFeedbackEntries);
+        for (uint32_t i = 0; i < m_maxPerPartitionFeedbackEntries; ++i) {
+            Feedback2PartitionInfo partition{};
+            partition.index = i;
+
+            if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR) {
+                partition.status = readStatus();
+            }
+            if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+                partition.offset = readU32();
+            }
+            if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+                partition.size = readU32();
+            }
+
+            results.partitions.push_back(partition);
+        }
+    }
+
+    return VK_SUCCESS;
+}
+
 VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo,
                                                   uint32_t frameIdx, uint32_t ofTotalFrames)
 {
     VkVideoEncodeFrameInfoAV1* pFrameInfo = GetEncodeFrameInfoAV1(encodeFrameInfo);
 
     if (pFrameInfo->bShowExistingFrame) {
+        WriteFeedback2Output(pFrameInfo, nullptr);
         WriteShowExistingFrameHeader(encodeFrameInfo);
         return VK_SUCCESS;
     }
@@ -860,21 +1031,15 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
     querySlotId = (uint32_t)encodeFrameInfo->srcEncodeImageResource->GetImageIndex();
 
     // get output results
-    struct VulkanVideoEncodeStatus {
-        uint32_t bitstreamStartOffset;
-        uint32_t bitstreamSize;
-        VkQueryResultStatusKHR status;
-    } encodeResult{};
+    EncodeFeedbackResults encodeResult{};
 
     // Fetch the coded VCL data and its information
-    result = m_vkDevCtx->GetQueryPoolResults(*m_vkDevCtx, queryPool, querySlotId,
-                                             1, sizeof(encodeResult), &encodeResult, sizeof(encodeResult),
-                                             VK_QUERY_RESULT_WITH_STATUS_BIT_KHR | VK_QUERY_RESULT_WAIT_BIT);
+    result = GetEncodeFeedbackResults(queryPool, querySlotId, encodeResult);
 
     assert(result == VK_SUCCESS);
     assert(encodeResult.status == VK_QUERY_RESULT_STATUS_COMPLETE_KHR);
 
-    if(result != VK_SUCCESS) {
+    if (result != VK_SUCCESS) {
         fprintf(stderr, "\nRetrieveData Error: Failed to get vcl query pool results.\n");
         return result;
     }
@@ -1009,7 +1174,132 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
     }
     fflush(m_encoderConfig->outputFileHandler.GetFileHandle());
 
+    WriteFeedback2Output(pFrameInfo, &encodeResult);
+
     return result;
+}
+
+VkResult VkVideoEncoderAV1::Feedback2TextOutput::Init(const EncoderConfigAV1& config)
+{
+    m_pictureEnabled = config.enablePictureFeedback || config.enablePixelFeedback || config.enablePerPartitionFeedback;
+    m_partitionEnabled = config.enablePerPartitionFeedback;
+
+    if (!Enabled()) {
+        return VK_SUCCESS;
+    }
+
+    const char* bitstreamPath = config.outputFileHandler.GetFileName();
+    if (bitstreamPath && bitstreamPath[0] != '\0') {
+        m_path = std::string(bitstreamPath) + ".feedback.txt";
+    } else {
+        m_path = "encoder.feedback.txt";
+    }
+
+    size_t fileSize = m_file.SetFileName(m_path.c_str());
+    if (fileSize == 0) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return VK_SUCCESS;
+}
+
+void VkVideoEncoderAV1::Feedback2TextOutput::Close()
+{
+    if (m_file.HandleIsValid()) {
+        m_file.Destroy();
+    }
+    m_path.clear();
+}
+
+void VkVideoEncoderAV1::Feedback2TextOutput::WriteFrame(const Feedback2FrameOutput& output)
+{
+    if (!Enabled() || !m_file.HandleIsValid()) {
+        return;
+    }
+
+    FILE* fileHandle = m_file.GetFileHandle();
+
+    if (m_pictureEnabled) {
+        fprintf(fileHandle, "frame %llu", (unsigned long long)output.frameIndex);
+        if (output.hasAvgQp) {
+            fprintf(fileHandle, " avgqp=%d", output.avgQp);
+        }
+        if (output.hasMinQp) {
+            fprintf(fileHandle, " minqp=%d", output.minQp);
+        }
+        if (output.hasMaxQp) {
+            fprintf(fileHandle, " maxqp=%d", output.maxQp);
+        }
+        if (output.hasIntraPixels) {
+            fprintf(fileHandle, " intra=%u", output.intraPixels);
+        }
+        if (output.hasInterPixels) {
+            fprintf(fileHandle, " inter=%u", output.interPixels);
+        }
+        if (output.hasSkippedPixels) {
+            fprintf(fileHandle, " skipped=%u", output.skippedPixels);
+        }
+        if (output.hasPicturePartitionCount) {
+            fprintf(fileHandle, " pic_partition_count=%u", output.picturePartitionCount);
+        }
+        fprintf(fileHandle, "\n");
+    }
+
+    if (m_partitionEnabled) {
+        for (const auto& partition : output.partitions) {
+            fprintf(fileHandle, "partition %u offset=%u size=%u\n",
+                    partition.index, partition.offset, partition.size);
+        }
+    }
+
+    fflush(fileHandle);
+}
+
+void VkVideoEncoderAV1::WriteFeedback2Output(const VkVideoEncodeFrameInfoAV1* frameInfo,
+                                             const EncodeFeedbackResults* results)
+{
+    if (!m_feedback2Output.Enabled() || frameInfo == nullptr) {
+        return;
+    }
+
+    Feedback2FrameOutput output{};
+    output.frameIndex = frameInfo->frameInputOrderNum;
+
+    if (m_feedback2Output.PictureEnabled()) {
+        output.hasAvgQp = (results && results->hasAverageQuantization);
+        output.hasMinQp = (results && results->hasMinQuantization);
+        output.hasMaxQp = (results && results->hasMaxQuantization);
+        output.avgQp = output.hasAvgQp ? results->averageQuantization : 0;
+        output.minQp = output.hasMinQp ? results->minQuantization : 0;
+        output.maxQp = output.hasMaxQp ? results->maxQuantization : 0;
+
+        output.hasIntraPixels = (results && results->hasIntraPixels);
+        output.hasInterPixels = (results && results->hasInterPixels);
+        output.hasSkippedPixels = (results && results->hasSkippedPixels);
+        output.intraPixels = output.hasIntraPixels ? results->intraPixels : 0;
+        output.interPixels = output.hasInterPixels ? results->interPixels : 0;
+        output.skippedPixels = output.hasSkippedPixels ? results->skippedPixels : 0;
+
+        output.hasPicturePartitionCount = (results && results->hasPicturePartitionCount);
+        output.picturePartitionCount = output.hasPicturePartitionCount ? results->picturePartitionCount : 0;
+    }
+
+    if (m_feedback2Output.PartitionEnabled() && results) {
+        if (results->hasPicturePartitionCount &&
+            results->picturePartitionCount > results->partitions.size()) {
+            std::cerr << "Feedback2: picturePartitionCount (" << results->picturePartitionCount
+                      << ") exceeds allocated per-partition entries ("
+                      << results->partitions.size() << ")\n";
+        }
+        uint32_t partitionCount = results->hasPicturePartitionCount ?
+                                  results->picturePartitionCount :
+                                  static_cast<uint32_t>(results->partitions.size());
+        partitionCount = std::min(partitionCount, static_cast<uint32_t>(results->partitions.size()));
+        output.partitions.assign(results->partitions.begin(),
+                                 results->partitions.begin() + partitionCount);
+    }
+
+    m_feedback2Output.WriteFrame(output);
 }
 
 void VkVideoEncoderAV1::WriteShowExistingFrameHeader(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo)

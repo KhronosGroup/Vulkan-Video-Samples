@@ -823,8 +823,17 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                                                                             VK_FALSE
                                                                            };
 
+        VkPhysicalDeviceVideoEncodeFeedback2FeaturesKHR feedback2Features {
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_ENCODE_FEEDBACK_2_FEATURES_KHR,
+            &synchronization2Features,
+            VK_FALSE
+        };
+
+        void* intraRefreshPNext = m_videoEncodeFeedback2Enabled ?
+            static_cast<void*>(&feedback2Features) :
+            static_cast<void*>(&synchronization2Features);
         VkPhysicalDeviceVideoEncodeIntraRefreshFeaturesKHR intraRefreshFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_ENCODE_INTRA_REFRESH_FEATURES_KHR,
-                                                                                  &synchronization2Features,
+                                                                                  intraRefreshPNext,
                                                                                   VK_FALSE
                                                                                 };
 
@@ -840,6 +849,9 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
         CHECK_VULKAN_FEATURE(timelineSemaphoreFeatures.timelineSemaphore, "timelineSemaphore", false);
         CHECK_VULKAN_FEATURE(videoMaintenance1Features.videoMaintenance1, "videoMaintenance1", true);
         CHECK_VULKAN_FEATURE(synchronization2Features.synchronization2, "synchronization2", false);
+        if (m_videoEncodeFeedback2Enabled) {
+            CHECK_VULKAN_FEATURE(feedback2Features.videoEncodeFeedback2, "videoEncodeFeedback2", false);
+        }
         CHECK_VULKAN_FEATURE(((videoCodecs & VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR) != 0) ==
                              (videoEncodeAV1Feature.videoEncodeAV1 != VK_FALSE), "videoEncodeAV1", false);
         CHECK_VULKAN_FEATURE(((videoCodecs & VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) != 0) ==
@@ -974,6 +986,7 @@ VulkanDeviceContext::VulkanDeviceContext()
     , m_importedDeviceHandle(false)
     , m_videoDecodeQueryResultStatusSupport(false)
     , m_videoEncodeQueryResultStatusSupport(false)
+    , m_videoEncodeFeedback2Enabled(false)
     , m_device()
     , m_gfxQueue()
     , m_computeQueue()

@@ -500,7 +500,7 @@ public:
         return OpenFile();
     }
 
-    const char* GetFileName()
+    const char* GetFileName() const
     {
         return m_fileName;
     }

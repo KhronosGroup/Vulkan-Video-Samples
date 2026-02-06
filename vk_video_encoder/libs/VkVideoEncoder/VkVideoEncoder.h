@@ -438,6 +438,10 @@ public:
         , m_maxDpbPicturesCount(16)
         , m_minStreamBufferSize(2 * 1024 * 1024)
         , m_streamBufferSize(m_minStreamBufferSize)
+        , m_encodeFeedbackFlags(VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
+                                VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR)
+        , m_perPartitionFeedbackFlags(0)
+        , m_maxPerPartitionFeedbackEntries(0)
         , m_rateControlInfo{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_RATE_CONTROL_INFO_KHR }
         , m_rateControlLayersInfo{{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_RATE_CONTROL_LAYER_INFO_KHR }}
         , m_picIdxToDpb{}
@@ -706,6 +710,9 @@ protected:
     uint32_t                              m_maxDpbPicturesCount;
     size_t                                m_minStreamBufferSize;
     size_t                                m_streamBufferSize;
+    VkVideoEncodeFeedbackFlagsKHR         m_encodeFeedbackFlags;
+    VkVideoEncodePerPartitionFeedbackFlagsKHR m_perPartitionFeedbackFlags;
+    uint32_t                              m_maxPerPartitionFeedbackEntries;
     VkVideoEncodeQualityLevelInfoKHR      m_qualityLevelInfo;
     VkVideoEncodeRateControlInfoKHR       m_rateControlInfo;
     VkVideoEncodeRateControlInfoKHR       m_beginRateControlInfo;

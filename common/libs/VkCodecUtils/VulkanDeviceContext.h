@@ -111,6 +111,8 @@ public:
     bool    GetVideoEncodeQueryResultStatusSupport() const { return m_videoEncodeQueryResultStatusSupport; }
     VkQueueFlags GetVideoDecodeQueueFlag() const { return m_videoDecodeQueueFlags; }
     VkQueueFlags GetVideoEncodeQueueFlag() const { return m_videoEncodeQueueFlags; }
+    void SetVideoEncodeFeedback2Enabled(bool enable) { m_videoEncodeFeedback2Enabled = enable; }
+    bool GetVideoEncodeFeedback2Enabled() const { return m_videoEncodeFeedback2Enabled; }
     class MtQueueMutex {
 
     public:
@@ -341,6 +343,7 @@ private:
     uint32_t m_importedDeviceHandle : 1;
     uint32_t m_videoDecodeQueryResultStatusSupport : 1;
     uint32_t m_videoEncodeQueryResultStatusSupport : 1;
+    uint32_t m_videoEncodeFeedback2Enabled : 1;
     VkDevice                m_device;
     VkQueue                 m_gfxQueue;
     VkQueue                 m_computeQueue;
