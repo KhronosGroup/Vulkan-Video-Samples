@@ -1,5 +1,9 @@
 # Contributing to Vulkan Video Samples
 
+Thank you for your interest in contributing! All contributions should be submitted through pull requests. If you're implementing a new feature, we encourage you to add unit tests using the [testing framework](tests/README.md).
+
+---
+
 ## Commit Message Guidelines
 
 All commit messages must follow this format:
@@ -37,27 +41,82 @@ Commit messages are automatically validated on pull requests via commitlint. See
 
 ---
 
-## Testing Hardware Information
+## Pull Request Guidelines
 
-Every PR must include a section describing the hardware configuration used to run the [testing framework](tests/README.md). This helps maintainers understand the test coverage and identify potential hardware-specific issues.
+When opening a pull request, you'll be presented with a template. Please fill in all required sections.
 
-Please include in your PR description:
+### PR Title
+
+The PR title must follow the same format as commit messages:
 
 ```
-## Test Results
+scope: description
+```
 
+- Same scope rules apply (lowercase for areas, PascalCase for components)
+- Maximum 100 characters
+- No draft indicators (WIP, fixup, etc.)
+- Must not end with a period
+
+### Required Sections
+
+#### Description
+
+Describe your changes clearly. Explain the "why" behind the changes, not just the "what".
+
+#### Type of Change
+
+Specify one of: `bug fix` / `feature` / `refactor` / `docs` / `cleanup`
+
+#### Tests
+
+Every PR must include test results from the [testing framework](tests/README.md). This helps maintainers understand the test coverage and identify potential hardware-specific issues.
+
+**Required format:**
+
+```
 ### [GPU Model] / [Driver Version] / [OS]
 
-Total Tests:     70
-Passed:          48
-Crashed:          0
-Failed:           0
-Not Supported:    5
-Skipped:         17 (in skip list)
+Total Tests: 70
+Passed: 48
+Failed: 0
 Success Rate: 100.0%
 ```
 
+**Required fields** (validated by CI):
+- `Total Tests`
+- `Passed`
+- `Failed`
+- `Success Rate`
+- GPU / Driver / OS header line
+
+**Optional fields** (not validated, but recommended):
+- `Crashed`
+- `Not Supported`
+- `Skipped`
+
 This information is essential for tracking codec support across different hardware vendors and driver versions.
+
+### Optional Sections
+
+#### Issue
+
+Link related issues using GitHub keywords:
+- `Fixes #123` - closes the issue when PR is merged
+- `Related to #456` - references without closing
+
+#### Additional Details
+
+Use this section for any extra context that doesn't fit elsewhere:
+- Implementation notes or trade-offs
+- Performance considerations
+- Migration or upgrade notes
+- Screenshots or logs
+- Links to related discussions or documentation
+
+### Validation
+
+PR titles and bodies are automatically validated via GitHub Actions. The check will fail if required sections are missing or incorrectly formatted.
 
 
 ## Developer Certificate of Origin
