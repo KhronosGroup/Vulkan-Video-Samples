@@ -139,6 +139,17 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
                     READ_PARAM(i, lrConfig.LoopRestorationSize[j], uint16_t);
                 }
             }
+        } else if (args[i] == "--pictureFeedback") {
+            enablePictureFeedback = true;
+        } else if (args[i] == "--pixelCountFeedback") {
+            enablePixelCountFeedback = true;
+        } else if (args[i] == "--skippedPixelCountFeedback") {
+            enableSkippedPixelCountFeedback = true;
+            enablePixelCountFeedback = true;
+        } else if (args[i] == "--enablePerPartitionFeedback") {
+            enablePerPartitionFeedback = true;
+        } else if (args[i] == "--maxPerPartitionFeedbackEntries") {
+            READ_PARAM(i, maxPerPartitionFeedbackEntries, uint32_t);
         } else if (args[i] == "--profile"){
             if (++i >= argc) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i-1].c_str());
@@ -190,6 +201,12 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
 
 VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    const bool feedback2Requested = enablePictureFeedback || enablePixelCountFeedback ||
+                                    enableSkippedPixelCountFeedback || enablePerPartitionFeedback;
+    videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
+        { VK_STRUCTURE_TYPE_VIDEO_ENCODE_FEEDBACK_2_CAPABILITIES_KHR, nullptr };
+    void* pExtCapabilities = feedback2Requested ? &videoEncodeFeedback2Capabilities : nullptr;
+
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeAV1CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_CAPABILITIES_KHR,
                                                                           VkVideoEncodeAV1QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_QUANTIZATION_MAP_CAPABILITIES_KHR>
                                                         (vkDevCtx, videoCoreProfile,
@@ -198,7 +215,8 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
                                                          av1EncodeCapabilities,
                                                          quantizationMapCapabilities,
                                                          av1QuantizationMapCapabilities,
-                                                         intraRefreshCapabilities);
+                                                         intraRefreshCapabilities,
+                                                         pExtCapabilities);
     if (result != VK_SUCCESS) {
         // Distinguish between "not supported" and "actual error"
         if (IsVideoUnsupportedResult(result)) {
@@ -229,6 +247,10 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
         std::cout << "  " << std::left << std::setw(48) << "bidirectionalCompoundReferenceNameMask" << ": 0x" << std::hex << av1EncodeCapabilities.bidirectionalCompoundReferenceNameMask << std::dec << std::endl;
         std::cout << "  " << std::left << std::setw(48) << "maxTemporalLayerCount" << ": " << av1EncodeCapabilities.maxTemporalLayerCount << std::endl;
         std::cout << "  " << std::left << std::setw(48) << "maxSpatialLayerCount" << ": " << av1EncodeCapabilities.maxSpatialLayerCount << std::endl;
+        if (feedback2Requested) {
+            std::cout << "  " << std::left << std::setw(48) << "maxPerPartitionFeedbackEntries" << ": " << videoEncodeFeedback2Capabilities.maxPerPartitionFeedbackEntries << std::endl;
+            std::cout << "  " << std::left << std::setw(48) << "supportedPerPartitionEncodeFeedbackFlags" << ": 0x" << std::hex << videoEncodeFeedback2Capabilities.supportedPerPartitionEncodeFeedbackFlags << std::dec << std::endl;
+        }
     }
 
     result = VulkanVideoCapabilities::GetPhysicalDeviceVideoEncodeQualityLevelProperties<VkVideoEncodeAV1QualityLevelPropertiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_QUALITY_LEVEL_PROPERTIES_KHR>

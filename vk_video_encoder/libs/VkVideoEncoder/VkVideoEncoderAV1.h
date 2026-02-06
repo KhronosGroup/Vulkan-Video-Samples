@@ -17,7 +17,10 @@
 #ifndef _VKVIDEOENCODER_VKVIDEOENCODERAV1_H_
 #define _VKVIDEOENCODER_VKVIDEOENCODERAV1_H_
 
+#include <cstdio>
 #include <set>
+#include <string>
+#include <vector>
 #include "VkVideoEncoder/VkVideoEncoder.h"
 #include "VkVideoEncoder/VkVideoEncoderStateAV1.h"
 #include "VkVideoEncoder/VkEncoderConfigAV1.h"
@@ -182,6 +185,7 @@ public:
 protected:
     virtual ~VkVideoEncoderAV1()
     {
+        m_feedback2Output.Close();
         m_frameInfoBuffersQueue = nullptr;
         m_videoSessionParameters = nullptr;
         m_videoSession = nullptr;
@@ -193,6 +197,89 @@ protected:
     }
 
 private:
+    struct Feedback2PartitionInfo {
+        uint32_t index;
+        bool hasStatus;
+        VkQueryResultStatusKHR status;
+        uint32_t offset;
+        uint32_t size;
+    };
+
+    struct Feedback2FrameOutput {
+        uint64_t frameIndex;
+        bool hasStatus;
+        VkQueryResultStatusKHR status;
+        bool hasBitstreamBufferOffset;
+        bool hasBitstreamBytesWritten;
+        uint32_t bitstreamBufferOffset;
+        uint32_t bitstreamBytesWritten;
+        bool hasAvgQp;
+        bool hasMinQp;
+        bool hasMaxQp;
+        int32_t avgQp;
+        int32_t minQp;
+        int32_t maxQp;
+        bool hasIntraPixels;
+        bool hasInterPixels;
+        bool hasSkippedPixels;
+        uint32_t intraPixels;
+        uint32_t interPixels;
+        uint32_t skippedPixels;
+        bool hasPicturePartitionCount;
+        uint32_t picturePartitionCount;
+        std::vector<Feedback2PartitionInfo> partitions;
+    };
+
+    struct EncodeFeedbackResults {
+        uint32_t bitstreamStartOffset;
+        uint32_t bitstreamSize;
+        bool hasStatus;
+        VkQueryResultStatusKHR status;
+        bool hasBitstreamStartOffset;
+        bool hasBitstreamSize;
+        VkBool32 hasOverrides;
+        bool hasAverageQuantization;
+        bool hasMinQuantization;
+        bool hasMaxQuantization;
+        int32_t averageQuantization;
+        int32_t minQuantization;
+        int32_t maxQuantization;
+        bool hasIntraPixels;
+        bool hasInterPixels;
+        bool hasSkippedPixels;
+        uint32_t intraPixels;
+        uint32_t interPixels;
+        uint32_t skippedPixels;
+        bool hasPicturePartitionCount;
+        uint32_t picturePartitionCount;
+        std::vector<Feedback2PartitionInfo> partitions;
+    };
+
+    class Feedback2TextOutput {
+    public:
+        Feedback2TextOutput()
+            : m_pictureEnabled(false)
+            , m_partitionEnabled(false)
+            , m_path()
+            , m_file()
+        {
+        }
+
+        VkResult Init(const EncoderConfigAV1& config);
+        void Close();
+        bool Enabled() const { return m_pictureEnabled || m_partitionEnabled; }
+        bool PictureEnabled() const { return m_pictureEnabled; }
+        bool PartitionEnabled() const { return m_partitionEnabled; }
+        const std::string& GetPath() const { return m_path; }
+        void WriteFrame(const Feedback2FrameOutput& output);
+
+    private:
+        bool m_pictureEnabled;
+        bool m_partitionEnabled;
+        std::string m_path;
+        EncoderOutputFileHandler m_file;
+    };
+
     VkVideoEncodeFrameInfoAV1* GetEncodeFrameInfoAV1(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo) {
         assert(VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR == encodeFrameInfo->GetCodecType());
         VkVideoEncodeFrameInfo* pEncodeFrameInfo = encodeFrameInfo;
@@ -201,11 +288,16 @@ private:
 
     void InitializeFrameHeader(StdVideoAV1SequenceHeader* pSequenceHdr, VkVideoEncodeFrameInfoAV1* pFrameInfo,
                                StdVideoAV1ReferenceName& refName);
+    VkResult GetEncodeFeedbackResults(VkQueryPool queryPool, uint32_t querySlotId, EncodeFeedbackResults& results);
+    size_t GetEncodeFeedbackResultsSize() const;
+    void WriteFeedback2Output(const VkVideoEncodeFrameInfoAV1* frameInfo,
+                              const EncodeFeedbackResults* results);
 
     VkSharedBaseObj<EncoderConfigAV1>   m_encoderConfig;
     EncoderAV1State                     m_stateAV1;
     VkEncDpbAV1*                        m_dpbAV1;
     VkSharedBaseObj<VulkanBufferPool<VkVideoEncodeFrameInfoAV1>> m_frameInfoBuffersQueue;
+    Feedback2TextOutput                 m_feedback2Output;
 
     int32_t                             m_lastKeyFrameOrderHint;
     uint32_t                            m_numBFramesToEncode;

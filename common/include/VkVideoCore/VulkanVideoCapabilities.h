@@ -67,9 +67,10 @@ public:
                                                VkVideoEncodeCodecCapabilitiesKHR& videoCodecCapabilities,
                                                VkVideoEncodeQuantizationMapCapabilitiesKHR& quantizationMapCapabilities,
                                                VkVideoEncodeCodecQuantizationMapCapabilitiesKHR& codecQuantizationMapCapabilities,
-                                               VkVideoEncodeIntraRefreshCapabilitiesKHR& intraRefreshCapabilities) {
+                                               VkVideoEncodeIntraRefreshCapabilitiesKHR& intraRefreshCapabilities,
+                                               void* pExtCapabilities = nullptr) {
 
-        intraRefreshCapabilities = VkVideoEncodeIntraRefreshCapabilitiesKHR { VK_STRUCTURE_TYPE_VIDEO_ENCODE_INTRA_REFRESH_CAPABILITIES_KHR, nullptr };
+        intraRefreshCapabilities = VkVideoEncodeIntraRefreshCapabilitiesKHR { VK_STRUCTURE_TYPE_VIDEO_ENCODE_INTRA_REFRESH_CAPABILITIES_KHR, pExtCapabilities };
         codecQuantizationMapCapabilities = VkVideoEncodeCodecQuantizationMapCapabilitiesKHR { VK_STRUCTURE_TYPE_VIDEO_ENCODE_CODEC_QUANTIZATION_MAP_CAPABILITIES_KHR, &intraRefreshCapabilities };
         quantizationMapCapabilities = VkVideoEncodeQuantizationMapCapabilitiesKHR { VK_STRUCTURE_TYPE_VIDEO_ENCODE_QUANTIZATION_MAP_CAPABILITIES_KHR, &codecQuantizationMapCapabilities };
         videoCodecCapabilities  = VkVideoEncodeCodecCapabilitiesKHR { VK_STRUCTURE_TYPE_VIDEO_ENCODE_CODEC_CAPABILITIES_KHR, &quantizationMapCapabilities };

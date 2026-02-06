@@ -87,6 +87,13 @@ int main(int argc, const char* argv[])
     vkDevCtxt.AddReqDeviceExtensions(requiredDeviceExtension);
     vkDevCtxt.AddOptDeviceExtensions(optinalDeviceExtension);
 
+    bool enableFeedback2 = false;
+    if (const EncoderConfigAV1* av1Config = encoderConfig->GetEncoderConfigAV1()) {
+        enableFeedback2 = av1Config->enablePictureFeedback || av1Config->enablePixelCountFeedback ||
+                          av1Config->enableSkippedPixelCountFeedback || av1Config->enablePerPartitionFeedback;
+    }
+    vkDevCtxt.SetVideoEncodeFeedback2Enabled(enableFeedback2);
+
     /********** Start WSI instance extensions support *******************************************/
     if (encoderConfig->enableFramePresent) {
         const std::vector<VkExtensionProperties>& wsiRequiredInstanceInstanceExtensions =
