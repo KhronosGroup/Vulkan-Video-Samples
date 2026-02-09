@@ -1,3 +1,12 @@
+v0.4.0:
+  - Add testing framework to run automated decode and encode conformance
+    tests across multiple GPU drivers and codecs
+  - Add GitHub issue and PR templates with body validation workflow
+  - Add contributing section with testing hardware requirements
+  - Improve error handling: VulkanVideoProcessor::Initialize returns VkResult
+  - Improve frame output error handling with result enum in VkVideoQueue
+  - Code cleanup and better C++ compliance across decoder and build system
+
 v0.3.9:
   - Add clang compiler support for Linux and Windows builds
   - Add -Wundef warning flag and fix undefined macro usage

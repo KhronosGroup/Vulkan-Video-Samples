@@ -118,6 +118,15 @@ Use this section for any extra context that doesn't fit elsewhere:
 
 PR titles and bodies are automatically validated via GitHub Actions. The check will fail if required sections are missing or incorrectly formatted.
 
+---
+
+## Release Process
+
+1. Update `Changelog.md` with the new version entry
+2. Update the version in `common/include/VkVSCommon.h`
+3. Create a tag (e.g. `v0.4.0`) and push it — GitHub will automatically create a release
+
+---
 
 ## Developer Certificate of Origin
 
