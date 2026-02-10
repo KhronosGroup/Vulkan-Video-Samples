@@ -118,13 +118,20 @@ Use this section for any extra context that doesn't fit elsewhere:
 
 PR titles and bodies are automatically validated via GitHub Actions. The check will fail if required sections are missing or incorrectly formatted.
 
+### CTS Build Validation
+
+A CI job validates that changes compile correctly within the [VK-GL-CTS](https://github.com/KhronosGroup/VK-GL-CTS) (Vulkan Conformance Test Suite). This ensures integration compatibility before changes reach CTS upstream.
+
+The CTS build runs automatically when the PR title contains `[release]`. It can also be triggered manually by adding the `cts-build` label to the pull request. The job clones VK-GL-CTS, replaces the pinned vulkan-video-samples sources with the PR code, and builds CTS on both Linux (GCC 64-bit Release) and Windows (VS 64-bit Debug).
+
 ---
 
 ## Release Process
 
 1. Update `Changelog.md` with the new version entry
 2. Update the version in `common/include/VkVSCommon.h`
-3. Create a tag (e.g. `v0.4.0`) and push it — GitHub will automatically create a release
+3. Create a PR with `[release]: create vx.x.x` as title to trigger a CTS build
+4. When PR has been merged, create a tag (e.g. `v0.4.0`) on this release commit and push it — GitHub will automatically create a release
 
 ---
 

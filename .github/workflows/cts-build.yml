@@ -1,0 +1,97 @@
+name: "VK-GL-CTS build validation"
+run-name: CTS build validation by ${{ github.actor }}
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, labeled]
+
+jobs:
+  cts-build-linux:
+    runs-on: ubuntu-24.04
+    if: >
+      contains(github.event.pull_request.title || '', '[release]') ||
+      github.event.label.name == 'cts-build' ||
+      contains(github.event.pull_request.labels.*.name, 'cts-build')
+    env:
+      TERM: dumb
+
+    steps:
+      - name: Checkout Vulkan-Video-Samples
+        uses: actions/checkout@v6
+        with:
+          path: vulkan-video-samples
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install --assume-yes --no-install-recommends \
+            cmake \
+            ninja-build \
+            python3 \
+            python3-lxml \
+            build-essential \
+            libx11-dev \
+            libwayland-dev \
+            libvulkan-dev \
+            libxrandr-dev
+
+      - name: Clone VK-GL-CTS
+        run: |
+          git clone --depth 1 https://github.com/KhronosGroup/VK-GL-CTS.git vk-gl-cts
+
+      - name: Fetch CTS external sources
+        run: |
+          cd vk-gl-cts
+          python3 external/fetch_sources.py
+
+      - name: Replace vulkan-video-samples sources
+        run: |
+          rm -rf vk-gl-cts/external/vulkan-video-samples/src
+          cp -r vulkan-video-samples vk-gl-cts/external/vulkan-video-samples/src
+
+      - name: Build CTS
+        run: |
+          cd vk-gl-cts
+          python3 scripts/check_build_sanity.py --skip-prerequisites -r gcc-64-release -t /tmp/cts-build
+
+  cts-build-windows:
+    runs-on: windows-latest
+    if: >
+      contains(github.event.pull_request.title || '', '[release]') ||
+      github.event.label.name == 'cts-build' ||
+      contains(github.event.pull_request.labels.*.name, 'cts-build')
+
+    steps:
+      - name: Checkout Vulkan-Video-Samples
+        uses: actions/checkout@v6
+        with:
+          path: vulkan-video-samples
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install lxml
+        run: pip install lxml
+
+      - name: Clone VK-GL-CTS
+        run: |
+          git clone --depth=1 https://github.com/KhronosGroup/VK-GL-CTS.git vk-gl-cts
+
+      - name: Fetch CTS external sources
+        run: |
+          cd vk-gl-cts
+          python3 external/fetch_sources.py
+
+      - name: Replace vulkan-video-samples sources
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force vk-gl-cts/external/vulkan-video-samples/src
+          Copy-Item -Recurse vulkan-video-samples vk-gl-cts/external/vulkan-video-samples/src
+
+      - name: Build CTS
+        run: |
+          cd vk-gl-cts
+          python3 scripts/check_build_sanity.py -r vs-64-debug
