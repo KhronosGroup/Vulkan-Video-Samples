@@ -16,7 +16,6 @@
 
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkVideoEncoderH264.h"
-#include "vk_enum_string_helper.h"
 
 int EncoderConfigH264::DoParseArguments(int argc, char* argv[])
 {
@@ -407,11 +406,11 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
         if (IsVideoUnsupportedResult(result)) {
             // Not supported by hardware/driver - return VK_ERROR_INCOMPATIBLE_DRIVER
             std::cerr << "*** Video encode capabilities not supported by hardware/driver ("
-                      << string_VkResult_Extended(result) << ") ***" << std::endl;
+                      << VKVS_STRINGIFY(result) << ") ***" << std::endl;
             return VK_ERROR_INCOMPATIBLE_DRIVER;
         }
         // Actual error (e.g., out of memory)
-        std::cerr << "*** Error getting video capabilities: " << string_VkResult_Extended(result) << " ***" << std::endl;
+        std::cerr << "*** Error getting video capabilities: " << VKVS_STRINGIFY(result) << " ***" << std::endl;
         return result;
     }
 

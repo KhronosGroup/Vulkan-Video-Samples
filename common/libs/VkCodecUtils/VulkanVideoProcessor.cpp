@@ -136,7 +136,7 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
 
     if (result != VK_SUCCESS) {
         std::cerr << "FATAL ERROR: Video decode capabilities not supported for this codec/profile!" << std::endl;
-        std::cerr << "GetVideoDecodeCapabilities failed with error: " << string_VkResult_Extended(result) << std::endl;
+        std::cerr << "GetVideoDecodeCapabilities failed with error: " << VKVS_STRINGIFY(result) << std::endl;
         return result;
     }
 

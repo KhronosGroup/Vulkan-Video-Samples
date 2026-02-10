@@ -40,11 +40,6 @@ extern "C" {
 #ifdef __cplusplus
 } // extern "C"
 
-// C++ only macros and utilities
-#include <iostream>
-#include <vulkan/vulkan.h>
-#include "vk_enum_string_helper.h"
-
 // Macro to check Vulkan features and return error if not supported
 // Note: This macro contains a return statement - use with care
 #define CHECK_VULKAN_FEATURE(feature, name, optional) \
@@ -61,21 +56,6 @@ extern "C" {
 #ifndef VKVS_CASE_STR
 #define VKVS_CASE_STR(x) case x: return VKVS_STRINGIFY(x)
 #endif
-
-// Helper function to get string representation of VkResult codes
-// Handles video-specific extension codes and falls back to generated string_VkResult()
-inline const char* string_VkResult_Extended(VkResult result) {
-    // First try video-specific error codes
-    switch (result) {
-        VKVS_CASE_STR(VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR);
-        VKVS_CASE_STR(VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR);
-        VKVS_CASE_STR(VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR);
-        VKVS_CASE_STR(VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR);
-        default:
-            // Fall back to generated string_VkResult()
-            return string_VkResult(result);
-    }
-}
 
 // Helper function to check if a VkResult indicates video profile/feature not supported
 // Returns true for video-specific KHR errors (profile, format, codec, std version)

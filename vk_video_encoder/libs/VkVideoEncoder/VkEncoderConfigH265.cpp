@@ -17,7 +17,6 @@
 #include <math.h>       /* sqrt */
 #include "VkVideoEncoder/VkEncoderConfigH265.h"
 #include "VkVideoEncoder/VkVideoEncoderH265.h"
-#include "vk_enum_string_helper.h"
 
 static void SetupAspectRatio(StdVideoH265SequenceParameterSetVui *vui, uint32_t width, uint32_t height,
                              uint32_t darWidth, uint32_t darHeight)
@@ -128,11 +127,11 @@ VkResult EncoderConfigH265::InitDeviceCapabilities(const VulkanDeviceContext* vk
         if (IsVideoUnsupportedResult(result)) {
             // Not supported by hardware/driver - return VK_ERROR_INCOMPATIBLE_DRIVER
             std::cerr << "*** Video encode capabilities not supported by hardware/driver ("
-                      << string_VkResult_Extended(result) << ") ***" << std::endl;
+                      << VKVS_STRINGIFY(result) << ") ***" << std::endl;
             return VK_ERROR_INCOMPATIBLE_DRIVER;
         }
         // Actual error (e.g., out of memory)
-        std::cerr << "*** Error getting video capabilities: " << string_VkResult_Extended(result) << " ***" << std::endl;
+        std::cerr << "*** Error getting video capabilities: " << VKVS_STRINGIFY(result) << " ***" << std::endl;
         return result;
     }
 
@@ -153,7 +152,7 @@ VkResult EncoderConfigH265::InitDeviceCapabilities(const VulkanDeviceContext* vk
                                                                                  qualityLevelProperties,
                                                                                  h265QualityLevelProperties);
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get Video Encode QualityLevel Properties :" << string_VkResult_Extended(result) << " ***" << std::endl;
+        std::cout << "*** Could not get Video Encode QualityLevel Properties :" << VKVS_STRINGIFY(result) << " ***" << std::endl;
         return result;
     }
 
