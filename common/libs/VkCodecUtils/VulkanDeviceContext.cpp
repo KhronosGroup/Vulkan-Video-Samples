@@ -428,6 +428,15 @@ static constexpr uint32_t g_ignoredValidationMessageIds[] = {
     // image-related false positives on the same video session.
     // Decoding works correctly on all tested hardware.
     0xc36d9e29,
+
+    // VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07139 (MessageID = 0xe9634196)
+    // H.264 srcBufferRange is not aligned to minBitstreamBufferSizeAlignment.
+    // NVDEC's H.264 NAL scanner uses srcBufferRange to bound its start-code scan.
+    // Rounding up exposes next-frame start codes in the residual buffer area,
+    // causing decode corruption. H.265/AV1/VP9 are properly aligned.
+    // The proper fix is to handle alignment in the H.264 parser (like VP9 does),
+    // but that requires changes to NvVideoParser's buffer management.
+    0xe9634196,
 };
 
 bool VulkanDeviceContext::DebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT,
