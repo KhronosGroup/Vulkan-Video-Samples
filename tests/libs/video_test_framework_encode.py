@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 """
 Vulkan Video Encoder Test Framework
-Tests encoder applications for all supported codecs (H.264, H.265, AV1).
+Encoder sample configuration and test framework classes.
 
 Copyright 2025 Igalia S.L.
 
@@ -19,45 +18,24 @@ limitations under the License.
 """
 
 from dataclasses import dataclass
-import argparse
 import re
-import sys
 from pathlib import Path
 from typing import Optional, List
 
-# Allow running both as package and as script (exception for this file only)
-# pylint: disable=wrong-import-position,import-error,duplicate-code
-if __package__ is None or __package__ == "":
-    sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-# Import base classes
-from tests.libs.video_test_config_base import (  # noqa: E402
+from tests.libs.video_test_config_base import (
     BaseTestConfig,
     CodecType,
     TestResult,
     VideoTestStatus,
     check_sample_resources,
     create_error_result,
-    load_and_download_samples,
     load_samples_from_json,
 )
-from tests.libs.video_test_framework_base import (  # noqa: E402
+from tests.libs.video_test_framework_base import (
     VulkanVideoTestFrameworkBase,
-    run_complete_framework_main,
 )
-from tests.libs.video_test_fetch_sample import (  # noqa: E402
+from tests.libs.video_test_fetch_sample import (
     FetchableResource,
-)
-from tests.libs.video_test_platform_utils import (  # noqa: E402
-    PlatformUtils,
-)
-from tests.libs.video_test_utils import (
-    add_common_arguments,
-    safe_main_wrapper,
-)
-
-from tests.libs.video_test_result_reporter import (
-    list_test_samples,
 )
 
 
@@ -70,35 +48,16 @@ class EncodeTestSample(BaseTestConfig):
     width: int = 0
     height: int = 0
 
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
         self,
-        name: str,
-        codec: CodecType,
-        expect_success: bool = True,
-        extra_args: Optional[List[str]] = None,
-        description: str = "",
-        timeout: Optional[int] = None,
-        source_url: str = "",
-        source_checksum: str = "",
-        source_filepath: str = "",
         profile: Optional[str] = None,
         source_format: str = "yuv",
         width: int = 0,
         height: int = 0,
+        **kwargs,
     ):
         """Initialize EncodeTestSample with all fields from base and child"""
-        super().__init__(
-            name=name,
-            codec=codec,
-            expect_success=expect_success,
-            extra_args=extra_args,
-            description=description,
-            timeout=timeout,
-            source_url=source_url,
-            source_checksum=source_checksum,
-            source_filepath=source_filepath,
-        )
+        super().__init__(**kwargs)
         self.profile = profile
         self.source_format = source_format
         self.width = width
@@ -108,14 +67,7 @@ class EncodeTestSample(BaseTestConfig):
     def from_dict(cls, data: dict) -> 'EncodeTestSample':
         """Create an EncodeTestSample from a dictionary"""
         return cls(
-            name=data["name"],
-            codec=CodecType(data["codec"]),
-            expect_success=data.get("expect_success", True),
-            extra_args=data.get("extra_args"),
-            description=data.get("description", ""),
-            source_url=data["source_url"],
-            source_checksum=data["source_checksum"],
-            source_filepath=data["source_filepath"],
+            **cls._parse_base_fields(data),
             profile=data.get("profile"),
             source_format=data.get("source_format", "yuv"),
             width=data.get("width", 0),
@@ -130,7 +82,7 @@ class EncodeTestSample(BaseTestConfig):
     @property
     def full_yuv_path(self) -> Path:
         """Get the full path to the YUV file"""
-        resources_dir = Path(__file__).parent / "resources"
+        resources_dir = Path(__file__).parent.parent / "resources"
         return resources_dir / self.source_filepath
 
     def yuv_exists(self) -> bool:
@@ -432,108 +384,3 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
                       test_type: str = "ENCODER") -> bool:
         """Print comprehensive test results summary"""
         return super().print_summary(results, test_type)
-
-
-def list_encoder_samples(test_suite: str = "encode_samples.json"):
-    """List all available encoder test samples
-
-    Args:
-        test_suite: Path to test suite JSON file
-    """
-    samples_data = load_samples_from_json(test_suite)
-
-    # Add profile info to descriptions
-    for sample in samples_data:
-        profile = sample.get('profile', '')
-        if profile and 'description' in sample:
-            sample['description'] += f" (profile: {profile})"
-
-    list_test_samples(samples_data, "encoder")
-
-
-@safe_main_wrapper
-def main() -> int:
-    """Main entry point for the encode test framework"""
-    parser = argparse.ArgumentParser(
-        description="Vulkan Video Encoder Test Framework")
-
-    # Add encoder-specific argument
-    parser.add_argument("--encoder", "-e",
-                        default="vk-video-enc-test",
-                        help="Path to vk-video-enc-test executable")
-
-    # Add common arguments with encoder codec choices
-    parser = add_common_arguments(
-        parser, codec_choices=["h264", "h265", "av1"]
-    )
-
-    # Add encoder-specific arguments
-    parser.add_argument(
-        "--encode-test-suite",
-        help="Path to custom encode test suite JSON file",
-    )
-    parser.add_argument(
-        "--no-validate-with-decoder",
-        action="store_true",
-        help="Disable validation of encoder output with decoder "
-             "(validation enabled by default)",
-    )
-    parser.add_argument(
-        "--decoder",
-        default="vk-video-dec-test",
-        help="Path to vk-video-dec-test executable for validation "
-             "(default: vk-video-dec-test)",
-    )
-    parser.add_argument(
-        "--decoder-args",
-        nargs="+",
-        help="Additional arguments to pass to decoder during validation",
-    )
-
-    args = parser.parse_args()
-
-    # Handle --list-samples option
-    if args.list_samples:
-        test_suite = args.encode_test_suite or "encode_samples.json"
-        list_encoder_samples(test_suite)
-        return 0
-
-    # Handle --download-only option
-    if args.download_only:
-        json_file = args.encode_test_suite or "encode_samples.json"
-        success = load_and_download_samples(
-            EncodeTestSample, json_file, "encode"
-        )
-        return 0 if success else 1
-
-    # Find and resolve encoder executable path
-    args.encoder = PlatformUtils.resolve_executable_path(
-        args.encoder, args.verbose
-    )
-
-    # Set validate_with_decoder flag (enabled by default)
-    args.validate_with_decoder = not args.no_validate_with_decoder
-
-    # Find and resolve decoder executable path if validation is enabled
-    if args.validate_with_decoder:
-        decoder_path = args.decoder
-        resolved_decoder = PlatformUtils.resolve_executable_path(
-            decoder_path, args.verbose
-        )
-        if (resolved_decoder == decoder_path and
-                not Path(decoder_path).exists()):
-            # Path was not resolved and doesn't exist
-            print(f"✗ Decoder not found: {decoder_path}")
-            print("  Validation with decoder requires decoder executable")
-            print("  Use --no-validate-with-decoder to disable validation")
-            return 1
-        args.decoder = resolved_decoder
-
-    # Use shared complete main function
-    return run_complete_framework_main(
-        VulkanVideoEncodeTestFramework, "encoder", args
-    )
-
-
-if __name__ == "__main__":
-    sys.exit(main())

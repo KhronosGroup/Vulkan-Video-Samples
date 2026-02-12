@@ -884,11 +884,4 @@ class VulkanVideoTestFrameworkBase:
             print("   --- End of decoder validation output ---")
 
 
-# Re-export main functions for backwards compatibility
-# These are now defined in video_test_framework_main.py
-# pylint: disable=wrong-import-position
-from tests.libs.video_test_framework_main import (  # noqa: E402
-    run_framework_main, run_complete_framework_main)
-
-__all__ = ['VulkanVideoTestFrameworkBase', 'run_framework_main',
-           'run_complete_framework_main']
+__all__ = ['VulkanVideoTestFrameworkBase']

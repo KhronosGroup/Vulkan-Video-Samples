@@ -120,16 +120,16 @@ The project includes a comprehensive test framework for validating both encoder 
 
 ```bash
 # Run all tests with default paths
-python3 tests/video_test_framework_codec.py
+python3 tests/vvs_test_runner.py
 
 # List all available test samples
-python3 tests/video_test_framework_codec.py --list-samples
+python3 tests/vvs_test_runner.py --list-samples
 
 # Test only H.264 decoder tests
-python3 tests/video_test_framework_decode.py --test "decode_h264_*"
+python3 tests/vvs_test_runner.py --decoder-only --test "decode_h264_*"
 
 # Test only H.264 encoder tests
-python3 tests/video_test_framework_encode.py --test "encode_h264_*"
+python3 tests/vvs_test_runner.py --encoder-only --test "encode_h264_*"
 ```
 
 For complete documentation, command-line options, and advanced usage examples, see **[tests/README.md](tests/README.md)**.

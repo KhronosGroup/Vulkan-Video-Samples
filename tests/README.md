@@ -10,19 +10,19 @@ cmake -B BUILD -DCMAKE_BUILD_TYPE=Release
 cmake --build BUILD --parallel
 
 # Run all tests (auto-downloads test samples)
-python3 tests/video_test_framework_codec.py
+python3 tests/vvs_test_runner.py
 
 # Run only H.264 decoder tests
-python3 tests/video_test_framework_codec.py --decoder-only --codec h264
+python3 tests/vvs_test_runner.py --decoder-only --codec h264
 
 # Run only encoder tests with verbose output
-python3 tests/video_test_framework_codec.py --encoder-only --verbose
+python3 tests/vvs_test_runner.py --encoder-only --verbose
 
 # List all available test samples
-python3 tests/video_test_framework_codec.py --list-samples
+python3 tests/vvs_test_runner.py --list-samples
 
 # Run a specific test by name
-python3 tests/video_test_framework_codec.py --test "h264_4k_main"
+python3 tests/vvs_test_runner.py --test "h264_4k_main"
 ```
 
 ## Table of Contents
@@ -47,9 +47,9 @@ python3 tests/video_test_framework_codec.py --test "h264_4k_main"
 
 ### Core Scripts
 
-- **`video_test_framework_codec.py`** - Unified test orchestrator that runs both encoder and decoder tests
-- **`video_test_framework_encode.py`** - Encoder-specific test runner
-- **`video_test_framework_decode.py`** - Decoder-specific test runner
+- **`vvs_test_runner.py`** - Unified test entry point that runs encoder, decoder, or both tests
+- **`libs/video_test_framework_encode.py`** - Encoder test framework classes (library module)
+- **`libs/video_test_framework_decode.py`** - Decoder test framework classes (library module)
 
 
 ### Configuration Files
@@ -175,10 +175,10 @@ To add a new decode test sample to `decode_samples.json`:
 6. **Test the new entry**:
    ```bash
    # Run only your new test
-   python3 tests/video_test_framework_codec.py --decoder-only --test "your_test_name"
+   python3 tests/vvs_test_runner.py --decoder-only --test "your_test_name"
 
    # Verify MD5 validation works
-   python3 tests/video_test_framework_decode.py --test "your_test_name" --verbose
+   python3 tests/vvs_test_runner.py --decoder-only --test "your_test_name" --verbose
    ```
 
 **Notes:**
@@ -297,10 +297,10 @@ To add a new encode test sample to `encode_samples.json`:
 6. **Test the new entry**:
    ```bash
    # Run only your new test
-   python3 tests/video_test_framework_codec.py --encoder-only --test "your_test_name"
+   python3 tests/vvs_test_runner.py --encoder-only --test "your_test_name"
 
    # With verbose output to see encoder command
-   python3 tests/video_test_framework_encode.py --test "your_test_name" --verbose
+   python3 tests/vvs_test_runner.py --encoder-only --test "your_test_name" --verbose
    ```
 
 **Notes:**
@@ -367,13 +367,13 @@ The framework uses a skip list system to skip tests that are known to fail on sp
 
 ```bash
 # Run tests ignoring the skip list (run all tests)
-python3 video_test_framework_codec.py --ignore-skip-list
+python3 vvs_test_runner.py --ignore-skip-list
 
 # Run only skipped tests (useful for testing fixes)
-python3 video_test_framework_codec.py --only-skipped
+python3 vvs_test_runner.py --only-skipped
 
 # Use a custom skip list
-python3 video_test_framework_codec.py --skip-list my_skip_list.json
+python3 vvs_test_runner.py --skip-list my_skip_list.json
 ```
 
 
@@ -381,22 +381,22 @@ python3 video_test_framework_codec.py --skip-list my_skip_list.json
 
 #### Run All Tests
 ```bash
-python3 video_test_framework_codec.py
+python3 vvs_test_runner.py
 ```
 
 #### Run Encoder Tests Only
 ```bash
-python3 video_test_framework_codec.py --encoder-only --codec h264
+python3 vvs_test_runner.py --encoder-only --codec h264
 ```
 
 #### Run Specific Test Pattern
 ```bash
-python3 video_test_framework_codec.py --test "*baseline*" --verbose
+python3 vvs_test_runner.py --test "*baseline*" --verbose
 ```
 
 #### Export Results to JSON
 ```bash
-python3 video_test_framework_codec.py --export-json results.json
+python3 vvs_test_runner.py --export-json results.json
 ```
 
 ### Command Line Options
@@ -422,17 +422,17 @@ python3 video_test_framework_codec.py --export-json results.json
 - `--decode-test-suite FILE` - Path to custom decode test suite JSON file
 - `--encode-test-suite FILE` - Path to custom encode test suite JSON file
 
-#### Codec Framework Only (video_test_framework_codec.py)
+#### Framework Selection
 
 - `--encoder-only` - Run only encoder tests
 - `--decoder-only` - Run only decoder tests
 
-#### Decoder Only (video_test_framework_decode.py)
+#### Decode-Specific Options
 
-- `--display` - Enable display output (removes --noPresent flag)
+- `--decode-display` - Enable display output for decode tests (removes --noPresent flag)
 - `--no-verify-md5` - Disable MD5 verification of decoded output
 
-#### Encoder Only (video_test_framework_encode.py)
+#### Encode-Specific Options
 
 - `--no-validate-with-decoder` - Disable validation of encoder output with decoder
 - `--decoder-args ARGS` - Additional arguments to pass to decoder during validation
@@ -457,17 +457,17 @@ Tests are automatically prefixed with their type for display:
 When filtering tests with `--test`, you can use either the base name or the prefixed name:
 ```bash
 # These are equivalent - run a specific test by base name or full name
-python3 video_test_framework_codec.py --test "h264_4k_main"
-python3 video_test_framework_codec.py --test "decode_h264_4k_main"
+python3 vvs_test_runner.py --test "h264_4k_main"
+python3 vvs_test_runner.py --test "decode_h264_4k_main"
 
 # Run only decoder tests (using prefix)
-python3 video_test_framework_codec.py --test "decode_*"
+python3 vvs_test_runner.py --test "decode_*"
 
 # Run only H.264 encoder tests
-python3 video_test_framework_codec.py --test "encode_h264_*"
+python3 vvs_test_runner.py --test "encode_h264_*"
 
 # Run all AV1 tests (both encode and decode)
-python3 video_test_framework_codec.py --test "av1_*"
+python3 vvs_test_runner.py --test "av1_*"
 ```
 
 ---
@@ -491,10 +491,10 @@ The framework supports [Fluster](https://github.com/fluendo/fluster) test suite 
 Example usage:
 ```bash
 # Use Fluster JVT-AVC_V1 test suite
-python3 video_test_framework_decode.py --decode-test-suite path/to/JVT-AVC_V1.json
+python3 vvs_test_runner.py --decoder-only --decode-test-suite path/to/JVT-AVC_V1.json
 
 # Filter specific tests from Fluster suite
-python3 video_test_framework_decode.py --decode-test-suite JVT-AVC_V1.json --test "*baseline*"
+python3 vvs_test_runner.py --decoder-only --decode-test-suite JVT-AVC_V1.json --test "*baseline*"
 ```
 
 **Note**: Fluster format is only supported for decode tests, not encode tests.
@@ -515,19 +515,17 @@ JSON export includes:
 - Individual test results with timing and status information
 - Support for both encoder and decoder test results in unified format
 
-### Individual Framework Usage
+### Running Specific Test Types
 
-Each component can be run independently:
+Use `--encoder-only` or `--decoder-only` to run a single test type:
 
 ```bash
 # List available samples
-python3 video_test_framework_codec.py --list-samples
-python3 video_test_framework_encode.py --list-samples
-python3 video_test_framework_decode.py --list-samples
+python3 vvs_test_runner.py --list-samples
 
 # Encoder tests only
-python3 video_test_framework_encode.py
+python3 vvs_test_runner.py --encoder-only
 
-# Decoder tests only
-python3 video_test_framework_decode.py --display
+# Decoder tests only with display
+python3 vvs_test_runner.py --decoder-only --decode-display
 ```

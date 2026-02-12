@@ -31,11 +31,11 @@ jobs:
 
       - name: Run flake8
         run: |
-          python -m flake8 tests/*/*.py --max-line-length=100 --show-source --statistics
+          python -m flake8 tests/*.py tests/*/*.py --max-line-length=100 --show-source --statistics
 
       - name: Run pylint
         run: |
-          python -m pylint tests/*/*.py --output-format=text
+          python -m pylint tests/*.py tests/*/*.py --output-format=text
 
   unit-tests:
     name: Unit Tests
@@ -82,4 +82,4 @@ jobs:
 
       - name: Run codec test framework
         run: |
-          python3 ./tests/video_test_framework_codec.py
+          python3 ./tests/vvs_test_runner.py

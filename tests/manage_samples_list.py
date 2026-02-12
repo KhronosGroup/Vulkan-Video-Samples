@@ -37,6 +37,7 @@ from typing import Dict, List, Optional
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+# pylint: disable=wrong-import-position
 from tests.libs.video_test_utils import normalize_test_name  # noqa: E402
 
 

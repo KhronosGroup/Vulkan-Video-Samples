@@ -21,8 +21,8 @@ limitations under the License.
 import pytest
 
 from tests.libs.video_test_config_base import CodecType, BaseTestConfig
-from tests.video_test_framework_decode import DecodeTestSample
-from tests.video_test_framework_encode import EncodeTestSample
+from tests.libs.video_test_framework_decode import DecodeTestSample
+from tests.libs.video_test_framework_encode import EncodeTestSample
 
 
 class TestCodecType:

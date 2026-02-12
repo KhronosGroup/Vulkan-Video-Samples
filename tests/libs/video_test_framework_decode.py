@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 """
 Vulkan Video Decoder Test Framework
-Tests decoder applications for all supported codecs (H.264, H.265, AV1, VP9).
+Decoder sample configuration and test framework classes.
 
 Copyright 2025 Igalia S.L.
 
@@ -18,91 +17,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import argparse
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List
 
-# Allow running both as package and as script (exception for this file only)
-# pylint: disable=wrong-import-position,import-error,duplicate-code
-if __package__ is None or __package__ == "":
-    sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from tests.libs.video_test_fetch_sample import FetchableResource  # noqa: E402
-from tests.libs.video_test_config_base import (  # noqa: E402
+from tests.libs.video_test_fetch_sample import FetchableResource
+from tests.libs.video_test_config_base import (
     BaseTestConfig,
-    CodecType,
     TestResult,
     VideoTestStatus,
     check_sample_resources,
     create_error_result,
-    load_and_download_samples,
     load_samples_from_json,
 )
-from tests.libs.video_test_framework_base import (  # noqa: E402
+from tests.libs.video_test_framework_base import (
     VulkanVideoTestFrameworkBase,
-    run_complete_framework_main,
-)
-from tests.libs.video_test_platform_utils import (  # noqa: E402
-    PlatformUtils,
 )
 from tests.libs.video_test_utils import (
-    add_common_arguments,
     calculate_file_hash,
-    safe_main_wrapper,
-)
-from tests.libs.video_test_result_reporter import (
-    list_test_samples,
 )
 
 
 @dataclass(init=False)
-# pylint: disable=too-many-instance-attributes
 class DecodeTestSample(BaseTestConfig):
     """Configuration for decoder test cases with download capability"""
     expected_output_md5: str = ""  # Expected MD5 of decoded YUV output
 
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
-    def __init__(
-        self,
-        name: str,
-        codec: CodecType,
-        expect_success: bool = True,
-        extra_args: Optional[List[str]] = None,
-        description: str = "",
-        timeout: Optional[int] = None,
-        source_url: str = "",
-        source_checksum: str = "",
-        source_filepath: str = "",
-        expected_output_md5: str = "",
-    ):
+    def __init__(self, expected_output_md5: str = "", **kwargs):
         """Initialize DecodeTestSample with all fields from base and child"""
-        super().__init__(
-            name=name,
-            codec=codec,
-            expect_success=expect_success,
-            extra_args=extra_args,
-            description=description,
-            timeout=timeout,
-            source_url=source_url,
-            source_checksum=source_checksum,
-            source_filepath=source_filepath,
-        )
+        super().__init__(**kwargs)
         self.expected_output_md5 = expected_output_md5
 
     @classmethod
     def from_dict(cls, data: dict) -> 'DecodeTestSample':
         """Create a DecodeTestSample from a dictionary"""
         return cls(
-            name=data["name"],
-            codec=CodecType(data["codec"]),
-            expect_success=data.get("expect_success", True),
-            extra_args=data.get("extra_args"),
-            description=data.get("description", ""),
-            source_url=data["source_url"],
-            source_checksum=data["source_checksum"],
-            source_filepath=data["source_filepath"],
+            **cls._parse_base_fields(data),
             expected_output_md5=data.get("expected_output_md5", ""),
         )
 
@@ -114,7 +64,7 @@ class DecodeTestSample(BaseTestConfig):
     @property
     def full_path(self) -> Path:
         """Get the full path to the sample file"""
-        resources_dir = Path(__file__).parent / "resources"
+        resources_dir = Path(__file__).parent.parent / "resources"
         return resources_dir / self.source_filepath
 
     def exists(self) -> bool:
@@ -294,72 +244,3 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
                       test_type: str = "DECODER") -> bool:
         """Print comprehensive test results summary"""
         return super().print_summary(results, test_type)
-
-
-def list_decoder_samples():
-    """List all available decoder test samples"""
-    samples_data = load_samples_from_json("decode_samples.json")
-    list_test_samples(samples_data, "decoder")
-
-
-@safe_main_wrapper
-def main() -> int:
-    """Main entry point for the decode test framework"""
-    parser = argparse.ArgumentParser(
-        description="Vulkan Video Decoder Test Framework")
-
-    # Add decoder-specific argument
-    parser.add_argument("--decoder", "-d",
-                        default="vk-video-dec-test",
-                        help="Path to vk-video-dec-test executable")
-
-    # Add common arguments with decoder codec choices
-    parser = add_common_arguments(
-        parser, codec_choices=["h264", "h265", "av1", "vp9"]
-    )
-
-    # Add decoder-specific arguments
-    parser.add_argument("--display", action="store_true",
-                        help="Enable display output "
-                             "(removes --noPresent from decoder commands)")
-    parser.add_argument(
-        "--no-verify-md5",
-        action="store_true",
-        help=(
-            "Disable MD5 verification of decoded output "
-            "(enabled by default when expected_output_md5 is present)"
-        ),
-    )
-    parser.add_argument(
-        "--decode-test-suite",
-        help="Path to custom decode test suite JSON file",
-    )
-
-    args = parser.parse_args()
-
-    # Handle --list-samples option
-    if args.list_samples:
-        list_decoder_samples()
-        return 0
-
-    # Handle --download-only option
-    if args.download_only:
-        json_file = args.decode_test_suite or "decode_samples.json"
-        success = load_and_download_samples(
-            DecodeTestSample, json_file, "decode"
-        )
-        return 0 if success else 1
-
-    # Find and resolve decoder executable path
-    args.decoder = PlatformUtils.resolve_executable_path(
-        args.decoder, args.verbose
-    )
-
-    # Use shared complete main function
-    return run_complete_framework_main(
-        VulkanVideoDecodeTestFramework, "decoder", args
-    )
-
-
-if __name__ == "__main__":
-    sys.exit(main())

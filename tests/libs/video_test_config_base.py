@@ -244,6 +244,21 @@ class BaseTestConfig:  # pylint: disable=too-many-instance-attributes
     source_checksum: str = ""
     source_filepath: str = ""
 
+    @staticmethod
+    def _parse_base_fields(data: dict) -> dict:
+        """Extract base config fields from a dictionary."""
+        return {
+            "name": data["name"],
+            "codec": CodecType(data["codec"]),
+            "expect_success": data.get("expect_success", True),
+            "extra_args": data.get("extra_args"),
+            "description": data.get("description", ""),
+            "timeout": data.get("timeout"),
+            "source_url": data["source_url"],
+            "source_checksum": data["source_checksum"],
+            "source_filepath": data["source_filepath"],
+        }
+
 
 @dataclass(init=False)
 class TestResult:
@@ -486,7 +501,9 @@ def load_and_download_samples(sample_class, json_file: str,
                   f"{data.get('name', 'unknown')}: {e}")
 
     if not samples:
-        return True
+        print(f"  Warning: all {len(samples_data)} {test_type} sample(s) "
+              f"failed to parse")
+        return False
     return download_sample_assets(samples, f"{test_type} test")
 
 

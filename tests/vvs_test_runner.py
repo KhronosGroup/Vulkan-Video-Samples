@@ -50,11 +50,11 @@ from tests.libs.video_test_platform_utils import (
 )
 
 from tests.libs.video_test_utils import safe_main_wrapper, DEFAULT_TEST_TIMEOUT
-from tests.video_test_framework_encode import (
+from tests.libs.video_test_framework_encode import (
     VulkanVideoEncodeTestFramework,
     EncodeTestSample,
 )
-from tests.video_test_framework_decode import (
+from tests.libs.video_test_framework_decode import (
     VulkanVideoDecodeTestFramework,
     DecodeTestSample,
 )
@@ -124,19 +124,36 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
         self.encode_framework = None
         self.decode_framework = None
 
+        # Common options shared by both sub-frameworks
+        common_opts = {
+            'work_dir': self.config.work_dir,
+            'device_id': self.config.device_id,
+            'verbose': self.config.verbose,
+            'keep_files': self.config.keep_files,
+            'no_auto_download': self.config.no_auto_download,
+            'timeout': self.config.timeout,
+            'skip_list': options.get('skip_list'),
+            'ignore_skip_list': self.ignore_skip_list,
+            'only_skipped': self.only_skipped,
+            'show_skipped': self.show_skipped,
+        }
+
         if encoder_path and Path(encoder_path).exists():
-            # Create options with work_dir, device_id and timeout
-            encoder_options = options.copy()
-            encoder_options['work_dir'] = self.config.work_dir
-            encoder_options['device_id'] = self.config.device_id
-            encoder_options['timeout'] = self.config.timeout
-            if 'encode_test_suite' in options:
-                encoder_options['test_suite'] = options['encode_test_suite']
+            encoder_options = {
+                **common_opts,
+                'test_suite': options.get('encode_test_suite'),
+            }
             # Pass decoder path for validation if available
             if decoder_path and Path(decoder_path).exists():
                 encoder_options['decoder'] = decoder_path
             else:
                 encoder_options['validate_with_decoder'] = False
+            # Pass encoder-specific CLI options
+            if options.get('no_validate_with_decoder', False):
+                encoder_options['validate_with_decoder'] = False
+            decoder_args = options.get('decoder_args')
+            if decoder_args:
+                encoder_options['decoder_args'] = decoder_args
 
             self.encode_framework = VulkanVideoEncodeTestFramework(
                 encoder_path=encoder_path,
@@ -144,13 +161,12 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             )
 
         if decoder_path and Path(decoder_path).exists():
-            # Create options with work_dir, device_id and timeout
-            decoder_options = options.copy()
-            decoder_options['work_dir'] = self.config.work_dir
-            decoder_options['device_id'] = self.config.device_id
-            decoder_options['timeout'] = self.config.timeout
-            if 'decode_test_suite' in options:
-                decoder_options['test_suite'] = options['decode_test_suite']
+            decoder_options = {
+                **common_opts,
+                'test_suite': options.get('decode_test_suite'),
+                'display': options.get('decode_display', False),
+                'verify_md5': not options.get('no_verify_md5', False),
+            }
 
             self.decode_framework = VulkanVideoDecodeTestFramework(
                 decoder_path=decoder_path,
@@ -489,64 +505,66 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             return False
 
 
-def list_all_samples(skip_list_path: str = "skipped_samples.json") -> None:
-    """List all available test samples from both encoder and decoder"""
+def _print_sample_section(header: str, json_file: str, test_type: str,
+                          prefix: str, skip_rules: list) -> tuple:
+    """Print a single sample section (decode or encode).
+
+    Returns:
+        Tuple of (sample_count, skipped_count).
+    """
+    print(f"\n{header}")
+    print("-" * 70)
+    samples = load_samples_from_json(json_file)
+    if not samples:
+        print(f"No {test_type} samples found")
+        return 0, 0
+
+    print(f"{'Name':<40} {'Codec':<8} Description")
+    print("-" * 70)
+    skipped = 0
+    for sample in samples:
+        name = f"{prefix}{sample['name']}"
+        codec = sample.get('codec', 'unknown')
+        description = sample.get('description', '')
+        if is_test_skipped(sample['name'], "vvs", skip_rules,
+                           test_type=test_type):
+            name = f"[SKIPPED] {name}"
+            skipped += 1
+        print(f"{name:<40} {codec:<8} {description}")
+    return len(samples), skipped
+
+
+def list_all_samples(skip_list_path: str = "skipped_samples.json",
+                     test_type_filter: Optional[TestType] = None) -> None:
+    """List available test samples from encoder and/or decoder
+
+    Args:
+        skip_list_path: Path to skip list JSON file
+        test_type_filter: Optional filter to show only encoder or decoder
+    """
     print("=" * 70)
     print("AVAILABLE TEST SAMPLES")
     print("=" * 70)
 
-    # Load skip rules
     skip_rules = load_skip_list(skip_list_path)
 
-    # Load and display decoder samples
-    print("\n📹 DECODER SAMPLES:")
-    print("-" * 70)
-    decoder_samples = load_samples_from_json("decode_samples.json")
-    skipped_decode_count = 0
-    if decoder_samples:
-        print(f"{'Name':<40} {'Codec':<8} Description")
-        print("-" * 70)
-        for sample in decoder_samples:
-            name = f"decode_{sample['name']}"
-            codec = sample.get('codec', 'unknown')
-            description = sample.get('description', '')
-            # Check if test is skipped
-            if is_test_skipped(sample['name'], "vvs", skip_rules,
-                               test_type="decode"):
-                name = f"[SKIPPED] {name}"
-                skipped_decode_count += 1
-            print(f"{name:<40} {codec:<8} {description}")
-    else:
-        print("No decoder samples found")
+    decoder_count, skipped_decode = 0, 0
+    encoder_count, skipped_encode = 0, 0
 
-    # Load and display encoder samples
-    print("\n✏️  ENCODER SAMPLES:")
-    print("-" * 70)
-    encoder_samples = load_samples_from_json("encode_samples.json")
-    skipped_encode_count = 0
-    if encoder_samples:
-        print(f"{'Name':<40} {'Codec':<8} Description")
-        print("-" * 70)
-        for sample in encoder_samples:
-            name = f"encode_{sample['name']}"
-            codec = sample.get('codec', 'unknown')
-            description = sample.get('description', '')
-            # Check if test is skipped
-            if is_test_skipped(sample['name'], "vvs", skip_rules,
-                               test_type="encode"):
-                name = f"[SKIPPED] {name}"
-                skipped_encode_count += 1
-            print(f"{name:<40} {codec:<8} {description}")
-    else:
-        print("No encoder samples found")
+    if test_type_filter is None or test_type_filter == TestType.DECODER:
+        decoder_count, skipped_decode = _print_sample_section(
+            "📹 DECODER SAMPLES:", "decode_samples.json",
+            "decode", "decode_", skip_rules)
+
+    if test_type_filter is None or test_type_filter == TestType.ENCODER:
+        encoder_count, skipped_encode = _print_sample_section(
+            "✏️  ENCODER SAMPLES:", "encode_samples.json",
+            "encode", "encode_", skip_rules)
 
     print("=" * 70)
 
-    # Print summary
-    decoder_count = len(decoder_samples) if decoder_samples else 0
-    encoder_count = len(encoder_samples) if encoder_samples else 0
     total_count = decoder_count + encoder_count
-    total_skipped = skipped_decode_count + skipped_encode_count
+    total_skipped = skipped_decode + skipped_encode
 
     print(f"\nTotal: {total_count} samples "
           f"({decoder_count} decoder, {encoder_count} encoder)")
@@ -639,6 +657,22 @@ def create_argument_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_TEST_TIMEOUT,
         help=f"Per-test timeout in seconds (default: {DEFAULT_TEST_TIMEOUT})")
+    parser.add_argument(
+        "--decode-display", action="store_true",
+        help="Enable display output for decode tests "
+             "(removes --noPresent from decoder commands)")
+    parser.add_argument(
+        "--no-verify-md5", action="store_true",
+        help="Disable MD5 verification of decoded output "
+             "(enabled by default when expected_output_md5 is present)")
+    parser.add_argument(
+        "--no-validate-with-decoder", action="store_true",
+        help="Disable validation of encoder output with decoder "
+             "(validation enabled by default)")
+    parser.add_argument(
+        "--decoder-args", nargs="+",
+        help="Additional arguments to pass to decoder during "
+             "encoder validation")
     return parser
 
 
@@ -709,7 +743,11 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
         show_skipped=args.show_skipped,
         encode_test_suite=args.encode_test_suite,
         decode_test_suite=args.decode_test_suite,
-        timeout=args.timeout
+        timeout=args.timeout,
+        decode_display=args.decode_display,
+        no_verify_md5=args.no_verify_md5,
+        no_validate_with_decoder=args.no_validate_with_decoder,
+        decoder_args=args.decoder_args,
     )
 
     # Determine test type filter
@@ -756,7 +794,12 @@ def main() -> int:
     # Handle --list-samples option
     if args.list_samples:
         skip_list_path = args.skip_list or "skipped_samples.json"
-        list_all_samples(skip_list_path)
+        test_type_filter = None
+        if args.encoder_only:
+            test_type_filter = TestType.ENCODER
+        elif args.decoder_only:
+            test_type_filter = TestType.DECODER
+        list_all_samples(skip_list_path, test_type_filter)
         return 0
 
     # Handle --download-only option
