@@ -37,6 +37,7 @@ from tests.libs.video_test_config_base import (  # noqa: E402
     VideoTestStatus,
     check_sample_resources,
     create_error_result,
+    load_and_download_samples,
     load_samples_from_json,
 )
 from tests.libs.video_test_framework_base import (  # noqa: E402
@@ -340,6 +341,14 @@ def main() -> int:
     if args.list_samples:
         list_decoder_samples()
         return 0
+
+    # Handle --download-only option
+    if args.download_only:
+        json_file = args.decode_test_suite or "decode_samples.json"
+        success = load_and_download_samples(
+            DecodeTestSample, json_file, "decode"
+        )
+        return 0 if success else 1
 
     # Find and resolve decoder executable path
     args.decoder = PlatformUtils.resolve_executable_path(

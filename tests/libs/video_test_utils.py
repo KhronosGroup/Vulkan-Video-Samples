@@ -162,6 +162,11 @@ def add_common_arguments(parser, codec_choices=None):
         action="store_true",
         help="Show skipped tests in summary output",
     )
+    parser.add_argument(
+        "--download-only",
+        action="store_true",
+        help="Download test resources and exit without running tests",
+    )
     return parser
 
 

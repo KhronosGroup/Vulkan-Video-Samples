@@ -36,9 +36,10 @@ from tests.libs.video_test_config_base import (  # noqa: E402
     CodecType,
     TestResult,
     VideoTestStatus,
-    create_error_result,
-    load_samples_from_json,
     check_sample_resources,
+    create_error_result,
+    load_and_download_samples,
+    load_samples_from_json,
 )
 from tests.libs.video_test_framework_base import (  # noqa: E402
     VulkanVideoTestFrameworkBase,
@@ -496,6 +497,14 @@ def main() -> int:
         test_suite = args.encode_test_suite or "encode_samples.json"
         list_encoder_samples(test_suite)
         return 0
+
+    # Handle --download-only option
+    if args.download_only:
+        json_file = args.encode_test_suite or "encode_samples.json"
+        success = load_and_download_samples(
+            EncodeTestSample, json_file, "encode"
+        )
+        return 0 if success else 1
 
     # Find and resolve encoder executable path
     args.encoder = PlatformUtils.resolve_executable_path(

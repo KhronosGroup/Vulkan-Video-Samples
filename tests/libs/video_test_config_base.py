@@ -460,6 +460,36 @@ def download_sample_assets(samples, asset_type: str = "test") -> bool:
         return False
 
 
+def load_and_download_samples(sample_class, json_file: str,
+                              test_type: str) -> bool:
+    """Load samples from JSON and download their assets.
+
+    Args:
+        sample_class: Sample class with a from_dict() classmethod
+        json_file: Path to JSON file containing sample definitions
+        test_type: Type of test ("decode" or "encode")
+
+    Returns:
+        True if download succeeded or no samples found.
+    """
+    samples_data = load_samples_from_json(json_file, test_type=test_type)
+    if not samples_data:
+        print(f"No {test_type} samples found")
+        return True
+
+    samples = []
+    for data in samples_data:
+        try:
+            samples.append(sample_class.from_dict(data))
+        except (KeyError, ValueError, TypeError) as e:
+            print(f"  Warning: failed to load {test_type} sample "
+                  f"{data.get('name', 'unknown')}: {e}")
+
+    if not samples:
+        return True
+    return download_sample_assets(samples, f"{test_type} test")
+
+
 def _validate_zip_member(member_name: str, extract_dir: Path) -> Path:
     """
     Validate a zip member path to prevent zip slip attacks.

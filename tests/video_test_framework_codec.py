@@ -39,6 +39,7 @@ from tests.libs.video_test_config_base import (
     VideoTestStatus,
     load_samples_from_json,
     download_sample_assets,
+    load_and_download_samples,
     load_skip_list,
     is_test_skipped,
     SkipFilter,
@@ -49,8 +50,14 @@ from tests.libs.video_test_platform_utils import (
 )
 
 from tests.libs.video_test_utils import safe_main_wrapper, DEFAULT_TEST_TIMEOUT
-from tests.video_test_framework_encode import VulkanVideoEncodeTestFramework
-from tests.video_test_framework_decode import VulkanVideoDecodeTestFramework
+from tests.video_test_framework_encode import (
+    VulkanVideoEncodeTestFramework,
+    EncodeTestSample,
+)
+from tests.video_test_framework_decode import (
+    VulkanVideoDecodeTestFramework,
+    DecodeTestSample,
+)
 
 
 @dataclass
@@ -599,6 +606,10 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--no-auto-download", action="store_true",
         help="Skip automatic download of missing/corrupt sample files")
     parser.add_argument(
+        "--download-only", action="store_true",
+        help="Download all test resources (encode and decode) and exit "
+             "without running tests")
+    parser.add_argument(
         "--deviceID",
         help="Vulkan device ID to use for testing "
              "(decimal or hex with 0x prefix)")
@@ -653,6 +664,29 @@ def find_executables(args: argparse.Namespace) -> Tuple[str, str]:
                 print(f"✓ Found decoder: {decoder_path}")
 
     return encoder_path, decoder_path
+
+
+def download_all_resources(args: argparse.Namespace) -> bool:
+    """Download all test resources (encode and decode) without running tests"""
+    print("=== Downloading All Test Resources ===\n")
+
+    decode_json = args.decode_test_suite or "decode_samples.json"
+    encode_json = args.encode_test_suite or "encode_samples.json"
+
+    decode_ok = load_and_download_samples(
+        DecodeTestSample, decode_json, "decode"
+    )
+    encode_ok = load_and_download_samples(
+        EncodeTestSample, encode_json, "encode"
+    )
+
+    success = decode_ok and encode_ok
+    if success:
+        print("\n✓ All resources downloaded successfully")
+    else:
+        print("\n✗ Some resources failed to download")
+
+    return success
 
 
 def run_framework_tests(args: argparse.Namespace, encoder_path: str,
@@ -724,6 +758,11 @@ def main() -> int:
         skip_list_path = args.skip_list or "skipped_samples.json"
         list_all_samples(skip_list_path)
         return 0
+
+    # Handle --download-only option
+    if args.download_only:
+        success = download_all_resources(args)
+        return 0 if success else 1
 
     # Find executable paths
     encoder_path, decoder_path = find_executables(args)
