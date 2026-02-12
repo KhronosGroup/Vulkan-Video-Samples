@@ -82,7 +82,7 @@ pytest tests/unit_tests/ -v -k "skip"
 | `test_cli.py` | CLI argument parsing and option handling |
 | `test_skip_list.py` | Skip list pattern matching and filtering |
 | `test_filter_suite.py` | Test suite filtering by codec, pattern, and skip rules |
-| `test_sample_configs.py` | Sample configuration classes (DecodeSample, EncodeTestSample) |
+| `test_sample_configs.py` | Sample configuration classes (DecodeTestSample, EncodeTestSample) |
 | `test_status_determination.py` | Return code to test status mapping |
 | `test_utils.py` | Utility functions (file hashing, checksum verification) |
 

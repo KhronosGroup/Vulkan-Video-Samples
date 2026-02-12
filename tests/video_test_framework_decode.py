@@ -58,7 +58,7 @@ from tests.libs.video_test_result_reporter import (
 
 @dataclass(init=False)
 # pylint: disable=too-many-instance-attributes
-class DecodeSample(BaseTestConfig):
+class DecodeTestSample(BaseTestConfig):
     """Configuration for decoder test cases with download capability"""
     expected_output_md5: str = ""  # Expected MD5 of decoded YUV output
 
@@ -76,7 +76,7 @@ class DecodeSample(BaseTestConfig):
         source_filepath: str = "",
         expected_output_md5: str = "",
     ):
-        """Initialize DecodeSample with all fields from base and child"""
+        """Initialize DecodeTestSample with all fields from base and child"""
         super().__init__(
             name=name,
             codec=codec,
@@ -91,8 +91,8 @@ class DecodeSample(BaseTestConfig):
         self.expected_output_md5 = expected_output_md5
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'DecodeSample':
-        """Create a DecodeSample from a dictionary"""
+    def from_dict(cls, data: dict) -> 'DecodeTestSample':
+        """Create a DecodeTestSample from a dictionary"""
         return cls(
             name=data["name"],
             codec=CodecType(data["codec"]),
@@ -144,14 +144,14 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
 
     def _load_decode_samples(
             self, json_file: str = "decode_samples.json"
-    ) -> List[DecodeSample]:
+    ) -> List[DecodeTestSample]:
         """Load decode samples from JSON configuration"""
         samples_data = load_samples_from_json(json_file, test_type="decode")
         samples = []
 
         for sample_data in samples_data:
             try:
-                sample = DecodeSample.from_dict(sample_data)
+                sample = DecodeTestSample.from_dict(sample_data)
                 samples.append(sample)
             except (KeyError, ValueError, TypeError) as e:
                 msg = (
@@ -182,7 +182,7 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
                 f"Decoder not found: {self.executable_path}")
 
     def check_resources(self, auto_download: bool = True,
-                        test_configs: List[DecodeSample] = None) -> bool:
+                        test_configs: List[DecodeTestSample] = None) -> bool:
         """Check if required resource files are available and have correct
         checksums
 
@@ -197,13 +197,13 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
                                       "decoder resource",
                                       auto_download)
 
-    def _run_decoder_test(self, config: DecodeSample) -> TestResult:
+    def _run_decoder_test(self, config: DecodeTestSample) -> TestResult:
         """Run decoder test for specified codec"""
         if not self.decoder_path:
             return create_error_result(config, "Decoder path not specified")
 
         # Use the sample file directly from the config
-        # (since DecodeSample now contains everything)
+        # (since DecodeTestSample now contains everything)
         input_file = config.full_path
 
         if not input_file.exists():
@@ -269,7 +269,7 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
         self,
         codec_filter: Optional[str] = None,
         test_pattern: Optional[str] = None,
-    ) -> List[DecodeSample]:
+    ) -> List[DecodeTestSample]:
         """Create test suite from samples with optional filtering"""
         # Use base class filtering method with skip list
         return self.filter_test_suite(
@@ -277,14 +277,14 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
             self.skip_filter, test_format="vvs", test_type="decode"
         )
 
-    def run_single_test(self, config: DecodeSample) -> TestResult:
+    def run_single_test(self, config: DecodeTestSample) -> TestResult:
         """Run a single test case - implementation for base class"""
         result = self._run_decoder_test(config)
         self._validate_test_result(result)
         return result
 
     def run_test_suite(
-        self, test_configs: List[DecodeSample] = None
+        self, test_configs: List[DecodeTestSample] = None
     ) -> List[TestResult]:
         """Run complete test suite using base class implementation"""
         return self.run_test_suite_base(test_configs, test_type="decode")

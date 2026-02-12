@@ -1,7 +1,7 @@
 """
 Unit tests for sample configuration classes.
 
-Tests DecodeSample, EncodeTestSample, and CodecType.
+Tests DecodeTestSample, EncodeTestSample, and CodecType.
 
 Copyright 2025 Igalia S.L.
 
@@ -21,7 +21,7 @@ limitations under the License.
 import pytest
 
 from tests.libs.video_test_config_base import CodecType, BaseTestConfig
-from tests.video_test_framework_decode import DecodeSample
+from tests.video_test_framework_decode import DecodeTestSample
 from tests.video_test_framework_encode import EncodeTestSample
 
 
@@ -48,11 +48,11 @@ class TestCodecType:
             CodecType("invalid")
 
 
-class TestDecodeSample:
-    """Tests for DecodeSample class"""
+class TestDecodeTestSample:
+    """Tests for DecodeTestSample class"""
 
     def test_from_dict_valid(self):
-        """Test creating DecodeSample from valid dictionary"""
+        """Test creating DecodeTestSample from valid dictionary"""
         data = {
             "name": "h264_test",
             "codec": "h264",
@@ -63,7 +63,7 @@ class TestDecodeSample:
             "expected_output_md5": "def456",
         }
 
-        sample = DecodeSample.from_dict(data)
+        sample = DecodeTestSample.from_dict(data)
 
         assert sample.name == "h264_test"
         assert sample.codec == CodecType.H264
@@ -74,7 +74,7 @@ class TestDecodeSample:
         assert sample.expected_output_md5 == "def456"
 
     def test_from_dict_optional_fields(self):
-        """Test creating DecodeSample with missing optional fields"""
+        """Test creating DecodeTestSample with missing optional fields"""
         data = {
             "name": "minimal_test",
             "codec": "av1",
@@ -83,7 +83,7 @@ class TestDecodeSample:
             "source_filepath": "video/test.ivf",
         }
 
-        sample = DecodeSample.from_dict(data)
+        sample = DecodeTestSample.from_dict(data)
 
         assert sample.name == "minimal_test"
         assert sample.codec == CodecType.AV1
@@ -102,11 +102,11 @@ class TestDecodeSample:
         }
 
         with pytest.raises(KeyError):
-            DecodeSample.from_dict(data)
+            DecodeTestSample.from_dict(data)
 
     def test_display_name_prefix(self):
         """Test that display_name adds decode_ prefix"""
-        sample = DecodeSample(
+        sample = DecodeTestSample(
             name="h264_test",
             codec=CodecType.H264,
             source_url="",
@@ -119,12 +119,15 @@ class TestDecodeSample:
     def test_display_name_different_codecs(self):
         """Test display_name with different codecs"""
         samples = [
-            DecodeSample(name="test", codec=CodecType.H264, source_url="",
-                         source_checksum="", source_filepath=""),
-            DecodeSample(name="test", codec=CodecType.H265, source_url="",
-                         source_checksum="", source_filepath=""),
-            DecodeSample(name="test", codec=CodecType.AV1, source_url="",
-                         source_checksum="", source_filepath=""),
+            DecodeTestSample(name="test", codec=CodecType.H264,
+                             source_url="", source_checksum="",
+                             source_filepath=""),
+            DecodeTestSample(name="test", codec=CodecType.H265,
+                             source_url="", source_checksum="",
+                             source_filepath=""),
+            DecodeTestSample(name="test", codec=CodecType.AV1,
+                             source_url="", source_checksum="",
+                             source_filepath=""),
         ]
 
         # All should have same display_name regardless of codec
