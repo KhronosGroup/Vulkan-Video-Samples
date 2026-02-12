@@ -758,10 +758,11 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
     )
 
     # Determine test type filter
+    # Both flags together means run everything (no filter)
     test_type_filter = None
-    if args.encoder_only:
+    if args.encoder_only and not args.decoder_only:
         test_type_filter = TestType.ENCODER
-    elif args.decoder_only:
+    elif args.decoder_only and not args.encoder_only:
         test_type_filter = TestType.DECODER
 
     # Run tests
@@ -802,9 +803,9 @@ def main() -> int:
     if args.list_samples:
         skip_list_path = args.skip_list or "skipped_samples.json"
         test_type_filter = None
-        if args.encoder_only:
+        if args.encoder_only and not args.decoder_only:
             test_type_filter = TestType.ENCODER
-        elif args.decoder_only:
+        elif args.decoder_only and not args.encoder_only:
             test_type_filter = TestType.DECODER
         list_all_samples(skip_list_path, test_type_filter)
         return 0
