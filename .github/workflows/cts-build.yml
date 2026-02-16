@@ -10,7 +10,7 @@ jobs:
   cts-build-linux:
     runs-on: ubuntu-24.04
     if: >
-      contains(github.event.pull_request.title || '', '[release]') ||
+      startsWith(github.event.pull_request.title || '', 'release:') ||
       github.event.label.name == 'cts-build' ||
       contains(github.event.pull_request.labels.*.name, 'cts-build')
     env:
@@ -58,7 +58,7 @@ jobs:
   cts-build-windows:
     runs-on: windows-latest
     if: >
-      contains(github.event.pull_request.title || '', '[release]') ||
+      startsWith(github.event.pull_request.title || '', 'release:') ||
       github.event.label.name == 'cts-build' ||
       contains(github.event.pull_request.labels.*.name, 'cts-build')
 

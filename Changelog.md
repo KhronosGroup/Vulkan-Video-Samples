@@ -1,3 +1,10 @@
+v0.4.1:
+  - Add VK-GL-CTS build validation workflow for PR integration testing
+  - Add download-only mode to test framework for pre-fetching test resources
+  - Consolidate test framework entry point into vvs_test_runner.py
+  - Rename DecodeSample to DecodeTestSample for consistency
+  - Remove vulkan includes from VkVSCommon.h
+
 v0.4.0:
   - Add testing framework to run automated decode and encode conformance
     tests across multiple GPU drivers and codecs
