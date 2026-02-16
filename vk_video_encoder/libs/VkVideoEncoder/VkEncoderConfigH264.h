@@ -193,7 +193,10 @@ struct EncoderConfigH264 : public EncoderConfig {
 
     virtual VkResult InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx) override;
 
-    virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_H264_PROFILE_IDC_HIGH; };
+    virtual uint32_t GetCodecProfile() override {
+        assert(profileIdc != STD_VIDEO_H264_PROFILE_IDC_INVALID);
+        return static_cast<uint32_t>(profileIdc);
+    }
 
     // 1. First h.264 determine the number of the Dpb buffers required
     virtual int8_t InitDpbCount() override;

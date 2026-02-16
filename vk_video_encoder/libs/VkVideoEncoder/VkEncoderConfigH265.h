@@ -159,7 +159,10 @@ struct EncoderConfigH265 : public EncoderConfig {
 
     virtual VkResult InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx) override;
 
-    virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_H265_PROFILE_IDC_MAIN; };
+    virtual uint32_t GetCodecProfile() override {
+        assert(profile != STD_VIDEO_H265_PROFILE_IDC_INVALID);
+        return static_cast<uint32_t>(profile);
+    }
 
     // 1. First h.265 determine the number of the Dpb buffers required
     virtual int8_t InitDpbCount() override;

@@ -115,7 +115,10 @@ struct EncoderConfigAV1 : public EncoderConfig {
 
     void InitProfileLevel();
 
-    virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_AV1_PROFILE_MAIN; }
+    virtual uint32_t GetCodecProfile() override {
+        assert(profile != STD_VIDEO_AV1_PROFILE_INVALID);
+        return static_cast<uint32_t>(profile);
+    }
 
     virtual int8_t InitDpbCount() override;
 
