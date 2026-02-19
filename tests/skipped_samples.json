@@ -28,7 +28,7 @@
         "all"
       ],
       "reproduction": "always",
-      "reason": "Fence timeout",
+      "reason": "Fence timeout. Hint: test requires filmgrain, which is not supported on ANV (<gen20)",
       "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/164",
       "date_added": "2026-02-10"
     },
@@ -115,40 +115,12 @@
         "all"
       ],
       "reproduction": "always",
-      "reason": "md5 mismatch",
+      "reason": "md5 mismatch. Hint: requires filmgrain, which is not supported on ANV (<gen20)",
       "bug_url": "",
       "date_added": "2026-01-19"
     },
     {
       "name": "vp9_intra_only",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "md5 mismatch",
-      "bug_url": "",
-      "date_added": "2026-01-19"
-    },
-    {
-      "name": "av1_superres_8bit",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "md5 mismatch",
-      "bug_url": "",
-      "date_added": "2026-01-19"
-    },
-    {
-      "name": "av1_frames_golden",
       "format": "vvs",
       "drivers": [
         "anv"
