@@ -78,21 +78,6 @@
       "date_added": "2025-01-27"
     },
     {
-      "name": "vp9_resize",
-      "source_filepath": "video/vp9/vp9-resize.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "VP9 dynamic resize not supported. MD5 mismatch",
-      "bug_url": "",
-      "date_added": "2025-01-27"
-    },
-    {
       "name": "vp9_resize_1_2",
       "source_filepath": "video/vp9/vp9-resize-1-2.ivf",
       "format": "vvs",

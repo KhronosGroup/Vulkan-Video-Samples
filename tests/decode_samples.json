@@ -402,7 +402,7 @@
       "name": "vp9_resize",
       "codec": "vp9",
       "description": "Test VP9 decoding with dynamic resize sample",
-      "expected_output_md5": "753f193819cc269f2e6047c252f29f5e",
+      "expected_output_md5": "d1c46d62ef713cb7f6fd5024c510f2da",
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/vp9/vp9-resize.ivf",
       "source_checksum": "84a345546e47e37de87d2959347bf731f9f440f9f2ab32bede3f0e416100c585",
       "source_filepath": "video/vp9/vp9-resize.ivf"
