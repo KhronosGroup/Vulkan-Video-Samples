@@ -302,8 +302,8 @@
     {
       "name": "av1_sizeup_fluster",
       "codec": "av1",
-      "description": "Test AV1 decoding with size up Fluster sample",
-      "expected_output_md5": "0fcf8e836a1941c318accc2deef2cc0c",
+      "description": "Test AV1 decoding with size up Fluster sample: av1-1-b8-03-sizeup.ivf",
+      "expected_output_md5": "9fc474a2842a5632757e4e0cb7492ad4",
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/av1/av1-sizeup-fluster.ivf",
       "source_checksum": "24b9554460aea54b24aff4adaf154c887fcc14ed114436bc87e8c29d8f4e7113",
       "source_filepath": "video/av1/av1-sizeup-fluster.ivf"

@@ -63,21 +63,6 @@
       "date_added": "2025-01-27"
     },
     {
-      "name": "av1_sizeup_fluster",
-      "source_filepath": "video/av1/av1-sizeup-fluster.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "Size up test - needs investigation. Resolution change trigger the same issue as clip-c",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/126",
-      "date_added": "2025-01-27"
-    },
-    {
       "name": "vp9_show_existing_frames",
       "source_filepath": "video/vp9/vp9-352x288-show-existing-frames.ivf",
       "format": "vvs",
