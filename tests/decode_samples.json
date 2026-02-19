@@ -474,7 +474,7 @@
       "name": "vp9_resize_1_2",
       "codec": "vp9",
       "description": "Test VP9 decoding with 1/2 resize sample",
-      "expected_output_md5": "57c7eb977a440162682edf0205a84973",
+      "expected_output_md5": "6c1d273248b5a41f05269fb38f428333",
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/vp9/vp9-resize-1-2.ivf",
       "source_checksum": "eb73c5e6a3fe0aa22bda18ed5fbf4c57baa29681ace12aa1a2739b89ab2536bd",
       "source_filepath": "video/vp9/vp9-resize-1-2.ivf"

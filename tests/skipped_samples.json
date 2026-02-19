@@ -78,21 +78,6 @@
       "date_added": "2025-01-27"
     },
     {
-      "name": "vp9_resize_1_2",
-      "source_filepath": "video/vp9/vp9-resize-1-2.ivf",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "VP9 resize not supported. Resolution change trigger the same issue as clip-c",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/126",
-      "date_added": "2025-01-27"
-    },
-    {
       "name": "h264_clip_a_compute_queue",
       "format": "vvs",
       "drivers": [
