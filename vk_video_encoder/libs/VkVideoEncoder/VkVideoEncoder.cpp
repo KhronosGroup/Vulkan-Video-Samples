@@ -168,16 +168,94 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
     // NOTE: Get image layout
     const VkSubresourceLayout* dstSubresourceLayout = dstImageResource->GetSubresourceLayout();
 
-    // Direct plane copy - no color space conversion needed
-    CopyYCbCrPlanesDirectCPU(
-            pInputFrameData,                                               // Source buffer
-            m_encoderConfig->input.planeLayouts,                           // Source layouts
-            writeImagePtr,                                                 // Destination buffer
-            dstSubresourceLayout,                                          // Destination layouts
-            std::min(m_encoderConfig->encodeWidth, m_encoderConfig->input.width),    // Width
-            std::min(m_encoderConfig->encodeHeight, m_encoderConfig->input.height),  // Height
-            m_encoderConfig->input.numPlanes,                              // Number of planes
-            m_encoderConfig->input.vkFormat);                              // Format for subsampling detection
+    const uint32_t width  = std::min(m_encoderConfig->encodeWidth,  m_encoderConfig->input.width);
+    const uint32_t height = std::min(m_encoderConfig->encodeHeight, m_encoderConfig->input.height);
+
+    if (m_inputComputeFilter != nullptr) {
+        // Compute filter available: direct plane copy, GPU filter handles conversion
+        CopyYCbCrPlanesDirectCPU(
+                pInputFrameData,                                           // Source buffer
+                m_encoderConfig->input.planeLayouts,                       // Source layouts
+                writeImagePtr,                                             // Destination buffer
+                dstSubresourceLayout,                                      // Destination layouts
+                width, height,
+                m_encoderConfig->input.numPlanes,                          // Number of planes
+                m_encoderConfig->input.vkFormat);                          // Format for subsampling detection
+    } else {
+        // No compute filter: CPU conversion from 3-plane to 2-plane format
+        int yCbCrConvResult = 0;
+        if (m_encoderConfig->input.bpp == 8) {
+            if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
+                yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I444ToP444(
+                        pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,
+                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                        pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,
+                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                        pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,
+                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                        writeImagePtr + dstSubresourceLayout[0].offset,
+                        (int)dstSubresourceLayout[0].rowPitch,
+                        writeImagePtr + dstSubresourceLayout[1].offset,
+                        (int)dstSubresourceLayout[1].rowPitch,
+                        width, height);
+            } else {
+                yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I420ToNV12(
+                        pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,
+                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                        pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,
+                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                        pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,
+                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                        writeImagePtr + dstSubresourceLayout[0].offset,
+                        (int)dstSubresourceLayout[0].rowPitch,
+                        writeImagePtr + dstSubresourceLayout[1].offset,
+                        (int)dstSubresourceLayout[1].rowPitch,
+                        width, height);
+            }
+        } else if (m_encoderConfig->input.bpp == 10 || m_encoderConfig->input.bpp == 12) {
+            int shiftBits = 0;
+            if (m_encoderConfig->input.msbShift >= 0) {
+                shiftBits = m_encoderConfig->input.msbShift;
+            } else {
+                shiftBits = 16 - m_encoderConfig->input.bpp;
+            }
+
+            if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
+                yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I444ToP444(
+                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset),
+                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset),
+                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset),
+                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),
+                        (int)dstSubresourceLayout[0].rowPitch,
+                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
+                        (int)dstSubresourceLayout[1].rowPitch,
+                        width, height, shiftBits);
+            } else {
+                yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I420ToNV12(
+                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset),
+                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset),
+                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset),
+                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),
+                        (int)dstSubresourceLayout[0].rowPitch,
+                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
+                        (int)dstSubresourceLayout[1].rowPitch,
+                        width, height, shiftBits);
+            }
+        } else {
+            assert(!"Requested bit-depth is not supported!");
+            return VK_ERROR_INITIALIZATION_FAILED;
+        }
+
+        if (yCbCrConvResult != 0) {
+            return VK_ERROR_INITIALIZATION_FAILED;
+        }
+    }
 
     // Now stage the input frame for the encoder video input
     return StageInputFrame(encodeFrameInfo);
@@ -1036,9 +1114,27 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         std::max(m_maxCodedExtent.height, encoderConfig->input.height)
     };
 
+    // When compute filter is available, the linear image stores raw input format
+    // and the filter handles conversion. Without it, the linear image must match
+    // the encode source format since CopyLinearToOptimalImage does no conversion.
+    const VkFormat linearImageFormat =
+#ifdef SHADERC_SUPPORT
+        encoderConfig->enablePreprocessComputeFilter
+            ? encoderConfig->input.vkFormat
+            : m_imageInFormat;
+#else
+        m_imageInFormat;
+    if (encoderConfig->input.vkFormat != m_imageInFormat) {
+        fprintf(stderr, "\nWarning: input format (%d) differs from encode format (%d) "
+                "but compute filter is not available (built without SHADERC_SUPPORT). "
+                "Output may be incorrect.\n",
+                encoderConfig->input.vkFormat, m_imageInFormat);
+    }
+#endif
+
     result = m_linearInputImagePool->Configure( m_vkDevCtx,
                                                 encoderConfig->numInputImages,
-                                                encoderConfig->input.vkFormat,
+                                                linearImageFormat,
                                                 linearInputImageExtent,
                                                   ( VK_IMAGE_USAGE_SAMPLED_BIT |
                                                     VK_IMAGE_USAGE_STORAGE_BIT |
@@ -1538,8 +1634,9 @@ VkResult VkVideoEncoder::CopyLinearToOptimalImage(VkCommandBuffer& commandBuffer
     // Bind memory for the image.
     const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(format);
 
-    // Currently formats that have more than 2 output planes are not supported. 444 formats have a shared CbCr planes in all current tests
-    assert((mpInfo->vkPlaneFormat[2] == VK_FORMAT_UNDEFINED) && (mpInfo->vkPlaneFormat[3] == VK_FORMAT_UNDEFINED));
+    // Determine number of planes: 1 (base) + numberOfExtraPlanes
+    const uint32_t numPlanes = 1 + mpInfo->planesLayout.numberOfExtraPlanes;
+    assert(numPlanes >= 1 && numPlanes <= 3);
 
     // Copy src buffer to image.
     VkImageCopy copyRegion[3]{};
@@ -1554,29 +1651,43 @@ VkResult VkVideoEncoder::CopyLinearToOptimalImage(VkCommandBuffer& commandBuffer
     copyRegion[0].dstSubresource.mipLevel = 0;
     copyRegion[0].dstSubresource.baseArrayLayer = dstCopyArrayLayer;
     copyRegion[0].dstSubresource.layerCount = 1;
-    copyRegion[1].extent.width = copyRegion[0].extent.width;
-    if (mpInfo->planesLayout.secondaryPlaneSubsampledX != 0) {
-        copyRegion[1].extent.width = (copyRegion[1].extent.width + 1) / 2;
+    if (numPlanes > 1) {
+        copyRegion[1].extent.width = copyRegion[0].extent.width;
+        if (mpInfo->planesLayout.secondaryPlaneSubsampledX != 0) {
+            copyRegion[1].extent.width = (copyRegion[1].extent.width + 1) / 2;
+        }
+
+        copyRegion[1].extent.height = copyRegion[0].extent.height;
+        if (mpInfo->planesLayout.secondaryPlaneSubsampledY != 0) {
+            copyRegion[1].extent.height = (copyRegion[1].extent.height + 1) / 2;
+        }
+
+        copyRegion[1].extent.depth = 1;
+        copyRegion[1].srcSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
+        copyRegion[1].srcSubresource.mipLevel = 0;
+        copyRegion[1].srcSubresource.baseArrayLayer = srcCopyArrayLayer;
+        copyRegion[1].srcSubresource.layerCount = 1;
+        copyRegion[1].dstSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
+        copyRegion[1].dstSubresource.mipLevel = 0;
+        copyRegion[1].dstSubresource.baseArrayLayer = dstCopyArrayLayer;
+        copyRegion[1].dstSubresource.layerCount = 1;
     }
 
-    copyRegion[1].extent.height = copyRegion[0].extent.height;
-    if (mpInfo->planesLayout.secondaryPlaneSubsampledY != 0) {
-        copyRegion[1].extent.height = (copyRegion[1].extent.height + 1) / 2;
+    if (numPlanes > 2) {
+        copyRegion[2].extent = copyRegion[1].extent;
+        copyRegion[2].srcSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_2_BIT;
+        copyRegion[2].srcSubresource.mipLevel = 0;
+        copyRegion[2].srcSubresource.baseArrayLayer = srcCopyArrayLayer;
+        copyRegion[2].srcSubresource.layerCount = 1;
+        copyRegion[2].dstSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_2_BIT;
+        copyRegion[2].dstSubresource.mipLevel = 0;
+        copyRegion[2].dstSubresource.baseArrayLayer = dstCopyArrayLayer;
+        copyRegion[2].dstSubresource.layerCount = 1;
     }
-
-    copyRegion[1].extent.depth = 1;
-    copyRegion[1].srcSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
-    copyRegion[1].srcSubresource.mipLevel = 0;
-    copyRegion[1].srcSubresource.baseArrayLayer = srcCopyArrayLayer;
-    copyRegion[1].srcSubresource.layerCount = 1;
-    copyRegion[1].dstSubresource.aspectMask = VK_IMAGE_ASPECT_PLANE_1_BIT;
-    copyRegion[1].dstSubresource.mipLevel = 0;
-    copyRegion[1].dstSubresource.baseArrayLayer = dstCopyArrayLayer;
-    copyRegion[1].dstSubresource.layerCount = 1;
 
     m_vkDevCtx->CmdCopyImage(commandBuffer, srcImageResource->GetImage(), srcImageLayout,
                              dstImageResource->GetImage(), dstImageLayout,
-                             (uint32_t)2, copyRegion);
+                             numPlanes, copyRegion);
 
     {
         VkMemoryBarrier memoryBarrier = {VK_STRUCTURE_TYPE_MEMORY_BARRIER};
