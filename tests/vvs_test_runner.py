@@ -586,14 +586,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     decoder_default = ("vk-video-dec-test" +
                        PlatformUtils.get_executable_extension())
 
-    parser.add_argument(
-        "--encoder", "-e",
-        default=encoder_default,
-        help="Path to vk-video-enc-test executable")
-    parser.add_argument(
-        "--decoder", "-d",
-        default=decoder_default,
-        help="Path to vk-video-dec-test executable")
+    # General options
     parser.add_argument(
         "--work-dir", "-w",
         help="Working directory for test files")
@@ -611,12 +604,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--verbose", "-v", action="store_true",
         help="Show command lines being executed")
-    parser.add_argument(
-        "--encoder-only", action="store_true",
-        help="Run only encoder tests")
-    parser.add_argument(
-        "--decoder-only", action="store_true",
-        help="Run only decoder tests")
     parser.add_argument(
         "--keep-files", action="store_true",
         help="Keep output artifacts after testing")
@@ -647,32 +634,52 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--show-skipped", action="store_true",
         help="Show skipped tests in summary output")
     parser.add_argument(
-        "--encode-test-suite",
-        help="Path to custom encode test suite JSON file")
-    parser.add_argument(
-        "--decode-test-suite",
-        help="Path to custom decode test suite JSON file")
-    parser.add_argument(
         "--timeout",
         type=int,
         default=DEFAULT_TEST_TIMEOUT,
         help=f"Per-test timeout in seconds (default: {DEFAULT_TEST_TIMEOUT})")
-    parser.add_argument(
-        "--decode-display", action="store_true",
-        help="Enable display output for decode tests "
-             "(removes --noPresent from decoder commands)")
-    parser.add_argument(
-        "--no-verify-md5", action="store_true",
-        help="Disable MD5 verification of decoded output "
-             "(enabled by default when expected_output_md5 is present)")
-    parser.add_argument(
+
+    # Encoder-specific options
+    encoder_group = parser.add_argument_group("encoder options")
+    encoder_group.add_argument(
+        "--encoder", "-e",
+        default=encoder_default,
+        help="Path to vk-video-enc-test executable")
+    encoder_group.add_argument(
+        "--encoder-only", action="store_true",
+        help="Run only encoder tests")
+    encoder_group.add_argument(
+        "--encode-test-suite",
+        help="Path to custom encode test suite JSON file")
+    encoder_group.add_argument(
         "--no-validate-with-decoder", action="store_true",
         help="Disable validation of encoder output with decoder "
              "(validation enabled by default)")
-    parser.add_argument(
+    encoder_group.add_argument(
         "--decoder-args", nargs="+",
         help="Additional arguments to pass to decoder during "
              "encoder validation")
+
+    # Decoder-specific options
+    decoder_group = parser.add_argument_group("decoder options")
+    decoder_group.add_argument(
+        "--decoder", "-d",
+        default=decoder_default,
+        help="Path to vk-video-dec-test executable")
+    decoder_group.add_argument(
+        "--decoder-only", action="store_true",
+        help="Run only decoder tests")
+    decoder_group.add_argument(
+        "--decode-test-suite",
+        help="Path to custom decode test suite JSON file")
+    decoder_group.add_argument(
+        "--decode-display", action="store_true",
+        help="Enable display output for decode tests "
+             "(removes --noPresent from decoder commands)")
+    decoder_group.add_argument(
+        "--no-verify-md5", action="store_true",
+        help="Disable MD5 verification of decoded output "
+             "(enabled by default when expected_output_md5 is present)")
     return parser
 
 
