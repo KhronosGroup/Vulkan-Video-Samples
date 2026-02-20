@@ -119,7 +119,7 @@ if(TARGET vulkan)
     list(APPEND definitions PRIVATE -DUNINSTALLED_LOADER="$<TARGET_FILE:vulkan>")
 endif()
 
-if(USE_SHADERC)
+if(USE_ENCODER_SHADERC)
     list(APPEND definitions PRIVATE -DSHADERC_SUPPORT)
 endif()
 

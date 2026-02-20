@@ -54,7 +54,10 @@ set (VULKAN_SDK_MIN_MINOR_VERSION 4)
 set (VULKAN_SDK_MIN_PATCH_VERSION 321)
 FIND_VULKAN_SDK(${VULKAN_SDK_MIN_MAJOR_VERSION} ${VULKAN_SDK_MIN_MINOR_VERSION} ${VULKAN_SDK_MIN_PATCH_VERSION})
 
-include(FindShaderc)
+option(USE_ENCODER_SHADERC "Enable shaderc GPU compute filters for encoder (e.g. YUV conversion). Only affects the encoder build; the decoder always uses shaderc." ON)
+if(BUILD_DECODER OR USE_ENCODER_SHADERC)
+    include(FindShaderc)
+endif()
 
 ############ VULKAN_FFMPEG_LIB_PATH ######################################
 if (DEFINED ENV{VULKAN_FFMPEG_LIB_DIR_PATH})
