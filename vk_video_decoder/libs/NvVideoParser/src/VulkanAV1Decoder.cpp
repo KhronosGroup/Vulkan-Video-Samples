@@ -1043,7 +1043,7 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
             pFilmGrain->num_cr_points = 0;
         } else {
             pFilmGrain->num_cb_points = u(4);
-            if (pFilmGrain->num_cb_points > STD_VIDEO_AV1_MAX_NUM_CR_POINTS) {
+            if (pFilmGrain->num_cb_points > STD_VIDEO_AV1_MAX_NUM_CB_POINTS) {
                 assert(!"num_cb_points exceeds the maximum value\n");
             }
 
