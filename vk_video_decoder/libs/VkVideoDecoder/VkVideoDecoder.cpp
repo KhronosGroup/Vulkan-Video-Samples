@@ -506,6 +506,51 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         extraImageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
 
+    if (m_enableExternalConsumerExport == VK_TRUE) {
+        // External consumers (presenters, encoders) need SAMPLED_BIT for rendering
+        // and TRANSFER_SRC_BIT for DMA-BUF export
+        extraImageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    // Select DRM modifier for external consumer export (used below when setting image specs)
+    uint64_t exportDrmModifier = 0;
+    VkExternalMemoryHandleTypeFlags exportHandleTypes = 0;
+    if (m_enableExternalConsumerExport == VK_TRUE) {
+        exportHandleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+        // Query supported DRM modifiers for the output format
+        VkDrmFormatModifierPropertiesListEXT modList{
+            VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT};
+        VkFormatProperties2 fmtProps{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
+        fmtProps.pNext = &modList;
+        m_vkDevCtx->GetPhysicalDeviceFormatProperties2(
+            m_vkDevCtx->getPhysicalDevice(), outImageFormat, &fmtProps);
+        if (modList.drmFormatModifierCount > 0) {
+            std::vector<VkDrmFormatModifierPropertiesEXT> mods(modList.drmFormatModifierCount);
+            modList.pDrmFormatModifierProperties = mods.data();
+            m_vkDevCtx->GetPhysicalDeviceFormatProperties2(
+                m_vkDevCtx->getPhysicalDevice(), outImageFormat, &fmtProps);
+            const VkFormatFeatureFlags required =
+                VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+            // Prefer non-linear (block-linear)
+            for (const auto& m : mods) {
+                if (m.drmFormatModifier != 0 &&
+                    (m.drmFormatModifierTilingFeatures & required) == required) {
+                    exportDrmModifier = m.drmFormatModifier;
+                    break;
+                }
+            }
+            // Fallback to any with required features
+            if (exportDrmModifier == 0) {
+                for (const auto& m : mods) {
+                    if ((m.drmFormatModifierTilingFeatures & required) == required) {
+                        exportDrmModifier = m.drmFormatModifier;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     if (m_dpbAndOutputCoincide == VK_TRUE) {
 
         if (!bitstreamHasFilmGrain) {
@@ -556,6 +601,11 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     imageSpecDpb.usesImageViewArray = m_useImageViewArray;
 
     imageSpecDpb.memoryProperty = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    // External consumer export: set on DPB in coincide mode (DPB IS the output)
+    if (m_enableExternalConsumerExport == VK_TRUE && m_dpbAndOutputCoincide == VK_TRUE) {
+        imageSpecDpb.exportHandleTypes = exportHandleTypes;
+        imageSpecDpb.exportDrmModifier = exportDrmModifier;
+    }
     assert(imageSpecDpb.imageTypeIdx == m_imageSpecsIndex.decodeDpb);
 
     if ((m_imageSpecsIndex.decodeOut != InvalidImageTypeIdx) && (m_imageSpecsIndex.decodeOut != m_imageSpecsIndex.decodeDpb)) {
@@ -577,6 +627,11 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         }
 
         imageSpecOut.createInfo.usage = outImageUsage;
+        // External consumer export: set on output image (distinct mode + film grain)
+        if (m_enableExternalConsumerExport == VK_TRUE) {
+            imageSpecOut.exportHandleTypes = exportHandleTypes;
+            imageSpecOut.exportDrmModifier = exportDrmModifier;
+        }
         if (m_useSeparateOutputImages == VK_TRUE) {
             // Add one more image for the separate output image used for platforms
             // requiring a separate output image or the output needs to be linear
@@ -818,10 +873,55 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     pCurrFrameDecParams->decodeFrameInfo.srcBuffer = pCurrFrameDecParams->bitstreamData->GetBuffer();
     //assert(pCurrFrameDecParams->bitstreamDataOffset == 0);
     assert(pCurrFrameDecParams->firstSliceIndex == 0);
-    // TODO: Assert if bitstreamDataOffset is aligned to VkVideoCapabilitiesKHR::minBitstreamBufferOffsetAlignment
-    pCurrFrameDecParams->decodeFrameInfo.srcBufferOffset = pCurrFrameDecParams->bitstreamDataOffset;
-    // TODO: Assert if bitstreamDataLen is aligned to VkVideoCapabilitiesKHR::minBitstreamBufferSizeAlignment
-    pCurrFrameDecParams->decodeFrameInfo.srcBufferRange =  pCurrFrameDecParams->bitstreamDataLen;
+
+    // Verify bitstream buffer alignment invariants.
+    // The parser's buffer management (swapBitstreamBuffer / GetBitstreamBuffer) ensures:
+    //   - Buffers are allocated with size rounded up to minBitstreamBufferSizeAlignment
+    //   - Residual data is copied to offset 0 of a new aligned buffer
+    //   - bitstreamDataOffset is 0 for H.264/H.265/AV1 (set in end_of_picture)
+    //   - VP9 aligns offset in the parser (VulkanVP9Decoder.cpp:261)
+    const VkDeviceSize sizeAlignment   = pCurrFrameDecParams->bitstreamData->GetSizeAlignment();
+    const VkDeviceSize bufferMaxSize   = pCurrFrameDecParams->bitstreamData->GetMaxSize();
+
+    // srcBufferOffset: must be 0 (H.264/H.265/AV1) or aligned (VP9).
+    // These codecs don't use non-zero offsets in the parser's end_of_picture.
+    VkDeviceSize srcOffset = pCurrFrameDecParams->bitstreamDataOffset;
+    assert((srcOffset & (pCurrFrameDecParams->bitstreamData->GetOffsetAlignment() - 1)) == 0 &&
+           "bitstreamDataOffset must be aligned to minBitstreamBufferOffsetAlignment");
+    // Safety: force to 0 for codecs that should not have non-zero offset
+    if (m_videoFormat.codec != VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
+        if (srcOffset != 0) {
+            fprintf(stderr, "WARNING: bitstreamDataOffset=%zu is non-zero for non-VP9 codec, forcing to 0\n",
+                    (size_t)srcOffset);
+            srcOffset = 0;
+        }
+    }
+
+    // srcBufferRange alignment to minBitstreamBufferSizeAlignment.
+    // The bytes beyond bitstreamDataLen contain the next frame's residual data
+    // (swapBitstreamBuffer copies it after decode returns), so we cannot zero-fill.
+    //
+    // H.264: NVDEC's NAL scanner uses srcBufferRange to bound its start-code scan.
+    //   Rounding up exposes the next frame's start codes in the residual area,
+    //   causing decode corruption. Pass exact bitstreamDataLen for H.264.
+    // H.265/AV1: Use slice segment offsets / tile sizes exclusively, so rounding
+    //   up is safe -- the residual data is ignored by the HW decoder.
+    // VP9: Already aligned by the parser (VulkanVP9Decoder.cpp:259).
+    VkDeviceSize srcRange = pCurrFrameDecParams->bitstreamDataLen;
+    bool canAlignRange = (m_videoFormat.codec != VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR);
+    VkDeviceSize alignedRange;
+    if (canAlignRange) {
+        alignedRange = (srcRange + (sizeAlignment - 1)) & ~(sizeAlignment - 1);
+        if (srcOffset + alignedRange > bufferMaxSize) {
+            alignedRange = bufferMaxSize - srcOffset;
+        }
+    } else {
+        // H.264: pass exact range; suppress VUID-07139 in g_ignoredValidationMessageIds
+        alignedRange = srcRange;
+    }
+
+    pCurrFrameDecParams->decodeFrameInfo.srcBufferOffset = srcOffset;
+    pCurrFrameDecParams->decodeFrameInfo.srcBufferRange  = alignedRange;
 
     VkVideoBeginCodingInfoKHR decodeBeginInfo = { VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR };
     decodeBeginInfo.pNext = pCurrFrameDecParams->beginCodingInfoPictureParametersExt;
