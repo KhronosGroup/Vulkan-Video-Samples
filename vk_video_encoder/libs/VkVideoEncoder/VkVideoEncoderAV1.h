@@ -199,6 +199,7 @@ protected:
 private:
     struct Feedback2PartitionInfo {
         uint32_t index;
+        bool hasStatus;
         VkQueryResultStatusKHR status;
         uint32_t offset;
         uint32_t size;
@@ -206,6 +207,12 @@ private:
 
     struct Feedback2FrameOutput {
         uint64_t frameIndex;
+        bool hasStatus;
+        VkQueryResultStatusKHR status;
+        bool hasBitstreamBufferOffset;
+        bool hasBitstreamBytesWritten;
+        uint32_t bitstreamBufferOffset;
+        uint32_t bitstreamBytesWritten;
         bool hasAvgQp;
         bool hasMinQp;
         bool hasMaxQp;
@@ -226,7 +233,10 @@ private:
     struct EncodeFeedbackResults {
         uint32_t bitstreamStartOffset;
         uint32_t bitstreamSize;
+        bool hasStatus;
         VkQueryResultStatusKHR status;
+        bool hasBitstreamStartOffset;
+        bool hasBitstreamSize;
         VkBool32 hasOverrides;
         bool hasAverageQuantization;
         bool hasMinQuantization;
