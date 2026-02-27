@@ -88,6 +88,8 @@ int main(int argc, const char **argv)
         requestVideoComputeQueueMask = VK_QUEUE_COMPUTE_BIT;
     }
 
+    VkSharedBaseObj<VulkanVideoProcessor> vulkanVideoProcessor;
+
     if (decoderConfig.noPresent == false) {
 
         VkSharedBaseObj<Shell> displayShell;
@@ -134,7 +136,6 @@ int main(int argc, const char **argv)
                                      requestVideoComputeQueueMask != 0  // createComputeQueue
                                      );
 
-        VkSharedBaseObj<VulkanVideoProcessor> vulkanVideoProcessor;
         result = VulkanVideoProcessor::Create(decoderConfig, &vkDevCtxt, vulkanVideoProcessor);
         if (result != VK_SUCCESS) {
             return EXIT_FAILURE;
@@ -218,7 +219,6 @@ int main(int argc, const char **argv)
             return EXIT_FAILURE;
         }
 
-        VkSharedBaseObj<VulkanVideoProcessor> vulkanVideoProcessor;
         result = VulkanVideoProcessor::Create(decoderConfig, &vkDevCtxt, vulkanVideoProcessor);
         if (result != VK_SUCCESS) {
             std::cerr << "Error creating the decoder instance: " << result << std::endl;
@@ -256,6 +256,10 @@ int main(int argc, const char **argv)
         do {
             continueLoop = frameProcessor->OnFrame(0);
         } while (continueLoop);
+    }
+
+    if (vulkanVideoProcessor) {
+        return ExitCodeFromVkResult(vulkanVideoProcessor->GetDecoderLastResult());
     }
 
     return EXIT_SUCCESS;

@@ -73,6 +73,11 @@ public:
         return extent;
     }
 
+    virtual VkResult GetLastResult() const
+    {
+        return m_vulkanVideoProcessor->GetDecoderLastResult();
+    }
+
     VulkanVideoDecoderImpl(const char* programName)
     : m_refCount(0)
     , m_vkDevCtxt()

@@ -22,11 +22,18 @@
 #include "VkVideoCore/VulkanVideoCapabilities.h"
 #include "VkVideoDecoder/VkVideoDecoder.h"
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
+#include "VkVSCommon.h"
 
 #undef max
 #undef min
 
 #define GPU_ALIGN(x) (((x) + 0xff) & ~0xff)
+#define FAIL_WITH_RESULT(vkResult, msg) do {                              \
+        std::cerr << __func__ << ": " << msg                               \
+                  << " (VkResult " << (vkResult) << ")" << std::endl;       \
+        m_lastVkResult = (vkResult);                                        \
+        return -1;                                                          \
+    } while (0)
 
 const uint64_t gFenceTimeout = 100 * 1000 * 1000 /* 100 mSec */;
 const uint64_t gLongTimeout  = 1000 * 1000 * 1000 /* 1000 mSec */;
@@ -142,9 +149,8 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
                                                        m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        videoCodec)) {
-        std::cout << "*** The video codec " << VkVideoCoreProfile::CodecToName(videoCodec) << " is not supported! ***" << std::endl;
-        assert(!"The video codec is not supported");
-        return -1;
+        FAIL_WITH_RESULT(VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR,
+                         "video codec " << VkVideoCoreProfile::CodecToName(videoCodec) << " is not supported");
     }
 
     if (m_videoFormat.coded_width && m_videoFormat.coded_height) {
@@ -174,9 +180,10 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                                           videoCapabilities,
                                                                           videoDecodeCapabilities);
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get Video Capabilities :" << result << " ***" << std::endl;
-        assert(!"Could not get Video Capabilities!");
-        return -1;
+        if (bitstreamHasFilmGrain && IsVideoUnsupportedResult(result)) {
+            FAIL_WITH_RESULT(result, "AV1 film grain required by bitstream but not supported by hardware");
+        }
+        FAIL_WITH_RESULT(result, "could not get video capabilities");
     }
     VkVideoDecodeCapabilityFlagsKHR capabilityFlags = videoDecodeCapabilities.flags;
     m_dpbAndOutputCoincide = (capabilityFlags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR);
@@ -213,9 +220,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                                                                outImageFormat,
                                                                dpbImageFormat);
     if (result != VK_SUCCESS) {
-        std::cout << "*** Could not get supported video formats :" << result << " ***" << std::endl;
-        assert(!"Could not get supported video formats!");
-        return -1;
+        FAIL_WITH_RESULT(result, "could not get supported video formats");
     }
 
     imageExtent.width  = std::max(imageExtent.width, videoCapabilities.minCodedExtent.width);
@@ -260,7 +265,9 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
         // after creating a new video session, we need codec reset.
         m_resetDecoder = VK_TRUE;
-        assert(result == VK_SUCCESS);
+        if (result != VK_SUCCESS) {
+            FAIL_WITH_RESULT(result, "could not create video session");
+        }
     }
 
     uint8_t imageSpecsIndex = 0;
@@ -724,8 +731,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                 VkParserDecodePictureInfo* pDecodePictureInfo)
 {
     if (!m_videoSession) {
-        assert(!"Decoder not initialized!");
-        return -1;
+        FAIL_WITH_RESULT(VK_ERROR_INITIALIZATION_FAILED, "decoder not initialized");
     }
 
     assert((m_videoFormat.codec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) ||
@@ -1028,7 +1034,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         bool valid = pCurrFrameDecParams->pStdSps->GetClientObject(currentVkPictureParameters);
         assert(valid);
         if (!(currentVkPictureParameters && valid)) {
-            return -1;
+            FAIL_WITH_RESULT(VK_ERROR_INITIALIZATION_FAILED, "invalid AV1 SPS picture parameters");
         }
         VkParserVideoPictureParameters* pOwnerPictureParameters =
             VkParserVideoPictureParameters::VideoPictureParametersFromBase(currentVkPictureParameters);
@@ -1038,7 +1044,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         int32_t ret = pOwnerPictureParameters->FlushPictureParametersQueue(m_videoSession);
         assert(ret >= 0);
         if (!(ret >= 0)) {
-            return -1;
+            FAIL_WITH_RESULT(VK_ERROR_INITIALIZATION_FAILED, "failed to flush AV1 picture parameters");
         }
 
         decodeBeginInfo.videoSessionParameters = *pOwnerPictureParameters;
@@ -1048,7 +1054,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         bool valid = pCurrFrameDecParams->pStdPps->GetClientObject(currentVkPictureParameters);
         assert(currentVkPictureParameters && valid);
         if (!(currentVkPictureParameters && valid)) {
-            return -1;
+            FAIL_WITH_RESULT(VK_ERROR_INITIALIZATION_FAILED, "invalid PPS picture parameters");
         }
         VkParserVideoPictureParameters* pOwnerPictureParameters =
                 VkParserVideoPictureParameters::VideoPictureParametersFromBase(currentVkPictureParameters);
@@ -1057,7 +1063,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         int32_t ret = pOwnerPictureParameters->FlushPictureParametersQueue(m_videoSession);
         assert(ret >= 0);
         if (!(ret >= 0)) {
-            return -1;
+            FAIL_WITH_RESULT(VK_ERROR_INITIALIZATION_FAILED, "failed to flush PPS picture parameters");
         }
         bool isSps = false;
         int32_t spsId = pCurrFrameDecParams->pStdPps->GetSpsId(isSps);
@@ -1289,7 +1295,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                            picNumInDecodeOrder);
     assert(result == VK_SUCCESS);
     if (result != VK_SUCCESS) {
-        return -1;
+        FAIL_WITH_RESULT(result, "queue submit failed");
     }
 
     if (m_dumpDecodeData) {
@@ -1381,7 +1387,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         assert(inputImageView);
 
         if ((index != currPicIdx) || !inputImageView) {
-            return -1;
+            FAIL_WITH_RESULT(VK_ERROR_INITIALIZATION_FAILED, "failed to get filter input image resource");
         }
 
         assert(m_imageSpecsIndex.filterOut != InvalidImageTypeIdx);

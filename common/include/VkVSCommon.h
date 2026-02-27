@@ -71,6 +71,13 @@ inline bool IsVideoUnsupportedResult(VkResult result) {
            result == VK_ERROR_EXTENSION_NOT_PRESENT;
 }
 
+inline int ExitCodeFromVkResult(VkResult result) {
+    if (IsVideoUnsupportedResult(result)) {
+        return VVS_EXIT_UNSUPPORTED;
+    }
+    return (result == VK_SUCCESS) ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 #endif // __cplusplus
 
 #endif // VKVS_COMMON_H

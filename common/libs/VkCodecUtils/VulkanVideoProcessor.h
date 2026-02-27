@@ -36,6 +36,8 @@ public:
     virtual VkVideoQueueResult GetNextFrame(VulkanDecodedFrame* pFrame);
     virtual int32_t ReleaseFrame(VulkanDecodedFrame* pDisplayedFrame);
 
+    VkResult GetDecoderLastResult() const;
+
     static VkSharedBaseObj<VulkanVideoProcessor>& invalidVulkanVideoProcessor;
 
     static VkResult Create(const DecoderConfig& settings, const VulkanDeviceContext* vkDevCtx,

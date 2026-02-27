@@ -46,6 +46,7 @@
 // High-level interface of the video decoder
 class VulkanVideoDecoder : public VkVideoQueue<VulkanDecodedFrame> {
 public:
+    virtual VkResult GetLastResult() const = 0;
     virtual ~VulkanVideoDecoder() {};
 };
 

@@ -104,6 +104,8 @@ int main(int argc, const char** argv)
                                                         decoderConfig.forceParserType :
                                                         videoStreamDemuxer->GetVideoCodec();
 
+    VkSharedBaseObj<VulkanVideoDecoder> vulkanVideoDecoder;
+
     if (decoderConfig.noPresent == false) {
 
         VkSharedBaseObj<Shell> displayShell;
@@ -164,7 +166,6 @@ int main(int argc, const char** argv)
             }
         }
 
-        VkSharedBaseObj<VulkanVideoDecoder> vulkanVideoDecoder;
         result = CreateVulkanVideoDecoder(vkDevCtxt.getInstance(),
                                         vkDevCtxt.getPhysicalDevice(),
                                         vkDevCtxt.getDevice(),
@@ -245,7 +246,6 @@ int main(int argc, const char** argv)
             }
         }
 
-        VkSharedBaseObj<VulkanVideoDecoder> vulkanVideoDecoder;
         result = CreateVulkanVideoDecoder(vkDevCtxt.getInstance(),
                                         vkDevCtxt.getPhysicalDevice(),
                                         vkDevCtxt.getDevice(),
@@ -274,6 +274,11 @@ int main(int argc, const char** argv)
     }
 
     /*******************************************************************************************/
+
+    int exitCode = ExitCodeFromVkResult(vulkanVideoDecoder->GetLastResult());
+    if (exitCode != EXIT_SUCCESS) {
+        return exitCode;
+    }
 
     std::cout << "Exit decoder test" << std::endl;
     return EXIT_SUCCESS;
