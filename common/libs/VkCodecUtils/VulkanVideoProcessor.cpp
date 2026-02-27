@@ -457,7 +457,7 @@ bool VulkanVideoProcessor::StreamCompleted()
 int32_t VulkanVideoProcessor::ParserProcessNextDataChunk()
 {
     if (m_videoStreamsCompleted) {
-        return -1;
+        return 0;
     }
 
     int32_t retValue = 0;
@@ -480,7 +480,6 @@ int32_t VulkanVideoProcessor::ParserProcessNextDataChunk()
                                                      &bitstreamBytesConsumed,
                                                      requiresPartialParsing);
         if (parserStatus != VK_SUCCESS) {
-            m_videoStreamsCompleted = true;
             std::cerr << "Parser: end of Video Stream with status  " << parserStatus << std::endl;
             retValue = -1;
         } else {
@@ -503,13 +502,22 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
     // The below call to DequeueDecodedPicture allows returning the next frame without parsing of the stream.
     // Parsing is only done when there are no more frames in the queue.
     int32_t framesInQueue = m_vkVideoFrameBuffer->DequeueDecodedPicture(pFrame);
+    bool parserError = false;
 
     // Loop until a frame (or more) is parsed and added to the queue.
     while ((framesInQueue == 0) && !m_videoStreamsCompleted) {
 
-        ParserProcessNextDataChunk();
+        parserError = (ParserProcessNextDataChunk() < 0);
+        if (parserError) {
+            break;
+        }
 
         framesInQueue = m_vkVideoFrameBuffer->DequeueDecodedPicture(pFrame);
+    }
+
+    if (parserError) {
+        m_videoStreamsCompleted = true;
+        return VkVideoQueueResult::Error;
     }
 
     if (framesInQueue) {
@@ -536,12 +544,12 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
         return VkVideoQueueResult::EndOfStream;
     }
 
-    if ((framesInQueue == 0) && m_videoStreamsCompleted) {
-        return VkVideoQueueResult::EndOfStream;
-    }
-
     if (framesInQueue == 0) {
-        return VkVideoQueueResult::NoFrame;
+        if (m_videoStreamsCompleted) {
+            return VkVideoQueueResult::EndOfStream;
+        } else {
+            return VkVideoQueueResult::NoFrame;
+        }
     }
 
     return VkVideoQueueResult::NewFrame;
@@ -606,6 +614,14 @@ VkResult VulkanVideoProcessor::CreateParser(const char*,
                                    bufferSizeAlignment,
                                    0, // clockRate - default 0 = 10Mhz
                                    m_vkParser);
+}
+
+VkResult VulkanVideoProcessor::GetDecoderLastResult() const
+{
+    if (m_vkVideoDecoder) {
+        return m_vkVideoDecoder->GetLastResult();
+    }
+    return VK_ERROR_INITIALIZATION_FAILED;
 }
 
 VkResult VulkanVideoProcessor::ParseVideoStreamData(const uint8_t* pData, size_t size,

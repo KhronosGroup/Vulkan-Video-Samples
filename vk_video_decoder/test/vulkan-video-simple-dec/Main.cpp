@@ -179,7 +179,13 @@ int main(int argc, const char** argv)
 
     deinit(frameDataQueue, curFrameDataQueueIndex);
 
+    int exitCode = ExitCodeFromVkResult(vulkanVideoDecoder->GetLastResult());
+    if (exitCode != EXIT_SUCCESS) {
+        return exitCode;
+    }
+
     std::cout << "Exit decoder test" << std::endl;
+    return EXIT_SUCCESS;
 }
 
 

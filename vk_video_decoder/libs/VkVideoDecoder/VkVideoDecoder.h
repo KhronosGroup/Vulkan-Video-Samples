@@ -173,6 +173,8 @@ public:
         return &m_videoFormat;
     }
 
+    VkResult GetLastResult() const { return m_lastVkResult; }
+
     /**
     *   @brief  This callback function gets called when when decoding of sequence starts,
     */
@@ -233,6 +235,7 @@ private:
         , m_numBitstreamBuffersToPreallocate(numBitstreamBuffersToPreallocate)
         , m_maxStreamBufferSize(2097152) // 2MB max bitstream by default
         , m_filterType(filterType)
+        , m_lastVkResult(VK_SUCCESS)
     {
         // FIXME: m_useSeparateLinearImages is currently unused - remove or implement
         (void)m_useSeparateLinearImages;
@@ -338,4 +341,5 @@ private:
     VkDeviceSize   m_maxStreamBufferSize;
     VulkanFilterYuvCompute::FilterType m_filterType;
     VkSharedBaseObj<VulkanFilter> m_yuvFilter;
+    VkResult m_lastVkResult;
 };
