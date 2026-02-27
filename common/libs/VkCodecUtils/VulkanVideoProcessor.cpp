@@ -117,11 +117,12 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
 
     m_vkVideoDecoder->SetVerbose(programConfig.verbose);
 
-    VkVideoCoreProfile videoProfile(m_videoStreamDemuxer->GetVideoCodec(),
-                                    m_videoStreamDemuxer->GetChromaSubsampling(),
-                                    m_videoStreamDemuxer->GetLumaBitDepth(),
-                                    m_videoStreamDemuxer->GetChromaBitDepth(),
-                                    m_videoStreamDemuxer->GetProfileIdc());
+    VkVideoCoreProfile videoProfile = VkVideoCoreProfile::CreateDecodeProfile(
+                                        m_videoStreamDemuxer->GetVideoCodec(),
+                                        m_videoStreamDemuxer->GetChromaSubsampling(),
+                                        m_videoStreamDemuxer->GetLumaBitDepth(),
+                                        m_videoStreamDemuxer->GetChromaBitDepth(),
+                                        m_videoStreamDemuxer->GetProfileIdc());
 
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(vkDevCtx,
                                                        vkDevCtx->GetVideoDecodeQueueFamilyIdx(),

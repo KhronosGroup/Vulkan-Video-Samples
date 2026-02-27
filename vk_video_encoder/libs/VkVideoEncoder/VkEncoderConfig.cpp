@@ -810,7 +810,8 @@ void EncoderConfig::InitVideoProfile()
     }
 
     // update the video profile
-    videoCoreProfile = VkVideoCoreProfile(codec, encodeChromaSubsampling,
+    videoCoreProfile = VkVideoCoreProfile::CreateEncodeProfile(
+                                          codec, encodeChromaSubsampling,
                                           GetComponentBitDepthFlagBits(encodeBitDepthLuma),
                                           GetComponentBitDepthFlagBits(encodeBitDepthChroma),
                                           (videoProfileIdc != (uint32_t)-1) ? videoProfileIdc :

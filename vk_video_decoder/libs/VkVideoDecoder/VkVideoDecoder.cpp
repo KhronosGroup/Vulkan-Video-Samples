@@ -144,8 +144,19 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         std::cout << "\tcodec " << VkVideoCoreProfile::CodecToName(videoCodec) << std::endl;
     }
 
-    VkVideoCoreProfile videoProfile(videoCodec, pVideoFormat->chromaSubsampling, pVideoFormat->lumaBitDepth, pVideoFormat->chromaBitDepth,
-                                    pVideoFormat->codecProfile);
+    assert((videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) || !pVideoFormat->filmGrainUsed);
+    bool bitstreamHasFilmGrain = (videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR)
+                                 && pVideoFormat->filmGrainUsed;
+
+    VkVideoCoreProfile videoProfile = bitstreamHasFilmGrain
+        ? VkVideoCoreProfile::CreateDecodeAV1Profile(
+              pVideoFormat->chromaSubsampling, pVideoFormat->lumaBitDepth,
+              pVideoFormat->chromaBitDepth, pVideoFormat->codecProfile,
+              bitstreamHasFilmGrain)
+        : VkVideoCoreProfile::CreateDecodeProfile(
+              videoCodec, pVideoFormat->chromaSubsampling,
+              pVideoFormat->lumaBitDepth, pVideoFormat->chromaBitDepth,
+              pVideoFormat->codecProfile);
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
                                                        m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        videoCodec)) {
@@ -276,10 +287,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     imageSpecs[m_imageSpecsIndex.decodeDpb].imageTypeIdx = m_imageSpecsIndex.decodeDpb;
     imageSpecs[m_imageSpecsIndex.decodeDpb].imageTypeMask |= DecodeFrameBufferIf::IMAGE_TYPE_MASK_DECODE_DPB;
 
-    assert((videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) || !pVideoFormat->filmGrainUsed);
-    bool filmGrainEnabled = ((videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) && pVideoFormat->filmGrainUsed);
-
-    if ((m_dpbAndOutputCoincide == VK_FALSE) || filmGrainEnabled) {
+    if ((m_dpbAndOutputCoincide == VK_FALSE) || bitstreamHasFilmGrain) {
         // The implementation does not support dpbAndOutputCoincide or can support filmGrain output
         m_useSeparateOutputImages = VK_TRUE;
 
@@ -288,7 +296,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         imageSpecs[m_imageSpecsIndex.decodeOut].imageTypeIdx = m_imageSpecsIndex.decodeOut;
         imageSpecs[m_imageSpecsIndex.decodeOut].imageTypeMask |= DecodeFrameBufferIf::IMAGE_TYPE_MASK_DECODE_OUT;
 
-        if (filmGrainEnabled) {
+        if (bitstreamHasFilmGrain) {
             m_imageSpecsIndex.filmGrainOut  = m_imageSpecsIndex.decodeOut;
             imageSpecs[m_imageSpecsIndex.decodeOut].imageTypeMask |= DecodeFrameBufferIf::IMAGE_TYPE_MASK_FILM_GRAIN_OUT;
             m_numImageTypesEnabled |= DecodeFrameBufferIf::IMAGE_TYPE_MASK_FILM_GRAIN_OUT;
@@ -455,7 +463,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
 
     if (m_dpbAndOutputCoincide == VK_TRUE) {
 
-        if (!filmGrainEnabled) {
+        if (!bitstreamHasFilmGrain) {
             // AV1 filmGrain uses the output of the decoder, even when in coincide mode
             // Otherwise the output is the same as the setup DPB image
             outImageUsage &= ~VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
@@ -468,7 +476,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         // Apply the extra usage flags for the decoder's DPB
         dpbImageUsage |= extraImageUsage;
 
-        if (filmGrainEnabled) {
+        if (bitstreamHasFilmGrain) {
             // For filmGrain, we do also need the decoder's output,
             // because we could be switching between the DPB and the output
             // for each frame.
@@ -511,7 +519,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         imageSpecOut.createInfo = imageSpecDpb.createInfo;
         imageSpecOut.createInfo.format = outImageFormat;
         imageSpecOut.createInfo.arrayLayers = 1;
-        if (filmGrainEnabled) {
+        if (bitstreamHasFilmGrain) {
             // FIXME: This may not be true. Some implementations may support linear output as filmGrain
             imageSpecOut.createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         } else {
@@ -1607,3 +1615,5 @@ int32_t VkVideoDecoder::Release()
     }
     return ret;
 }
+
+#undef FAIL_WITH_RESULT

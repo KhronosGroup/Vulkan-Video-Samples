@@ -814,7 +814,7 @@ public:
     , codecBlockAlignment(16)
     , qualityLevel(0)
     , tuningMode(VK_VIDEO_ENCODE_TUNING_MODE_DEFAULT_KHR)
-    , videoCoreProfile(codec, encodeChromaSubsampling, encodeBitDepthLuma, encodeBitDepthChroma)
+    , videoCoreProfile()
     , videoCapabilities()
     , videoEncodeCapabilities()
     , quantizationMapCapabilities()
