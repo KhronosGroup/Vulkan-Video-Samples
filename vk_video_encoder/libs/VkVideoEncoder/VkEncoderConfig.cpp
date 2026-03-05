@@ -612,10 +612,14 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
     }
 
     if ((encodeMaxWidth != 0) && (encodeWidth > encodeMaxWidth)) {
+        fprintf(stderr, "Warning: encode width %u exceeds max width %u\n",
+                encodeWidth, encodeMaxWidth);
         encodeWidth = encodeMaxWidth;
     }
 
     if ((encodeMaxHeight != 0) && (encodeHeight > encodeMaxHeight)) {
+        fprintf(stderr, "Warning: encode height %u exceeds max height %u\n",
+                encodeHeight, encodeMaxHeight);
         encodeHeight = encodeMaxHeight;
     }
 

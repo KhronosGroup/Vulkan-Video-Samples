@@ -847,11 +847,22 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         m_qpMapTiling = supportedQpMapTiling[0];
     }
 
-    encoderConfig->encodeWidth  = std::max(encoderConfig->encodeWidth,  encoderConfig->videoCapabilities.minCodedExtent.width);
-    encoderConfig->encodeHeight = std::max(encoderConfig->encodeHeight, encoderConfig->videoCapabilities.minCodedExtent.height);
-
-    encoderConfig->encodeWidth  = std::min(encoderConfig->encodeWidth,  encoderConfig->videoCapabilities.maxCodedExtent.width);
-    encoderConfig->encodeHeight = std::min(encoderConfig->encodeHeight, encoderConfig->videoCapabilities.maxCodedExtent.height);
+    if (encoderConfig->encodeWidth < encoderConfig->videoCapabilities.minCodedExtent.width ||
+        encoderConfig->encodeHeight < encoderConfig->videoCapabilities.minCodedExtent.height) {
+        fprintf(stderr, "\nInitEncoder Error: encode resolution %ux%u is below hardware minimum %ux%u\n",
+                encoderConfig->encodeWidth, encoderConfig->encodeHeight,
+                encoderConfig->videoCapabilities.minCodedExtent.width,
+                encoderConfig->videoCapabilities.minCodedExtent.height);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
+    }
+    if (encoderConfig->encodeWidth > encoderConfig->videoCapabilities.maxCodedExtent.width ||
+        encoderConfig->encodeHeight > encoderConfig->videoCapabilities.maxCodedExtent.height) {
+        fprintf(stderr, "\nInitEncoder Error: encode resolution %ux%u exceeds hardware maximum %ux%u\n",
+                encoderConfig->encodeWidth, encoderConfig->encodeHeight,
+                encoderConfig->videoCapabilities.maxCodedExtent.width,
+                encoderConfig->videoCapabilities.maxCodedExtent.height);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
+    }
 
     m_maxCodedExtent = { encoderConfig->encodeMaxWidth, encoderConfig->encodeMaxHeight }; // max coded size
     m_streamBufferSize = std::max(m_minStreamBufferSize, (size_t)encoderConfig->input.fullImageSize); // use worst case size
