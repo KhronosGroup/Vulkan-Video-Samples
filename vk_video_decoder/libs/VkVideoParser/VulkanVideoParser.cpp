@@ -665,8 +665,6 @@ protected:
         VkSharedBaseObj<IVulkanVideoDecoderHandler>& decoderHandler,
         VkSharedBaseObj<IVulkanVideoFrameBufferParserCb>& videoFrameBufferCb,
         uint32_t defaultMinBufferSize,
-        uint32_t bufferOffsetAlignment,
-        uint32_t bufferSizeAlignment,
         bool outOfBandPictureParameters,
         uint32_t errorThreshold);
 
@@ -953,8 +951,6 @@ VkResult VulkanVideoParser::Initialize(
     VkSharedBaseObj<IVulkanVideoDecoderHandler>& decoderHandler,
     VkSharedBaseObj<IVulkanVideoFrameBufferParserCb>& videoFrameBufferCb,
     uint32_t defaultMinBufferSize,
-    uint32_t bufferOffsetAlignment,
-    uint32_t bufferSizeAlignment,
     bool outOfBandPictureParameters,
     uint32_t errorThreshold)
 {
@@ -973,8 +969,10 @@ VkResult VulkanVideoParser::Initialize(
     nvdp.pClient = reinterpret_cast<VkParserVideoDecodeClient*>(this);
 
     nvdp.defaultMinBufferSize = defaultMinBufferSize;
-    nvdp.bufferOffsetAlignment = bufferOffsetAlignment;
-    nvdp.bufferSizeAlignment = bufferSizeAlignment;
+    // The vendor parser uses these for internal bitstream offset arithmetic.
+    // Actual HW alignment is enforced by VkVideoDecoder::GetBitstreamBuffer().
+    nvdp.bufferOffsetAlignment = 256;
+    nvdp.bufferSizeAlignment   = 256;
 
     nvdp.referenceClockRate = m_clockRate;
     nvdp.errorThreshold = errorThreshold;
@@ -2668,8 +2666,6 @@ VkResult IVulkanVideoParser::Create(
     uint32_t maxNumDecodeSurfaces,
     uint32_t maxNumDpbSurfaces,
     uint32_t defaultMinBufferSize,
-    uint32_t bufferOffsetAlignment,
-    uint32_t bufferSizeAlignment,
     uint64_t clockRate,
     uint32_t errorThreshold,
     VkSharedBaseObj<IVulkanVideoParser>& vulkanVideoParser)
@@ -2689,8 +2685,6 @@ VkResult IVulkanVideoParser::Create(
         VkResult result = nvVulkanVideoParser->Initialize(decoderHandler,
                                                           videoFrameBufferCb,
                                                           defaultMinBufferSize,
-                                                          bufferOffsetAlignment,
-                                                          bufferSizeAlignment,
                                                           outOfBandPictureParameters,
                                                           errorThreshold);
 
@@ -2714,8 +2708,6 @@ VkResult vulkanCreateVideoParser(
             uint32_t maxNumDecodeSurfaces,
             uint32_t maxNumDpbSurfaces,
             uint32_t defaultMinBufferSize,
-            uint32_t bufferOffsetAlignment,
-            uint32_t bufferSizeAlignment,
             uint64_t clockRate,
             VkSharedBaseObj<IVulkanVideoParser>& vulkanVideoParser)
 {
@@ -2749,8 +2741,6 @@ VkResult vulkanCreateVideoParser(
                                       maxNumDecodeSurfaces,
                                       maxNumDpbSurfaces,
                                       defaultMinBufferSize,
-                                      bufferOffsetAlignment,
-                                      bufferSizeAlignment,
                                       clockRate,
                                       0, // errorThreshold
                                       vulkanVideoParser);

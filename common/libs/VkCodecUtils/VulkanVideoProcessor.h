@@ -97,9 +97,7 @@ private:
 
     VkResult CreateParser(const char* filename,
                           VkVideoCodecOperationFlagBitsKHR vkCodecType,
-                          uint32_t defaultMinBufferSize,
-                          uint32_t bufferOffsetAlignment,
-                          uint32_t bufferSizeAlignment);
+                          uint32_t defaultMinBufferSize);
 
     VkResult ParseVideoStreamData(const uint8_t* pData, size_t size,
                                   size_t* pnVideoBytes = nullptr,

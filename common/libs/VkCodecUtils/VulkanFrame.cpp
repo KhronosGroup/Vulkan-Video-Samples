@@ -360,7 +360,10 @@ bool VulkanFrame<FrameDataType>::OnFrame( int32_t renderIndex,
         pLastDecodedFrame->Reset();
 
         VkVideoQueueResult result = m_videoQueue->GetNextFrame(pLastDecodedFrame);
-        if (result == VkVideoQueueResult::EndOfStream || result == VkVideoQueueResult::Error) {
+        if (result == VkVideoQueueResult::Error) {
+            std::cerr << "Error: decoder reported a fatal error during frame retrieval" << std::endl;
+            continueLoop = false;
+        } else if (result == VkVideoQueueResult::EndOfStream) {
             continueLoop = false;
             bool displayTimeNow = true;
             float fps = GetFrameRateFps(displayTimeNow);

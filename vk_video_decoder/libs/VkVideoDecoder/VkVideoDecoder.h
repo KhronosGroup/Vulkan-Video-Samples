@@ -234,6 +234,8 @@ private:
         , m_imageSpecsIndex()
         , m_numBitstreamBuffersToPreallocate(numBitstreamBuffersToPreallocate)
         , m_maxStreamBufferSize(2097152) // 2MB max bitstream by default
+        , m_minBitstreamBufferOffsetAlignment(256)
+        , m_minBitstreamBufferSizeAlignment(256)
         , m_filterType(filterType)
         , m_lastVkResult(VK_SUCCESS)
     {
@@ -339,6 +341,8 @@ private:
     DecodeFrameBufferIf::ImageSpecsIndex m_imageSpecsIndex;
     int32_t  m_numBitstreamBuffersToPreallocate;
     VkDeviceSize   m_maxStreamBufferSize;
+    VkDeviceSize   m_minBitstreamBufferOffsetAlignment;
+    VkDeviceSize   m_minBitstreamBufferSizeAlignment;
     VulkanFilterYuvCompute::FilterType m_filterType;
     VkSharedBaseObj<VulkanFilter> m_yuvFilter;
     VkResult m_lastVkResult;
