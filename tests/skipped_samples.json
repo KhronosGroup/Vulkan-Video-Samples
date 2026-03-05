@@ -18,26 +18,11 @@
       "date_added": "2025-01-27"
     },
     {
-      "name": "av1_argon_test1019",
-      "source_filepath": "video/av1/av1-argon_test1019.obu",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "Fence timeout. Hint: test requires filmgrain, which is not supported on ANV (<gen20)",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/164",
-      "date_added": "2026-02-10"
-    },
-    {
       "name": "av1_argon_test787",
       "source_filepath": "video/av1/av1-argon_test787.obu",
       "format": "vvs",
       "drivers": [
-        "all"
+        "radv"
       ],
       "platforms": [
         "all"
@@ -52,7 +37,8 @@
       "source_filepath": "video/av1/av1-argon_test9354_2.obu",
       "format": "vvs",
       "drivers": [
-        "all"
+        "radv",
+        "anv"
       ],
       "platforms": [
         "all"
@@ -78,20 +64,6 @@
       "date_added": "2025-01-27"
     },
     {
-      "name": "h264_clip_a_compute_queue",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "Can not initialize the physical device",
-      "bug_url": "",
-      "date_added": "2026-01-14"
-    },
-    {
       "name": "h264_clip_a_filter_ycbcr2rgba",
       "format": "vvs",
       "drivers": [
@@ -104,20 +76,6 @@
       "reason": "shaderc crash",
       "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/147",
       "date_added": "2026-01-14"
-    },
-    {
-      "name": "av1_filmgrain_8bit",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "md5 mismatch. Hint: requires filmgrain, which is not supported on ANV (<gen20)",
-      "bug_url": "",
-      "date_added": "2026-01-19"
     },
     {
       "name": "vp9_intra_only",
@@ -141,20 +99,6 @@
       ],
       "platforms": [
         "windows"
-      ],
-      "reproduction": "always",
-      "reason": "",
-      "bug_url": "",
-      "date_added": "2026-01-20"
-    },
-    {
-      "name": "av1_filmgrain_8bit",
-      "format": "vvs",
-      "drivers": [
-        "intel"
-      ],
-      "platforms": [
-        "all"
       ],
       "reproduction": "always",
       "reason": "",
@@ -193,20 +137,6 @@
     }
   ],
   "encode": [
-    {
-      "name": "h264_high444_profile",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "H.264 High 4:4:4 profile encoding not supported",
-      "bug_url": "",
-      "date_added": "2025-12-10"
-    },
     {
       "name": "h265_main10_profile",
       "format": "vvs",
