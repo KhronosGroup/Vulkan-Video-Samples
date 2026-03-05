@@ -946,27 +946,34 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
         }
     }
 
-    // Create timeline semaphores instead of binary semaphores
-    VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
-    timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-    timelineCreateInfo.pNext = nullptr;
-    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-    timelineCreateInfo.initialValue = 0ULL;
-
-    VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
     if (m_frameCompleteSemaphore == VK_NULL_HANDLE) {
+        VkExportSemaphoreCreateInfo exportInfo = {};
+        exportInfo.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
+        exportInfo.pNext = nullptr;
+#ifdef _WIN32
+        exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#else
+        exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+#endif
+
+        VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
+        timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+        timelineCreateInfo.pNext = &exportInfo;
+        timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+        timelineCreateInfo.initialValue = 0ULL;
+
+        VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
         result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_frameCompleteSemaphore);
         assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             return -1;
         }
-    }
-
-    if (m_consumerCompleteSemaphore == VK_NULL_HANDLE) {
-        result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_consumerCompleteSemaphore);
-        assert(result == VK_SUCCESS);
-        if (result != VK_SUCCESS) {
-            return -1;
+        if (m_consumerCompleteSemaphore == VK_NULL_HANDLE) {
+            result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_consumerCompleteSemaphore);
+            assert(result == VK_SUCCESS);
+            if (result != VK_SUCCESS) {
+                return -1;
+            }
         }
     }
 
