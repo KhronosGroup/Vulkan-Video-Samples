@@ -148,7 +148,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     bool bitstreamHasFilmGrain = (videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR)
                                  && pVideoFormat->filmGrainUsed;
 
-    VkVideoCoreProfile videoProfile = bitstreamHasFilmGrain
+    VkVideoCoreProfile videoProfile = (videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR)
         ? VkVideoCoreProfile::CreateDecodeAV1Profile(
               pVideoFormat->chromaSubsampling, pVideoFormat->lumaBitDepth,
               pVideoFormat->chromaBitDepth, pVideoFormat->codecProfile,
@@ -193,12 +193,15 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     if (result != VK_SUCCESS) {
         if (bitstreamHasFilmGrain && IsVideoUnsupportedResult(result)) {
             FAIL_WITH_RESULT(result, "AV1 film grain required by bitstream but not supported by hardware");
+        } else {
+            FAIL_WITH_RESULT(result, "could not get video capabilities");
         }
-        FAIL_WITH_RESULT(result, "could not get video capabilities");
     }
     VkVideoDecodeCapabilityFlagsKHR capabilityFlags = videoDecodeCapabilities.flags;
     m_dpbAndOutputCoincide = (capabilityFlags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR);
     bool dpbAndOutputDistinct = (capabilityFlags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_DISTINCT_BIT_KHR);
+    m_minBitstreamBufferOffsetAlignment = videoCapabilities.minBitstreamBufferOffsetAlignment;
+    m_minBitstreamBufferSizeAlignment   = videoCapabilities.minBitstreamBufferSizeAlignment;
 
     if (m_verbose) {
         std::string dpbMode;
@@ -241,6 +244,23 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     imageExtent.width = ((imageExtent.width + alignWidth) & ~alignWidth);
     uint32_t alignHeight = videoCapabilities.pictureAccessGranularity.height - 1;
     imageExtent.height = ((imageExtent.height + alignHeight) & ~alignHeight);
+
+    if (m_codedExtent.width < videoCapabilities.minCodedExtent.width ||
+        m_codedExtent.height < videoCapabilities.minCodedExtent.height) {
+        FAIL_WITH_RESULT(VK_ERROR_FORMAT_NOT_SUPPORTED,
+                         "video resolution " << m_codedExtent.width << "x" << m_codedExtent.height
+                         << " is below hardware minimum "
+                         << videoCapabilities.minCodedExtent.width << "x"
+                         << videoCapabilities.minCodedExtent.height);
+    }
+    if (m_codedExtent.width > videoCapabilities.maxCodedExtent.width ||
+        m_codedExtent.height > videoCapabilities.maxCodedExtent.height) {
+        FAIL_WITH_RESULT(VK_ERROR_FORMAT_NOT_SUPPORTED,
+                         "video resolution " << m_codedExtent.width << "x" << m_codedExtent.height
+                         << " exceeds hardware maximum "
+                         << videoCapabilities.maxCodedExtent.width << "x"
+                         << videoCapabilities.maxCodedExtent.height);
+    }
 
     VkVideoSessionCreateFlagsKHR sessionCreateFlags{};
 
@@ -1486,11 +1506,14 @@ VkDeviceSize VkVideoDecoder::GetBitstreamBuffer(VkDeviceSize size,
         availablePoolNode = m_decodeFramesData.GetBitstreamBuffersQueue().GetAvailableNodeFromPool(newBitstreamBuffer);
     }
     if (!(availablePoolNode >= 0)) {
+        // Use the stricter of HW-queried and vendor parser alignment requirements.
+        VkDeviceSize offsetAlignment = std::max(m_minBitstreamBufferOffsetAlignment, minBitstreamBufferOffsetAlignment);
+        VkDeviceSize sizeAlignment   = std::max(m_minBitstreamBufferSizeAlignment, minBitstreamBufferSizeAlignment);
         VkResult result = VulkanBitstreamBufferImpl::Create(m_vkDevCtx,
                 m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                 VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR,
-                newSize, minBitstreamBufferOffsetAlignment,
-                minBitstreamBufferSizeAlignment,
+                newSize, offsetAlignment,
+                sizeAlignment,
                 pInitializeBufferMemory, initializeBufferMemorySize, newBitstreamBuffer);
         assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {

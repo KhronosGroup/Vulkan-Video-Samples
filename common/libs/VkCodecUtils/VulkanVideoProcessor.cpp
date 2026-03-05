@@ -114,63 +114,11 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
         fprintf(stderr, "\nERROR: Create VkVideoDecoder result: 0x%x\n", result);
         return result;
     }
-
     m_vkVideoDecoder->SetVerbose(programConfig.verbose);
-
-    VkVideoCoreProfile videoProfile = VkVideoCoreProfile::CreateDecodeProfile(
-                                        m_videoStreamDemuxer->GetVideoCodec(),
-                                        m_videoStreamDemuxer->GetChromaSubsampling(),
-                                        m_videoStreamDemuxer->GetLumaBitDepth(),
-                                        m_videoStreamDemuxer->GetChromaBitDepth(),
-                                        m_videoStreamDemuxer->GetProfileIdc());
-
-    if (!VulkanVideoCapabilities::IsCodecTypeSupported(vkDevCtx,
-                                                       vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
-                                                       m_videoStreamDemuxer->GetVideoCodec())) {
-        std::cout << "*** The video codec " << VkVideoCoreProfile::CodecToName(m_videoStreamDemuxer->GetVideoCodec()) << " is not supported! ***" << std::endl;
-        return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
-    }
-
-    VkVideoCapabilitiesKHR videoCapabilities;
-    VkVideoDecodeCapabilitiesKHR videoDecodeCapabilities;
-    result = VulkanVideoCapabilities::GetVideoDecodeCapabilities(m_vkDevCtx, videoProfile,
-                                                                 videoCapabilities,
-                                                                 videoDecodeCapabilities);
-
-    if (result != VK_SUCCESS) {
-        std::cerr << "FATAL ERROR: Video decode capabilities not supported for this codec/profile!" << std::endl;
-        std::cerr << "GetVideoDecodeCapabilities failed with error: " << VKVS_STRINGIFY(result) << std::endl;
-        return result;
-    }
-
-    // Validate video dimensions against hardware capabilities
-    uint32_t videoWidth = m_videoStreamDemuxer->GetWidth();
-    uint32_t videoHeight = m_videoStreamDemuxer->GetHeight();
-
-    if (videoWidth < videoCapabilities.minCodedExtent.width ||
-        videoWidth > videoCapabilities.maxCodedExtent.width) {
-        std::cerr << "*** Video width " << videoWidth
-                  << " is outside supported range ["
-                  << videoCapabilities.minCodedExtent.width << ", "
-                  << videoCapabilities.maxCodedExtent.width << "] ***" << std::endl;
-        return VK_ERROR_FORMAT_NOT_SUPPORTED;
-    }
-
-    if (videoHeight < videoCapabilities.minCodedExtent.height ||
-        videoHeight > videoCapabilities.maxCodedExtent.height) {
-        std::cerr << "*** Video height " << videoHeight
-                  << " is outside supported range ["
-                  << videoCapabilities.minCodedExtent.height << ", "
-                  << videoCapabilities.maxCodedExtent.height << "] ***" << std::endl;
-        return VK_ERROR_FORMAT_NOT_SUPPORTED;
-    }
-
     const uint32_t defaultMinBufferSize = 2 * 1024 * 1024; // 2MB
     result = CreateParser(nullptr,
                           m_videoStreamDemuxer->GetVideoCodec(),
-                          defaultMinBufferSize,
-                          (uint32_t)videoCapabilities.minBitstreamBufferOffsetAlignment,
-                          (uint32_t)videoCapabilities.minBitstreamBufferSizeAlignment);
+                          defaultMinBufferSize);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nERROR: CreateParser() result: 0x%x\n", result);
         return result;
@@ -579,9 +527,7 @@ int32_t VulkanVideoProcessor::ReleaseFrame(VulkanDecodedFrame* pDisplayedFrame)
 
 VkResult VulkanVideoProcessor::CreateParser(const char*,
                                             VkVideoCodecOperationFlagBitsKHR vkCodecType,
-                                            uint32_t defaultMinBufferSize,
-                                            uint32_t bufferOffsetAlignment,
-                                            uint32_t bufferSizeAlignment)
+                                            uint32_t defaultMinBufferSize)
 {
     static const VkExtensionProperties h264StdExtensionVersion = { VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_EXTENSION_NAME, VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_SPEC_VERSION };
     static const VkExtensionProperties h265StdExtensionVersion = { VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_EXTENSION_NAME, VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_SPEC_VERSION };
@@ -611,8 +557,6 @@ VkResult VulkanVideoProcessor::CreateParser(const char*,
                                    1, // maxNumDecodeSurfaces - currently ignored
                                    1, // maxNumDpbSurfaces - currently ignored
                                    defaultMinBufferSize,
-                                   bufferOffsetAlignment,
-                                   bufferSizeAlignment,
                                    0, // clockRate - default 0 = 10Mhz
                                    m_vkParser);
 }

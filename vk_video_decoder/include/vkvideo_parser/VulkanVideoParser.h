@@ -61,8 +61,6 @@ public:
         uint32_t maxNumDecodeSurfaces,
         uint32_t maxNumDpbSurfaces,
         uint32_t defaultMinBufferSize,
-        uint32_t bufferOffsetAlignment,
-        uint32_t bufferSizeAlignment,
         uint64_t clockRate,
         uint32_t errorThreshold,
         VkSharedBaseObj<IVulkanVideoParser>& vulkanVideoParser);
@@ -88,8 +86,6 @@ VkResult vulkanCreateVideoParser(
     uint32_t maxNumDecodeSurfaces,
     uint32_t maxNumDpbSurfaces,
     uint32_t defaultMinBufferSize,
-    uint32_t bufferOffsetAlignment,
-    uint32_t bufferSizeAlignment,
     uint64_t clockRate,
     VkSharedBaseObj<IVulkanVideoParser>& vulkanVideoParser);
 
