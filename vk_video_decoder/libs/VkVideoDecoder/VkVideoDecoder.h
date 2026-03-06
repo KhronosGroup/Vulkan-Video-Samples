@@ -159,6 +159,8 @@ public:
     static const char* GetVideoCodecString(VkVideoCodecOperationFlagBitsKHR codec);
     static const char* GetVideoChromaFormatString(VkVideoChromaSubsamplingFlagBitsKHR chromaFormat);
 
+    void SetVerbose(bool verbose) { m_verbose = verbose ? VK_TRUE : VK_FALSE; }
+
     virtual int32_t AddRef();
     virtual int32_t Release();
 
@@ -207,7 +209,6 @@ private:
         , m_videoFormat {}
         , m_numDecodeImagesInFlight(numDecodeImagesInFlight)
         , m_numDecodeImagesToPreallocate(numDecodeImagesToPreallocate)
-        , m_capabilityFlags()
         , m_videoSession(nullptr)
         , m_videoFrameBuffer(videoFrameBuffer)
         , m_decodeFramesData(vkDevCtx)
@@ -225,6 +226,7 @@ private:
         , m_useTransferOperation(VK_FALSE)
         , m_resetDecoder(VK_TRUE)
         , m_dumpDecodeData(VK_FALSE)
+        , m_verbose(VK_FALSE)
         , m_numImageTypes(1) // At least the decoder requires images for DPB
         , m_numImageTypesEnabled(DecodeFrameBufferIf::IMAGE_TYPE_MASK_DECODE_DPB)
         , m_imageSpecsIndex()
@@ -309,7 +311,6 @@ private:
     int32_t                     m_numDecodeImagesInFlight; // driven by how deep is the decoder queue
     int32_t                     m_numDecodeImagesToPreallocate; // -1 means pre-allocate all required images on setup
 
-    VkVideoDecodeCapabilityFlagsKHR         m_capabilityFlags;
     VkSharedBaseObj<VulkanVideoSession>     m_videoSession;
     VkSharedBaseObj<VulkanVideoFrameBuffer> m_videoFrameBuffer;
     NvVkDecodeFrameData                     m_decodeFramesData;
@@ -329,6 +330,7 @@ private:
     uint32_t m_useTransferOperation : 1;
     uint32_t m_resetDecoder : 1;
     uint32_t m_dumpDecodeData : 1;
+    uint32_t m_verbose : 1;
     uint32_t m_numImageTypes;
     uint32_t m_numImageTypesEnabled;
     DecodeFrameBufferIf::ImageSpecsIndex m_imageSpecsIndex;

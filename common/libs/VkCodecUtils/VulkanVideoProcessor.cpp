@@ -115,6 +115,8 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
         return result;
     }
 
+    m_vkVideoDecoder->SetVerbose(programConfig.verbose);
+
     VkVideoCoreProfile videoProfile(m_videoStreamDemuxer->GetVideoCodec(),
                                     m_videoStreamDemuxer->GetChromaSubsampling(),
                                     m_videoStreamDemuxer->GetLumaBitDepth(),

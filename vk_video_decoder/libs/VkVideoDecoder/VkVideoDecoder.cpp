@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 
 #include "VkVideoCore/VulkanVideoCapabilities.h"
@@ -177,12 +178,38 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         assert(!"Could not get Video Capabilities!");
         return -1;
     }
-    m_capabilityFlags = videoDecodeCapabilities.flags;
-    m_dpbAndOutputCoincide = (m_capabilityFlags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR);
+    VkVideoDecodeCapabilityFlagsKHR capabilityFlags = videoDecodeCapabilities.flags;
+    m_dpbAndOutputCoincide = (capabilityFlags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR);
+    bool dpbAndOutputDistinct = (capabilityFlags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_DISTINCT_BIT_KHR);
+
+    if (m_verbose) {
+        std::string dpbMode;
+        if (m_dpbAndOutputCoincide) dpbMode += "coincide";
+        if (m_dpbAndOutputCoincide && dpbAndOutputDistinct) dpbMode += " + ";
+        if (dpbAndOutputDistinct) dpbMode += "distinct";
+
+        std::cout << std::endl
+                  << "+--------------------------------------------+" << std::endl
+                  << "|         Decoder Capabilities               |" << std::endl
+                  << "+----------------------------+---------------+" << std::endl
+                  << "| minCodedExtent             | " << std::setw(5) << videoCapabilities.minCodedExtent.width
+                  << " x " << std::setw(5) << std::left << videoCapabilities.minCodedExtent.height << std::right << " |" << std::endl
+                  << "| maxCodedExtent             | " << std::setw(5) << videoCapabilities.maxCodedExtent.width
+                  << " x " << std::setw(5) << std::left << videoCapabilities.maxCodedExtent.height << std::right << " |" << std::endl
+                  << "| pictureAccessGranularity   | " << std::setw(5) << videoCapabilities.pictureAccessGranularity.width
+                  << " x " << std::setw(5) << std::left << videoCapabilities.pictureAccessGranularity.height << std::right << " |" << std::endl
+                  << "| maxDpbSlots                | " << std::setw(13) << videoCapabilities.maxDpbSlots << " |" << std::endl
+                  << "| maxActiveReferencePictures | " << std::setw(13) << videoCapabilities.maxActiveReferencePictures << " |" << std::endl
+                  << "| dpbAndOutput               | " << std::setw(13) << dpbMode << " |" << std::endl
+                  << "| minBitstreamBufferOffset   | " << std::setw(13) << videoCapabilities.minBitstreamBufferOffsetAlignment << " |" << std::endl
+                  << "| minBitstreamBufferSize     | " << std::setw(13) << videoCapabilities.minBitstreamBufferSizeAlignment << " |" << std::endl
+                  << "+----------------------------+---------------+" << std::endl;
+    }
+
     VkFormat dpbImageFormat = VK_FORMAT_UNDEFINED;
     VkFormat outImageFormat = VK_FORMAT_UNDEFINED;
     result = VulkanVideoCapabilities::GetSupportedVideoFormats(m_vkDevCtx, videoProfile,
-                                                               m_capabilityFlags,
+                                                               capabilityFlags,
                                                                outImageFormat,
                                                                dpbImageFormat);
     if (result != VK_SUCCESS) {
