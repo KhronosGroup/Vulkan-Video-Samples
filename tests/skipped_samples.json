@@ -304,6 +304,20 @@
       "reason": "",
       "bug_url": "",
       "date_added": "2026-01-20"
+    },
+    {
+      "name": "h264_resolution_too_small",
+      "format": "vvs",
+      "drivers": [
+        "anv"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "reproduction": "always",
+      "reason": "could not allocate a frame buffer",
+      "bug_url": "",
+      "date_added": "2026-03-06"
     }
   ]
 }

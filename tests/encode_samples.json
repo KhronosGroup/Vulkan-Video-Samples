@@ -245,6 +245,81 @@
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
       "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
       "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h264_resolution_too_small",
+      "codec": "h264",
+      "profile": null,
+      "extra_args": null,
+      "description": "Test H.264 encoding rejects resolution below hardware minimum",
+      "width": 128,
+      "height": 48,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h264_resolution_too_large",
+      "codec": "h264",
+      "profile": null,
+      "extra_args": null,
+      "extended": true,
+      "description": "Test H.264 encoding rejects resolution above hardware maximum",
+      "width": 7680,
+      "height": 4320,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/7680x4320_420_8le.yuv",
+      "source_checksum": "0a7799afe89ad34aeb62b293c4c310a9a15c34961e9203a8499027ad775929b0",
+      "source_filepath": "video/yuv/7680x4320_420_8le.yuv"
+    },
+    {
+      "name": "h265_resolution_too_small",
+      "codec": "h265",
+      "profile": null,
+      "extra_args": null,
+      "description": "Test H.265 encoding rejects resolution below hardware minimum",
+      "width": 128,
+      "height": 48,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h265_resolution_too_large",
+      "codec": "h265",
+      "profile": null,
+      "extra_args": null,
+      "extended": true,
+      "description": "Test H.265 encoding rejects resolution above hardware maximum",
+      "width": 7680,
+      "height": 4320,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/7680x4320_420_8le.yuv",
+      "source_checksum": "0a7799afe89ad34aeb62b293c4c310a9a15c34961e9203a8499027ad775929b0",
+      "source_filepath": "video/yuv/7680x4320_420_8le.yuv"
+    },
+    {
+      "name": "av1_resolution_too_small",
+      "codec": "av1",
+      "profile": null,
+      "extra_args": null,
+      "description": "Test AV1 encoding rejects resolution below hardware minimum",
+      "width": 128,
+      "height": 48,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "av1_resolution_too_large",
+      "codec": "av1",
+      "profile": null,
+      "extra_args": null,
+      "extended": true,
+      "description": "Test AV1 encoding rejects resolution above hardware maximum",
+      "width": 7680,
+      "height": 4320,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/7680x4320_420_8le.yuv",
+      "source_checksum": "0a7799afe89ad34aeb62b293c4c310a9a15c34961e9203a8499027ad775929b0",
+      "source_filepath": "video/yuv/7680x4320_420_8le.yuv"
     }
   ]
 }
