@@ -940,12 +940,19 @@ public:
         // Copy chroma subsampling from input to encoder config
         encodeChromaSubsampling = input.chromaSubsampling;
 
-        if ((encodeWidth == 0) || (encodeWidth > input.width)) {
+        if (encodeWidth == 0) {
             encodeWidth = input.width;
         }
-
-        if ((encodeHeight == 0) || (encodeHeight > input.height)) {
+        if (encodeHeight == 0) {
             encodeHeight = input.height;
+        }
+
+        // Defense-in-depth: also checked in ParseArguments for the CLI path,
+        // but this guard covers programmatic callers that skip ParseArguments.
+        if (encodeWidth > input.width || encodeHeight > input.height) {
+            fprintf(stderr, "Error: encode resolution %ux%u exceeds input resolution %ux%u\n",
+                    encodeWidth, encodeHeight, input.width, input.height);
+            return VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR;
         }
 
         return VK_SUCCESS;

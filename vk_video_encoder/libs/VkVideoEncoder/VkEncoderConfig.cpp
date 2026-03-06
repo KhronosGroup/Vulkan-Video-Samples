@@ -603,12 +603,22 @@ int EncoderConfig::ParseArguments(int argc, char *argv[])
         }
     }
 
-    if ((encodeWidth == 0) || (encodeWidth > input.width)) {
+    if (encodeWidth == 0) {
         encodeWidth = input.width;
     }
-
-    if ((encodeHeight == 0) || (encodeHeight > input.height)) {
+    if (encodeHeight == 0) {
         encodeHeight = input.height;
+    }
+
+    if (encodeWidth > input.width) {
+        fprintf(stderr, "Error: encode width %u exceeds input width %u\n",
+                encodeWidth, input.width);
+        return -1;
+    }
+    if (encodeHeight > input.height) {
+        fprintf(stderr, "Error: encode height %u exceeds input height %u\n",
+                encodeHeight, input.height);
+        return -1;
     }
 
     if ((encodeMaxWidth != 0) && (encodeWidth > encodeMaxWidth)) {
