@@ -505,8 +505,11 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             return False
 
 
-def _print_sample_section(header: str, json_file: str, test_type: str,
-                          prefix: str, skip_rules: list) -> tuple:
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+def _print_sample_section(
+        header: str, json_file: str, test_type: str,
+        prefix: str, skip_rules: list,
+        codec_filter: Optional[str] = None) -> tuple:
     """Print a single sample section (decode or encode).
 
     Returns:
@@ -522,25 +525,33 @@ def _print_sample_section(header: str, json_file: str, test_type: str,
     print(f"{'Name':<40} {'Codec':<8} Description")
     print("-" * 70)
     skipped = 0
+    count = 0
     for sample in samples:
-        name = f"{prefix}{sample['name']}"
         codec = sample.get('codec', 'unknown')
+        if codec_filter and codec != codec_filter:
+            continue
+        count += 1
+        name = f"{prefix}{sample['name']}"
         description = sample.get('description', '')
         if is_test_skipped(sample['name'], "vvs", skip_rules,
                            test_type=test_type):
             name = f"[SKIPPED] {name}"
             skipped += 1
         print(f"{name:<40} {codec:<8} {description}")
-    return len(samples), skipped
+    return count, skipped
 
 
-def list_all_samples(skip_list_path: str = "skipped_samples.json",
-                     test_type_filter: Optional[TestType] = None) -> None:
+def list_all_samples(
+        skip_list_path: str = "skipped_samples.json",
+        test_type_filter: Optional[TestType] = None,
+        codec_filter: Optional[str] = None) -> None:
     """List available test samples from encoder and/or decoder
 
     Args:
         skip_list_path: Path to skip list JSON file
-        test_type_filter: Optional filter to show only encoder or decoder
+        test_type_filter: Optional filter to show only encoder
+            or decoder
+        codec_filter: Optional codec name to filter samples
     """
     print("=" * 70)
     print("AVAILABLE TEST SAMPLES")
@@ -554,12 +565,12 @@ def list_all_samples(skip_list_path: str = "skipped_samples.json",
     if test_type_filter is None or test_type_filter == TestType.DECODER:
         decoder_count, skipped_decode = _print_sample_section(
             "📹 DECODER SAMPLES:", "decode_samples.json",
-            "decode", "decode_", skip_rules)
+            "decode", "decode_", skip_rules, codec_filter)
 
     if test_type_filter is None or test_type_filter == TestType.ENCODER:
         encoder_count, skipped_encode = _print_sample_section(
             "✏️  ENCODER SAMPLES:", "encode_samples.json",
-            "encode", "encode_", skip_rules)
+            "encode", "encode_", skip_rules, codec_filter)
 
     print("=" * 70)
 
@@ -807,7 +818,8 @@ def main() -> int:
             test_type_filter = TestType.ENCODER
         elif args.decoder_only and not args.encoder_only:
             test_type_filter = TestType.DECODER
-        list_all_samples(skip_list_path, test_type_filter)
+        list_all_samples(skip_list_path, test_type_filter,
+                         args.codec)
         return 0
 
     # Handle --download-only option
