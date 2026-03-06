@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <cinttypes>
 #include <functional>
 #include <vector>
 #include "VkVideoEncoder/VkVideoEncoder.h"
@@ -664,6 +665,32 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     if (result != VK_SUCCESS) {
         std::cerr << "InitDeviceCapabilties failed" << std::endl;
         return result;
+    }
+
+    if (encoderConfig->verbose) {
+        const VkVideoCapabilitiesKHR& vidCaps = encoderConfig->videoCapabilities;
+        const VkVideoEncodeCapabilitiesKHR& encCaps = encoderConfig->videoEncodeCapabilities;
+
+        printf("\n");
+        printf("+-------------------------------------------+\n");
+        printf("|         Encoder Capabilities              |\n");
+        printf("+---------------------------+---------------+\n");
+        printf("| minCodedExtent            | %5u x %-5u |\n",
+               vidCaps.minCodedExtent.width, vidCaps.minCodedExtent.height);
+        printf("| maxCodedExtent            | %5u x %-5u |\n",
+               vidCaps.maxCodedExtent.width, vidCaps.maxCodedExtent.height);
+        printf("| pictureAccessGranularity  | %5u x %-5u |\n",
+               vidCaps.pictureAccessGranularity.width, vidCaps.pictureAccessGranularity.height);
+        printf("| encodeInputPictureGran.   | %5u x %-5u |\n",
+               encCaps.encodeInputPictureGranularity.width, encCaps.encodeInputPictureGranularity.height);
+        printf("| maxDpbSlots               | %13u |\n", vidCaps.maxDpbSlots);
+        printf("| maxActiveRefPictures      | %13u |\n", vidCaps.maxActiveReferencePictures);
+        printf("| maxQualityLevels          | %13u |\n", encCaps.maxQualityLevels);
+        printf("| maxRateControlLayers      | %13u |\n", encCaps.maxRateControlLayers);
+        printf("| maxBitrate                | %13" PRIu64 " |\n", encCaps.maxBitrate);
+        printf("| minBitstreamBufferOffset  | %13" PRIu64 " |\n", vidCaps.minBitstreamBufferOffsetAlignment);
+        printf("| minBitstreamBufferSize    | %13" PRIu64 " |\n", vidCaps.minBitstreamBufferSizeAlignment);
+        printf("+---------------------------+---------------+\n");
     }
 
     if (encoderConfig->qualityLevel >= encoderConfig->videoEncodeCapabilities.maxQualityLevels) {
