@@ -105,11 +105,11 @@ int main(int argc, char** argv)
     VkResult result = vkDevCtxt.InitVulkanDevice(encoderConfig->appName.c_str(), VK_NULL_HANDLE,
                                                  encoderConfig->verbose);
     if (result != VK_SUCCESS) {
-        if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-            printf("Could not initialize Vulkan device: incompatible driver\n");
+        if (IsVideoUnsupportedResult(result)) {
+            fprintf(stderr, "Could not initialize Vulkan device: incompatible driver\n");
             return VVS_EXIT_UNSUPPORTED;
         }
-        printf("Could not initialize the Vulkan device %d!\n", result);
+        fprintf(stderr, "Could not initialize the Vulkan device %d!\n", result);
         return EXIT_FAILURE;
     }
 
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
                                                  encoderConfig->enableFrameDirectModePresent);
         result = Shell::Create(&vkDevCtxt, configuration, displayShell);
         if (result != VK_SUCCESS) {
-            assert(!"Can't allocate display shell! Out of memory!");
+            fprintf(stderr, "Can't allocate display shell! Out of memory!");
             return EXIT_FAILURE;
         }
 
@@ -182,12 +182,12 @@ int main(int argc, char** argv)
                                               encoderConfig->verbose,
                                               encoderConfig->noDeviceFallback);
         if (result != VK_SUCCESS) {
-            if (result == VK_ERROR_FEATURE_NOT_PRESENT) {
+            if (IsVideoUnsupportedResult(result)) {
                 // Special exit code for missing video queue family support
-                printf("Video encode queue family not supported by hardware/driver\n");
+                fprintf(stderr, "Video encode queue family not supported by hardware/driver\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            printf("Can't initialize the Vulkan physical device!\n");
+            fprintf(stderr, "Can't initialize the Vulkan physical device!\n");
             return EXIT_FAILURE;
         }
         assert(displayShell->PhysDeviceCanPresent(vkDevCtxt.getPhysicalDevice(),
@@ -203,21 +203,21 @@ int main(int argc, char** argv)
                                                (encoderConfig->enablePreprocessComputeFilter == VK_TRUE))
                                               );
         if (result != VK_SUCCESS) {
-            if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-                printf("Could not initialize the Vulkan decoder device with an incompatible driver!\n");
+            if (IsVideoUnsupportedResult(result)) {
+                fprintf(stderr, "Could not initialize the Vulkan device: unsupported feature!\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            printf("Could not initialize the Vulkan device %d!\n", result);
+            fprintf(stderr, "Could not initialize the Vulkan device %d!\n", result);
             return EXIT_FAILURE;
         }
 
         result = VkVideoEncoder::CreateVideoEncoder(&vkDevCtxt, encoderConfig, encoder);
         if (result != VK_SUCCESS) {
-            if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-                printf("Can't create the video encoder! with an incompatible driver!\n");
+            if (IsVideoUnsupportedResult(result)) {
+                fprintf(stderr, "Can't create the video encoder: unsupported feature!\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            printf("Can't create the video encoder! %d", result);
+            fprintf(stderr, "Can't create the video encoder! %d\n", result);
             return EXIT_FAILURE;
         }
 
@@ -246,12 +246,12 @@ int main(int argc, char** argv)
                                               encoderConfig->verbose,
                                               encoderConfig->noDeviceFallback);
         if (result != VK_SUCCESS) {
-            if (result == VK_ERROR_FEATURE_NOT_PRESENT) {
+            if (IsVideoUnsupportedResult(result)) {
                 // Special exit code for missing video queue family support
-                printf("Video encode queue family not supported by hardware/driver\n");
+                fprintf(stderr, "Video encode queue family not supported by hardware/driver\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            printf("Can't initialize the Vulkan physical device!\n");
+            fprintf(stderr, "Can't initialize the Vulkan physical device!\n");
             return EXIT_FAILURE;
         }
 
@@ -269,20 +269,20 @@ int main(int argc, char** argv)
                                               );
         if (result != VK_SUCCESS) {
             if (IsVideoUnsupportedResult(result)) {
-                printf("Failed to create Vulkan device: unsupported feature\n");
+                fprintf(stderr, "Failed to create Vulkan device: unsupported feature\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            printf("Failed to create Vulkan device!\n");
+            fprintf(stderr, "Failed to create Vulkan device!\n");
             return EXIT_FAILURE;
         }
 
         result = VkVideoEncoder::CreateVideoEncoder(&vkDevCtxt, encoderConfig, encoder);
         if (result != VK_SUCCESS) {
-            if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-                printf("Can't create the video encoder! with an incompatible driver!\n");
+            if (IsVideoUnsupportedResult(result)) {
+                fprintf(stderr, "Can't create the video encoder: unsupported feature\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            printf("Can't create the video encoder!\n");
+            fprintf(stderr, "Can't create the video encoder!\n");
             return EXIT_FAILURE;
         }
     }
