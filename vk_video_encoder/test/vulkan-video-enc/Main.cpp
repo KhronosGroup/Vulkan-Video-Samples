@@ -47,6 +47,7 @@ int main(int argc, char** argv)
     result = vulkanVideoEncoder->GetBitstream();
     if (result != VK_SUCCESS) {
         std::cerr << "Error obtaining the encoded bitstream file: " << result << std::endl;
+        return EXIT_FAILURE;
     }
 
     std::cout << "Exit encoder test" << std::endl;
