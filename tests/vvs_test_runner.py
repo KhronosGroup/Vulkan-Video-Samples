@@ -136,6 +136,7 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             'ignore_skip_list': self.ignore_skip_list,
             'only_skipped': self.only_skipped,
             'show_skipped': self.show_skipped,
+            'extended': options.get('extended', False),
         }
 
         if encoder_path and Path(encoder_path).exists():
@@ -533,10 +534,16 @@ def _print_sample_section(
         count += 1
         name = f"{prefix}{sample['name']}"
         description = sample.get('description', '')
+        tags = []
         if is_test_skipped(sample['name'], "vvs", skip_rules,
                            test_type=test_type):
-            name = f"[SKIPPED] {name}"
+            tags.append("SKIPPED")
             skipped += 1
+        if sample.get('extended', False):
+            tags.append("EXTENDED")
+        if tags:
+            tag_str = ",".join(tags)
+            name = f"[{tag_str}] {name}"
         print(f"{name:<40} {codec:<8} {description}")
     return count, skipped
 
@@ -644,6 +651,10 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--show-skipped", action="store_true",
         help="Show skipped tests in summary output")
+    parser.add_argument(
+        "--extended", action="store_true",
+        help="Include extended tests (e.g., resolution boundary tests with "
+             "large files)")
     parser.add_argument(
         "--timeout",
         type=int,
@@ -766,6 +777,7 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
         no_verify_md5=args.no_verify_md5,
         no_validate_with_decoder=args.no_validate_with_decoder,
         decoder_args=args.decoder_args,
+        extended=args.extended,
     )
 
     # Determine test type filter

@@ -243,6 +243,7 @@ class BaseTestConfig:  # pylint: disable=too-many-instance-attributes
     source_url: str = ""
     source_checksum: str = ""
     source_filepath: str = ""
+    extended: bool = False
 
     @staticmethod
     def _parse_base_fields(data: dict) -> dict:
@@ -257,6 +258,7 @@ class BaseTestConfig:  # pylint: disable=too-many-instance-attributes
             "source_url": data["source_url"],
             "source_checksum": data["source_checksum"],
             "source_filepath": data["source_filepath"],
+            "extended": data.get("extended", False),
         }
 
 

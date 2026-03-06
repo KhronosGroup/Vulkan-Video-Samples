@@ -95,6 +95,7 @@ class VulkanVideoTestFrameworkBase:
             'timeout': int(options.get('timeout', DEFAULT_TEST_TIMEOUT)),
             'skip_filter': skip_filter,
             'show_skipped': options.get('show_skipped', False),
+            'extended': options.get('extended', False),
         }
 
         self.resources_dir.mkdir(exist_ok=True)
@@ -696,6 +697,12 @@ class VulkanVideoTestFrameworkBase:
             if test_pattern and not exact_match and not pattern_match:
                 continue
 
+            user_requested = exact_match or pattern_match
+            if (getattr(sample, 'extended', False)
+                    and not self._options.get('extended', False)
+                    and not user_requested):
+                continue
+
             skip_rule = is_test_skipped(
                 sample.name, test_format, self._skip_rules,
                 current_driver=None, test_type=test_type
@@ -707,7 +714,6 @@ class VulkanVideoTestFrameworkBase:
             enabled_mode = skip_filter == SkipFilter.ENABLED
             # When user explicitly requests a test (exact or pattern match),
             # bypass skip list filtering
-            user_requested = exact_match or pattern_match
             if skipped_mode and not is_all_drivers_skip and not user_requested:
                 continue
             if enabled_mode and is_all_drivers_skip and not user_requested:
