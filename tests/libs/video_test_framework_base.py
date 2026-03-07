@@ -594,8 +594,9 @@ class VulkanVideoTestFrameworkBase:
             str(decoder_path),
             "-i", str(input_file),
             "--verbose",
-            "--enablePostProcessFilter", "0",
         ]
+        if not extra_decoder_args or "--enablePostProcessFilter" not in extra_decoder_args:
+            cmd.extend(["--enablePostProcessFilter", "0"])
 
         if output_file:
             cmd.extend(["-o", str(output_file)])
