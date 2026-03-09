@@ -56,7 +56,7 @@ int main(int argc, const char** argv)
                                                 decoderConfig.initialBitdepth,
                                                 videoStreamDemuxer);
     if (result != VK_SUCCESS) {
-        assert(!"Can't initialize the VideoStreamDemuxer!");
+        fprintf(stderr, "Can't initialize the VideoStreamDemuxer!");
         return EXIT_FAILURE;
     }
 
@@ -77,7 +77,7 @@ int main(int argc, const char** argv)
                                                decoderConfig.verbose);
 
     if (result != VK_SUCCESS) {
-        printf("Could not initialize the Vulkan decoder device!\n");
+        fprintf(stderr, "Could not initialize the Vulkan decoder device!\n");
         if (IsVideoUnsupportedResult(result)) {
             return VVS_EXIT_UNSUPPORTED;
         }
@@ -115,7 +115,7 @@ int main(int argc, const char** argv)
 
         result = Shell::Create(&vkDevCtxt, configuration, displayShell);
         if (result != VK_SUCCESS) {
-            assert(!"Can't allocate display shell! Out of memory!");
+            fprintf(stderr, "Can't allocate display shell! Out of memory!");
             return EXIT_FAILURE;
         }
 
