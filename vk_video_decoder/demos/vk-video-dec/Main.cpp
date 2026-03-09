@@ -64,11 +64,11 @@ int main(int argc, const char **argv)
                                                decoderConfig.verbose);
 
     if (result != VK_SUCCESS) {
-        if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-            printf("Could not initialize the Vulkan decoder device with an incompatible driver!\n");
+        if (IsVideoUnsupportedResult(result)) {
+            fprintf(stderr, "Could not initialize the Vulkan decoder device with an incompatible driver!\n");
             return VVS_EXIT_UNSUPPORTED;
         }
-        printf("Could not initialize the Vulkan decoder device %d!\n", result);
+        fprintf(stderr, "Could not initialize the Vulkan decoder device %d!\n", result);
         return EXIT_FAILURE;
     }
 
@@ -99,7 +99,7 @@ int main(int argc, const char **argv)
 
         result = Shell::Create(&vkDevCtxt, configuration, displayShell);
         if (result != VK_SUCCESS) {
-            printf("Can't allocate display shell! Out of memory!");
+            fprintf(stderr, "Can't allocate display shell! Out of memory!");
             return EXIT_FAILURE;
         }
 
@@ -116,12 +116,12 @@ int main(int argc, const char **argv)
                                               decoderConfig.verbose,
                                               decoderConfig.noDeviceFallback);
         if (result != VK_SUCCESS) {
-            if (result == VK_ERROR_FEATURE_NOT_PRESENT) {
+            if (IsVideoUnsupportedResult(result)) {
                 // Special exit code for missing video queue family support
-                printf("Video decode queue family not supported by hardware/driver\n");
+                fprintf(stderr, "Video decode queue family not supported by hardware/driver\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            printf("Can't initialize the Vulkan physical device! %d", result);
+            fprintf(stderr, "Can't initialize the Vulkan physical device! %d", result);
             return EXIT_FAILURE;
         }
         assert(displayShell->PhysDeviceCanPresent(vkDevCtxt.getPhysicalDevice(),
@@ -187,12 +187,12 @@ int main(int argc, const char **argv)
                                               decoderConfig.verbose,
                                               decoderConfig.noDeviceFallback);
         if (result != VK_SUCCESS) {
-            if (result == VK_ERROR_FEATURE_NOT_PRESENT) {
+            if (IsVideoUnsupportedResult(result)) {
                 // Special exit code for missing video queue family support
-                printf("Video decode queue family not supported by hardware/driver\n");
+                fprintf(stderr, "Video decode queue family not supported by hardware/driver\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            assert(!"Can't initialize the Vulkan physical device!");
+            fprintf(stderr, "Can't initialize the Vulkan physical device!");
             return EXIT_FAILURE;
         }
 
@@ -209,13 +209,12 @@ int main(int argc, const char **argv)
                                               requestVideoComputeQueueMask != 0   // createComputeQueue
                                               );
         if (result != VK_SUCCESS) {
-
-            if (result == VK_ERROR_FEATURE_NOT_PRESENT) {
+            if (IsVideoUnsupportedResult(result)) {
                 // Special exit code for missing video queue family support
-                printf("Unable to create vulkan device with unsupported features\n");
+                fprintf(stderr, "Unable to create vulkan device with unsupported features\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            assert(!"Failed to create Vulkan device!");
+            fprintf(stderr, "Failed to create Vulkan device!");
             return EXIT_FAILURE;
         }
 
