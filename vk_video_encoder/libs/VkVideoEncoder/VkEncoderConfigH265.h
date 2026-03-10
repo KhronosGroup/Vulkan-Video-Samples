@@ -28,14 +28,16 @@ struct EncoderConfigH265 : public EncoderConfig {
     enum { MAX_NUM_REF_PICS = 15 };
     enum { LOG2_MB_SIZE = 4 };
 
+    // represents (log2(size) - 3)
     enum CuSize
     {
         CU_SIZE_8x8   = 0U,
         CU_SIZE_16x16 = 1U,
         CU_SIZE_32x32 = 2U,
-        CU_SIZE_64x64 = 4U,
+        CU_SIZE_64x64 = 3U,
     };
 
+    // represents (log2(size) - 2)
     enum TransformUnitSize
     {
         TU_SIZE_4x4   = 0U,
@@ -92,10 +94,10 @@ struct EncoderConfigH265 : public EncoderConfig {
       , vpsId(0)
       , spsId(0)
       , ppsId(0)
-      , cuMinSize(CU_SIZE_16x16)            // TODO: adjust based on device capabilities
-      , cuSize(CU_SIZE_32x32)               // TODO: adjust based on device capabilities
-      , minTransformUnitSize(TU_SIZE_4x4)   // TODO: adjust based on device capabilities
-      , maxTransformUnitSize(TU_SIZE_32x32) // TODO: adjust based on device capabilities
+      , cuMinSize(CU_SIZE_8x8)
+      , cuSize(CU_SIZE_8x8)
+      , minTransformUnitSize(TU_SIZE_4x4)
+      , maxTransformUnitSize(TU_SIZE_4x4)
       , vbvBufferSize()
       , vbvInitialDelay()
       , minQp{}
@@ -173,6 +175,9 @@ struct EncoderConfigH265 : public EncoderConfig {
     {
         return ((h265EncodeCapabilities.flags & VK_VIDEO_ENCODE_H265_CAPABILITY_B_PICTURE_INTRA_REFRESH_BIT_KHR) != 0);
     }
+
+    void SetMaxCtbSize();
+    void SetTransformBlockSize();
 
     bool GetRateControlParameters(VkVideoEncodeRateControlInfoKHR *rcInfo,
                                   VkVideoEncodeRateControlLayerInfoKHR *pRcLayerInfo,

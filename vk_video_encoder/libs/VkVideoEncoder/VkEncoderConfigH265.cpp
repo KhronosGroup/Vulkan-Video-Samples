@@ -613,6 +613,40 @@ bool EncoderConfigH265::GetRateControlParameters(VkVideoEncodeRateControlInfoKHR
     return true;
 }
 
+void EncoderConfigH265::SetMaxCtbSize()
+{
+    uint8_t ctbSizes = static_cast<uint8_t>(h265EncodeCapabilities.ctbSizes);
+
+    if (ctbSizes & VK_VIDEO_ENCODE_H265_CTB_SIZE_64_BIT_KHR) {
+        cuSize = CU_SIZE_64x64;
+    } else if (ctbSizes & VK_VIDEO_ENCODE_H265_CTB_SIZE_32_BIT_KHR) {
+        cuSize = CU_SIZE_32x32;
+    }
+}
+
+void EncoderConfigH265::SetTransformBlockSize()
+{
+    uint8_t tbSizes = static_cast<uint8_t>(h265EncodeCapabilities.transformBlockSizes);
+
+    if (tbSizes & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_32_BIT_KHR) {
+        maxTransformUnitSize = TU_SIZE_32x32;
+    } else if (tbSizes & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_16_BIT_KHR) {
+        maxTransformUnitSize = TU_SIZE_16x16;
+    } else if (tbSizes & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_8_BIT_KHR) {
+        maxTransformUnitSize = TU_SIZE_8x8;
+    }
+
+    if (tbSizes & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_4_BIT_KHR) {
+        minTransformUnitSize = TU_SIZE_4x4;
+    } else if (tbSizes & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_8_BIT_KHR) {
+        minTransformUnitSize = TU_SIZE_8x8;
+    } else if (tbSizes & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_16_BIT_KHR) {
+        minTransformUnitSize = TU_SIZE_16x16;
+    } else if (tbSizes & VK_VIDEO_ENCODE_H265_TRANSFORM_BLOCK_SIZE_8_BIT_KHR) {
+        minTransformUnitSize = TU_SIZE_32x32;
+    }
+}
+
 bool EncoderConfigH265::InitParamameters(VpsH265 *vpsInfo, SpsH265 *spsInfo,
                                          StdVideoH265PictureParameterSet *pps,
                                          StdVideoH265SequenceParameterSetVui* vui)
@@ -650,6 +684,9 @@ bool EncoderConfigH265::InitParamameters(VpsH265 *vpsInfo, SpsH265 *spsInfo,
             spsInfo->profileTierLevel.general_profile_idc = STD_VIDEO_H265_PROFILE_IDC_FORMAT_RANGE_EXTENSIONS;
         }
     }
+
+    SetMaxCtbSize();
+    SetTransformBlockSize();
 
     const uint32_t ctbLog2SizeY = cuSize + 3;
     const uint32_t minCbLog2SizeY = cuMinSize + 3;
