@@ -685,7 +685,6 @@ public:
     bool     noDeviceFallback;
     VkVideoCodecOperationFlagBitsKHR codec;
     bool useDpbArray;
-    uint32_t videoProfileIdc;
     uint32_t numInputImages;
     EncoderInputImageParameters input;
     uint8_t  encodeBitDepthLuma;
@@ -793,7 +792,6 @@ public:
     , noDeviceFallback(false)
     , codec(VK_VIDEO_CODEC_OPERATION_NONE_KHR)
     , useDpbArray(false)
-    , videoProfileIdc((uint32_t)-1)
     , numInputImages(DEFAULT_NUM_INPUT_IMAGES)
     , input()
     , encodeBitDepthLuma(0)
@@ -954,7 +952,8 @@ public:
     // These functions should be overwritten from the codec-specific classes
     virtual VkResult InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx) { return VK_ERROR_INITIALIZATION_FAILED; };
 
-    virtual uint32_t GetDefaultVideoProfileIdc() { return 0; };
+    // Returns the codec-specific profile identifier (must be set by InitProfileLevel first)
+    virtual uint32_t GetCodecProfile() = 0;
 
     virtual int8_t InitDpbCount() { return 16; };
 
