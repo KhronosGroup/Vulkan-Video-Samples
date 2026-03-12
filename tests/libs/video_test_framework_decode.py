@@ -142,7 +142,7 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
             test_configs: Optional list of test configs to check resources for.
                          If None, checks all loaded samples.
         """
-        samples_to_check = (test_configs if test_configs
+        samples_to_check = (test_configs if test_configs is not None
                             else self.decode_samples)
         return check_sample_resources(samples_to_check,
                                       "decoder resource",
