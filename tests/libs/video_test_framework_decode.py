@@ -19,7 +19,7 @@ limitations under the License.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List
+from typing import List
 
 from tests.libs.video_test_fetch_sample import FetchableResource
 from tests.libs.video_test_config_base import (
@@ -216,15 +216,11 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
 
         return result
 
-    def create_test_suite(
-        self,
-        codec_filter: Optional[str] = None,
-        test_pattern: Optional[str] = None,
-    ) -> List[DecodeTestSample]:
+    def create_test_suite(self) -> List[DecodeTestSample]:
         """Create test suite from samples with optional filtering"""
         # Use base class filtering method with skip list
         return self.filter_test_suite(
-            self.decode_samples, codec_filter, test_pattern,
+            self.decode_samples,
             self.skip_filter, test_format="vvs", test_type="decode"
         )
 

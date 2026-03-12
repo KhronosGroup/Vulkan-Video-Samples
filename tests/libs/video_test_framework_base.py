@@ -96,6 +96,8 @@ class VulkanVideoTestFrameworkBase:
             'skip_filter': skip_filter,
             'show_skipped': options.get('show_skipped', False),
             'extended': options.get('extended', False),
+            'codec_filter': options.get('codec_filter'),
+            'test_pattern': options.get('test_pattern'),
         }
 
         self.resources_dir.mkdir(exist_ok=True)
@@ -265,8 +267,7 @@ class VulkanVideoTestFrameworkBase:
         except (OSError, PermissionError) as e:
             print(f"⚠️  Failed to clean up results: {e}")
 
-    def create_test_suite(self, codec_filter: str = None,
-                          test_pattern: str = None):
+    def create_test_suite(self):
         """Create test suite - to be implemented by subclasses"""
         raise NotImplementedError(
             "Subclasses must implement create_test_suite method"
@@ -596,7 +597,10 @@ class VulkanVideoTestFrameworkBase:
             "-i", str(input_file),
             "--verbose",
         ]
-        if not extra_decoder_args or "--enablePostProcessFilter" not in extra_decoder_args:
+        has_filter_arg = (extra_decoder_args
+                          and "--enablePostProcessFilter"
+                          in extra_decoder_args)
+        if not has_filter_arg:
             cmd.extend(["--enablePostProcessFilter", "0"])
 
         if output_file:
@@ -670,13 +674,13 @@ class VulkanVideoTestFrameworkBase:
     def filter_test_suite(
         self,
         samples: list,
-        codec_filter: Optional[str] = None,
-        test_pattern: Optional[str] = None,
         skip_filter: SkipFilter = SkipFilter.ENABLED,
         test_format: str = "vvs",
         test_type: str = "decode",
     ) -> list:
         """Filter test samples based on codec, pattern, and skip list."""
+        codec_filter = self._options.get('codec_filter')
+        test_pattern = self._options.get('test_pattern')
         self._test_pattern_active = test_pattern is not None
         self._skipped_samples = {}  # Maps sample name to skip_rule
         filtered_samples = []

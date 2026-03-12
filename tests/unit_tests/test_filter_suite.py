@@ -61,11 +61,16 @@ class MockFramework(VulkanVideoTestFrameworkBase):
         """Set the skip filter mode."""
         self._options['skip_filter'] = mode
 
+    def set_filter(self, codec_filter=None, test_pattern=None):
+        """Set codec and test pattern filters."""
+        self._options['codec_filter'] = codec_filter
+        self._options['test_pattern'] = test_pattern
+
     def check_resources(self, _auto_download=True, _test_configs=None):
         """Check resources - mock implementation always returns True."""
         return True
 
-    def create_test_suite(self, _codec_filter=None, _test_pattern=None):
+    def create_test_suite(self):
         """Create test suite - mock implementation returns empty list."""
         return []
 
@@ -86,7 +91,8 @@ class TestFilterByCodec:
             MockSample(name="test4", codec=CodecType.AV1),
         ]
 
-        result = framework.filter_test_suite(samples, codec_filter="h264")
+        framework.set_filter(codec_filter="h264")
+        result = framework.filter_test_suite(samples)
         assert len(result) == 2
         assert all(s.codec == CodecType.H264 for s in result)
 
@@ -98,7 +104,7 @@ class TestFilterByCodec:
             MockSample(name="test2", codec=CodecType.H265),
         ]
 
-        result = framework.filter_test_suite(samples, codec_filter=None)
+        result = framework.filter_test_suite(samples)
         assert len(result) == 2
 
 
@@ -113,8 +119,8 @@ class TestFilterByPattern:
             MockSample(name="h265_test", codec=CodecType.H265),
         ]
 
-        result = framework.filter_test_suite(
-            samples, test_pattern="decode_h264_*")
+        framework.set_filter(test_pattern="decode_h264_*")
+        result = framework.filter_test_suite(samples)
         assert len(result) == 1
         assert result[0].name == "h264_test"
 
@@ -126,7 +132,8 @@ class TestFilterByPattern:
             MockSample(name="h265_test", codec=CodecType.H265),
         ]
 
-        result = framework.filter_test_suite(samples, test_pattern="h264_*")
+        framework.set_filter(test_pattern="h264_*")
+        result = framework.filter_test_suite(samples)
         assert len(result) == 1
         assert result[0].name == "h264_test"
 
@@ -138,7 +145,8 @@ class TestFilterByPattern:
             MockSample(name="h264_test_extended", codec=CodecType.H264),
         ]
 
-        result = framework.filter_test_suite(samples, test_pattern="h264_test")
+        framework.set_filter(test_pattern="h264_test")
+        result = framework.filter_test_suite(samples)
         assert len(result) == 1
         assert result[0].name == "h264_test"
 
@@ -149,8 +157,8 @@ class TestFilterByPattern:
             MockSample(name="h264_test", codec=CodecType.H264),
         ]
 
-        result = framework.filter_test_suite(
-            samples, test_pattern="decode_h264_test")
+        framework.set_filter(test_pattern="decode_h264_test")
+        result = framework.filter_test_suite(samples)
         assert len(result) == 1
 
     def test_filter_wildcard_matches_multiple(self):
@@ -163,7 +171,8 @@ class TestFilterByPattern:
             MockSample(name="h264_basic", codec=CodecType.H264),
         ]
 
-        result = framework.filter_test_suite(samples, test_pattern="av1_*")
+        framework.set_filter(test_pattern="av1_*")
+        result = framework.filter_test_suite(samples)
         assert len(result) == 3
         assert all(s.codec == CodecType.AV1 for s in result)
 
@@ -243,9 +252,9 @@ class TestFilterBySkipList:
         ]
 
         # Exact match by base name should override skip
+        framework.set_filter(test_pattern="skipped_test")
         result = framework.filter_test_suite(
-            samples, test_pattern="skipped_test",
-            skip_filter=SkipFilter.ENABLED,
+            samples, skip_filter=SkipFilter.ENABLED,
             test_format="vvs", test_type="decode"
         )
         assert len(result) == 1
@@ -266,9 +275,9 @@ class TestFilterCombined:
             MockSample(name="h265_basic", codec=CodecType.H265),
         ]
 
-        result = framework.filter_test_suite(
-            samples, codec_filter="h264", test_pattern="*_basic"
-        )
+        framework.set_filter(
+            codec_filter="h264", test_pattern="*_basic")
+        result = framework.filter_test_suite(samples)
         assert len(result) == 1
         assert result[0].name == "h264_basic"
 
@@ -285,7 +294,6 @@ class TestFilterCombined:
             MockSample(name="test1", codec=CodecType.H264),
         ]
 
-        result = framework.filter_test_suite(
-            samples, test_pattern="nonexistent_*"
-        )
+        framework.set_filter(test_pattern="nonexistent_*")
+        result = framework.filter_test_suite(samples)
         assert not result
