@@ -476,13 +476,15 @@ def download_sample_assets(samples, asset_type: str = "test") -> bool:
 
 
 def load_and_download_samples(sample_class, json_file: str,
-                              test_type: str) -> bool:
+                              test_type: str,
+                              include_extended: bool = True) -> bool:
     """Load samples from JSON and download their assets.
 
     Args:
         sample_class: Sample class with a from_dict() classmethod
         json_file: Path to JSON file containing sample definitions
         test_type: Type of test ("decode" or "encode")
+        include_extended: Whether to include extended samples
 
     Returns:
         True if download succeeded or no samples found.
@@ -495,7 +497,12 @@ def load_and_download_samples(sample_class, json_file: str,
     samples = []
     for data in samples_data:
         try:
-            samples.append(sample_class.from_dict(data))
+            sample = sample_class.from_dict(data)
+            if not include_extended and getattr(
+                sample, 'extended', False
+            ):
+                continue
+            samples.append(sample)
         except (KeyError, ValueError, TypeError) as e:
             print(f"  Warning: failed to load {test_type} sample "
                   f"{data.get('name', 'unknown')}: {e}")

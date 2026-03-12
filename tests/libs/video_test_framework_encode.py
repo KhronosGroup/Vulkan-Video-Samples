@@ -220,7 +220,7 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
                 return self.encode_sample.to_fetchable_resource()
 
         # Use provided test configs or all samples
-        samples_to_check = (test_configs if test_configs
+        samples_to_check = (test_configs if test_configs is not None
                             else self.encode_samples)
         adapted_samples = [YUVSampleAdapter(sample)
                            for sample in samples_to_check]

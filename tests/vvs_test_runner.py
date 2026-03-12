@@ -291,11 +291,13 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
                 self.decode_framework.create_test_suite()
             )
 
-        # Check resource files only for the filtered test configs
+        # Check resource files only for the filtered test configs.
+        # Pass empty list (not None) when a test type is excluded,
+        # so check_resources skips it rather than downloading all.
         if not self.check_resources(
             auto_download=True,
-            encode_configs=encode_test_configs or None,
-            decode_configs=decode_test_configs or None,
+            encode_configs=encode_test_configs,
+            decode_configs=decode_test_configs,
         ):
             print("✗ FATAL: Missing or corrupt resource files "
                   "could not be downloaded")
@@ -743,18 +745,32 @@ def find_executables(args: argparse.Namespace) -> Tuple[str, str]:
 
 
 def download_all_resources(args: argparse.Namespace) -> bool:
-    """Download all test resources (encode and decode) without running tests"""
-    print("=== Downloading All Test Resources ===\n")
+    """Download test resources, respecting --decoder-only/--encoder-only
+    and --extended flags."""
+    include_extended = getattr(args, 'extended', False)
+    label = "All" if include_extended else "Standard"
+    print(f"=== Downloading {label} Test Resources ===\n")
+
+    decoder_only = getattr(args, 'decoder_only', False)
+    encoder_only = getattr(args, 'encoder_only', False)
 
     decode_json = args.decode_test_suite or "decode_samples.json"
     encode_json = args.encode_test_suite or "encode_samples.json"
 
-    decode_ok = load_and_download_samples(
-        DecodeTestSample, decode_json, "decode"
-    )
-    encode_ok = load_and_download_samples(
-        EncodeTestSample, encode_json, "encode"
-    )
+    decode_ok = True
+    encode_ok = True
+
+    if not encoder_only:
+        decode_ok = load_and_download_samples(
+            DecodeTestSample, decode_json, "decode",
+            include_extended=include_extended,
+        )
+
+    if not decoder_only:
+        encode_ok = load_and_download_samples(
+            EncodeTestSample, encode_json, "encode",
+            include_extended=include_extended,
+        )
 
     success = decode_ok and encode_ok
     if success:
