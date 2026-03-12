@@ -517,12 +517,12 @@ class VulkanVideoTestFrameworkBase:
         """Validate test result against expectations."""
         config = result.config
 
-        if config.expect_success and result.status == VideoTestStatus.ERROR:
+        if result.status == VideoTestStatus.ERROR:
             if not result.error_message:
                 result.error_message = (
                     f"Expected success but got return code {result.returncode}"
                 )
-        elif config.expect_success and result.status == VideoTestStatus.CRASH:
+        elif result.status == VideoTestStatus.CRASH:
             if not result.error_message:
                 result.error_message = (
                     f"Application crashed with return code {result.returncode}"

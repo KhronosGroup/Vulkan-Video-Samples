@@ -236,7 +236,6 @@ class BaseTestConfig:  # pylint: disable=too-many-instance-attributes
     """Base configuration for a test case"""
     name: str
     codec: CodecType
-    expect_success: bool = True
     extra_args: Optional[List[str]] = None
     description: str = ""
     timeout: Optional[int] = None
@@ -251,7 +250,6 @@ class BaseTestConfig:  # pylint: disable=too-many-instance-attributes
         return {
             "name": data["name"],
             "codec": CodecType(data["codec"]),
-            "expect_success": data.get("expect_success", True),
             "extra_args": data.get("extra_args"),
             "description": data.get("description", ""),
             "timeout": data.get("timeout"),

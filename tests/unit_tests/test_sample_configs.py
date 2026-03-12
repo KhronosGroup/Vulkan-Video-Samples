@@ -89,7 +89,6 @@ class TestDecodeTestSample:
         assert sample.codec == CodecType.AV1
         assert sample.description == ""  # Default
         assert sample.expected_output_md5 == ""  # Default
-        assert sample.expect_success is True  # Default
 
     def test_from_dict_missing_required_field(self):
         """Test that missing required field raises KeyError"""
@@ -234,7 +233,6 @@ class TestBaseTestConfig:
 
         assert config.name == "test"
         assert config.codec == CodecType.H264
-        assert config.expect_success is True
         assert config.extra_args is None
         assert config.description == ""
         assert config.timeout is None
@@ -247,7 +245,6 @@ class TestBaseTestConfig:
         config = BaseTestConfig(
             name="custom_test",
             codec=CodecType.H265,
-            expect_success=False,
             extra_args=["--arg1", "value1"],
             description="Custom description",
             timeout=60,
@@ -258,7 +255,6 @@ class TestBaseTestConfig:
 
         assert config.name == "custom_test"
         assert config.codec == CodecType.H265
-        assert config.expect_success is False
         assert config.extra_args == ["--arg1", "value1"]
         assert config.description == "Custom description"
         assert config.timeout == 60
