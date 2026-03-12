@@ -38,7 +38,7 @@ class MockFramework(VulkanVideoTestFrameworkBase):
         """Check resources - mock implementation always returns True."""
         return True
 
-    def create_test_suite(self, _codec_filter=None, _test_pattern=None):
+    def create_test_suite(self):
         """Create test suite - mock implementation returns empty list."""
         return []
 

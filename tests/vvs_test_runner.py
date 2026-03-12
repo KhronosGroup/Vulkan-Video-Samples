@@ -137,6 +137,8 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             'only_skipped': self.only_skipped,
             'show_skipped': self.show_skipped,
             'extended': options.get('extended', False),
+            'codec_filter': options.get('codec_filter'),
+            'test_pattern': options.get('test_pattern'),
         }
 
         if encoder_path and Path(encoder_path).exists():
@@ -247,14 +249,11 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
 
         return encode_tests, decode_tests
 
-    def run_test_suite(self, codec_filter: Optional[str] = None,
-                       test_type_filter: Optional[TestType] = None,
-                       test_pattern: Optional[str] = None
-                       ) -> Tuple[List, List]:
+    def run_test_suite(
+        self,
+        test_type_filter: Optional[TestType] = None,
+    ) -> Tuple[List, List]:
         """Run complete test suite"""
-        # Track if a test pattern filter is active
-        self._test_pattern_active = test_pattern is not None
-
         # Check if at least one framework is available
         if not self.encode_framework and not self.decode_framework:
             print("✗ FATAL: No encoder or decoder executables found!")
@@ -282,20 +281,14 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
                 (test_type_filter is None or
                  test_type_filter == TestType.ENCODER)):
             encode_test_configs = (
-                self.encode_framework.create_test_suite(
-                    codec_filter=codec_filter,
-                    test_pattern=test_pattern
-                )
+                self.encode_framework.create_test_suite()
             )
 
         if (self.decode_framework and
                 (test_type_filter is None or
                  test_type_filter == TestType.DECODER)):
             decode_test_configs = (
-                self.decode_framework.create_test_suite(
-                    codec_filter=codec_filter,
-                    test_pattern=test_pattern
-                )
+                self.decode_framework.create_test_suite()
             )
 
         # Check resource files only for the filtered test configs
@@ -798,6 +791,8 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
         no_validate_with_decoder=args.no_validate_with_decoder,
         decoder_args=args.decoder_args,
         extended=args.extended,
+        codec_filter=args.codec,
+        test_pattern=args.test,
     )
 
     # Determine test type filter
@@ -810,9 +805,7 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
 
     # Run tests
     encode_results, decode_results = framework.run_test_suite(
-        codec_filter=args.codec,
         test_type_filter=test_type_filter,
-        test_pattern=args.test
     )
 
     if not encode_results and not decode_results:

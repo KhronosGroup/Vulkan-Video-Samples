@@ -356,15 +356,11 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
         }
         return extensions.get(codec, "bin")
 
-    def create_test_suite(
-        self,
-        codec_filter: Optional[str] = None,
-        test_pattern: Optional[str] = None,
-    ) -> List[EncodeTestSample]:
+    def create_test_suite(self) -> List[EncodeTestSample]:
         """Create test suite from samples with optional filtering"""
         # Use base class filtering method with skip list
         return self.filter_test_suite(
-            self.encode_samples, codec_filter, test_pattern,
+            self.encode_samples,
             self.skip_filter, test_format="vvs", test_type="encode"
         )
 
