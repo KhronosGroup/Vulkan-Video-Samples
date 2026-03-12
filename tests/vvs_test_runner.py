@@ -177,7 +177,9 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
         # Combined results tracking
         self.all_results: List[TestResult] = []
 
-    def check_resources(self, auto_download: bool = True) -> bool:
+    def check_resources(self, auto_download: bool = True,
+                        encode_configs: list = None,
+                        decode_configs: list = None) -> bool:
         """Check if required resource files are available and have correct
         checksums"""
         encode_ok = True
@@ -191,12 +193,14 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
 
         if self.encode_framework:
             encode_ok = self.encode_framework.check_resources(
-                effective_auto_download
+                effective_auto_download,
+                test_configs=encode_configs
             )
 
         if self.decode_framework:
             decode_ok = self.decode_framework.check_resources(
-                effective_auto_download
+                effective_auto_download,
+                test_configs=decode_configs
             )
 
         return encode_ok and decode_ok
@@ -269,43 +273,59 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             print(f"Work Dir: {self.config.work_dir}")
         print()
 
-        # Check resource files (automatically downloads missing/corrupt files)
-        if not self.check_resources(auto_download=True):
-            print("✗ FATAL: Missing or corrupt resource files could not "
-                  "be downloaded")
+        # Create filtered test suites first so we only download
+        # resources for tests that will actually run
+        encode_test_configs = []
+        decode_test_configs = []
+
+        if (self.encode_framework and
+                (test_type_filter is None or
+                 test_type_filter == TestType.ENCODER)):
+            encode_test_configs = (
+                self.encode_framework.create_test_suite(
+                    codec_filter=codec_filter,
+                    test_pattern=test_pattern
+                )
+            )
+
+        if (self.decode_framework and
+                (test_type_filter is None or
+                 test_type_filter == TestType.DECODER)):
+            decode_test_configs = (
+                self.decode_framework.create_test_suite(
+                    codec_filter=codec_filter,
+                    test_pattern=test_pattern
+                )
+            )
+
+        # Check resource files only for the filtered test configs
+        if not self.check_resources(
+            auto_download=True,
+            encode_configs=encode_test_configs or None,
+            decode_configs=decode_test_configs or None,
+        ):
+            print("✗ FATAL: Missing or corrupt resource files "
+                  "could not be downloaded")
             return [], []
 
         encode_results = []
         decode_results = []
 
         # Run encoder tests
-        if (self.encode_framework and
-                (test_type_filter is None or
-                 test_type_filter == TestType.ENCODER)):
+        if encode_test_configs:
             print("\n" + "=" * 50)
             print("RUNNING ENCODER TESTS")
             print("=" * 50)
-
-            encode_test_configs = self.encode_framework.create_test_suite(
-                codec_filter=codec_filter, test_pattern=test_pattern
-            )
 
             encode_results = self.encode_framework.run_test_suite(
                 encode_test_configs)
             self.all_results.extend(encode_results)
 
         # Run decoder tests
-        if (self.decode_framework and
-                (test_type_filter is None or
-                 test_type_filter == TestType.DECODER)):
+        if decode_test_configs:
             print("\n" + "=" * 50)
             print("RUNNING DECODER TESTS")
             print("=" * 50)
-
-            decode_test_configs = self.decode_framework.create_test_suite(
-                codec_filter=codec_filter,
-                test_pattern=test_pattern
-            )
 
             decode_results = self.decode_framework.run_test_suite(
                 decode_test_configs)
