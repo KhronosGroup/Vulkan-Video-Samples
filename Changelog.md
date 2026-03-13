@@ -1,3 +1,14 @@
+v0.4.2:
+  - Fix multiple AV1 decode issues (segmentation flags, DPB slot preservation,
+    SIGFPE crash, num_cb_points bounds, film grain detection)
+  - Fix MiCol/RowStarts units and 10/12-bit sample normalization
+  - Propagate decoder/encoder errors using IsVideoUnsupportedResult
+  - Display decoder and encoder capabilities table in verbose mode
+  - Reject unsupported encode resolutions instead of silent clamping
+  - Defer decoder validation and alignment to StartVideoSequence
+  - Add extended test framework with encode boundary tests and optimized
+    resource downloads
+
 v0.4.1:
   - Add VK-GL-CTS build validation workflow for PR integration testing
   - Add download-only mode to test framework for pre-fetching test resources
