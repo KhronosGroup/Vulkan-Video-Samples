@@ -141,7 +141,7 @@ int main(int argc, const char** argv)
     if (result != VK_SUCCESS) {
         fprintf(stderr, "Error: Failed to initialize VideoStreamDemuxer for file: %s\n",
                 decoderConfig.videoFileName.c_str());
-        return -1;
+        return EXIT_FAILURE;
     }
 
     VkSharedBaseObj<VkVideoFrameOutput> frameToFile;
