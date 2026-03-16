@@ -296,6 +296,22 @@ void VulkanFilterYuvCompute::ShaderGeneratePlaneDescriptors(std::stringstream& s
     }
 }
 
+VkFormat VulkanFilterYuvCompute::GetOutputFormat(FilterType filterType, VkFormat inputFormat, VkFormat outputFormat)
+{
+    if (filterType == YCBCR2RGBA) {
+        const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(inputFormat);
+        assert(mpInfo != nullptr && "YCBCR2RGBA requires a YCbCr input format");
+        if (mpInfo == nullptr)
+            return VK_FORMAT_UNDEFINED;
+        if (mpInfo->planesLayout.bpp == YCBCRA_8BPP)
+            return VK_FORMAT_R8G8B8A8_UNORM;
+        // 10/12/16-bit YCbCr -> RGBA16
+        return VK_FORMAT_R16G16B16A16_UNORM;
+    }
+    // Preserve the output format for non-converting filters
+    return outputFormat;
+}
+
 size_t VulkanFilterYuvCompute::InitYCBCR2RGBA(std::string& computeShader)
 {
     // The compute filter uses two or three input images as separate planes

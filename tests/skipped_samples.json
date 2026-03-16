@@ -64,20 +64,6 @@
       "date_added": "2025-01-27"
     },
     {
-      "name": "h264_clip_a_filter_ycbcr2rgba",
-      "format": "vvs",
-      "drivers": [
-        "all"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "shaderc crash",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/147",
-      "date_added": "2026-01-14"
-    },
-    {
       "name": "vp9_intra_only",
       "format": "vvs",
       "drivers": [
