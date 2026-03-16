@@ -336,6 +336,14 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         m_useImageViewArray = VK_FALSE;
     }
 
+    const VkFormat outputFormat = m_enableDecodeComputeFilter
+        ? VulkanFilterYuvCompute::GetOutputFormat(m_filterType, dpbImageFormat, outImageFormat)
+        : outImageFormat;
+
+    if (outputFormat == VK_FORMAT_UNDEFINED) {
+        FAIL_WITH_RESULT(VK_ERROR_FORMAT_NOT_SUPPORTED, "output format undefined");
+    }
+
     if (m_enableDecodeComputeFilter) {
 
         const VkSamplerYcbcrRange ycbcrRange = VkVideoCoreProfile::CodecFullRangeToYCbCrRange(
@@ -346,7 +354,6 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
                 pVideoFormat->video_signal_description.matrix_coefficients);
 
         const VkFormat inputFormat = dpbImageFormat;
-        const VkFormat outputFormat = outImageFormat;
 
         const VkSamplerYcbcrConversionCreateInfo ycbcrConversionCreateInfo {
                    VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
@@ -575,7 +582,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     if (filterOutImageSpecsIndex != InvalidImageTypeIdx) {
         VulkanVideoFrameBuffer::ImageSpec& imageSpecFilter = imageSpecs[filterOutImageSpecsIndex];
         imageSpecFilter.createInfo = imageSpecDpb.createInfo;
-        imageSpecFilter.createInfo.format = outImageFormat;
+        imageSpecFilter.createInfo.format = outputFormat;
         imageSpecFilter.createInfo.arrayLayers = 1;
 
         if (m_enableDecodeComputeFilter == VK_TRUE) {
@@ -1432,8 +1439,8 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         outputImageResource.codedExtent = pCurrFrameDecParams->decodeFrameInfo.dstPictureResource.codedExtent;
         assert(outputImageView);
         assert(inputImageView->GetImageView() != outputImageView->GetImageView());
-        assert(inputImageView->GetPlaneImageView(0) != outputImageView->GetPlaneImageView(0));
-        assert(inputImageView->GetPlaneImageView(1) != outputImageView->GetPlaneImageView(1));
+        assert(outputImageView->GetNumberOfPlanes() < 1 || inputImageView->GetPlaneImageView(0) != outputImageView->GetPlaneImageView(0));
+        assert(outputImageView->GetNumberOfPlanes() < 2 || inputImageView->GetPlaneImageView(1) != outputImageView->GetPlaneImageView(1));
 
         assert(pCurrFrameDecParams->decodeFrameInfo.dstPictureResource.imageViewBinding == inputImageView->GetImageView());
 

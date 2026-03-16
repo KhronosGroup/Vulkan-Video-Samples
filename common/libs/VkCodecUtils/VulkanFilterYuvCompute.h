@@ -80,6 +80,10 @@ public:
     VkResult Init(const VkSamplerYcbcrConversionCreateInfo* pYcbcrConversionCreateInfo,
                   const VkSamplerCreateInfo* pSamplerCreateInfo);
 
+    static VkFormat GetOutputFormat(FilterType filterType,
+                                    VkFormat inputFormat,
+                                    VkFormat outputFormat);
+
     bool IsCompatible(FilterType filterType,
                       uint32_t maxNumFrames,
                       VkFormat inputFormat,
