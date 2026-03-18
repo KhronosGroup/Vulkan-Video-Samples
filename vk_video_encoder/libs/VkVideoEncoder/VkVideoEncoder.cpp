@@ -1804,7 +1804,7 @@ VkResult VkVideoEncoder::RecordVideoCodingCmd(VkSharedBaseObj<VkVideoEncodeFrame
 
         m_beginRateControlInfo = *(VkVideoEncodeRateControlInfoKHR*)encodeFrameInfo->pControlCmdChain;
         // Do not walk the chain, otherwise we end up creating a loop here.
-        m_beginRateControlInfo.pNext = (VkBaseInStructure*)(&encodeFrameInfo->pControlCmdChain);
+        m_beginRateControlInfo.pNext = NULL;
     }
 
     if (m_videoMaintenance1FeaturesSupported)
