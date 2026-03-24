@@ -68,6 +68,8 @@ public:
             if(stop) {
 #ifdef __cpp_exceptions
                 throw std::runtime_error("enqueue on stopped ThreadPool");
+#else
+                return {};
 #endif
             }
 

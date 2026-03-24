@@ -430,7 +430,7 @@ public:
                 assert(layouts[plane].rowPitch <= SIZE_MAX);
                 assert(yuvPlaneLayouts[plane].rowPitch <= SIZE_MAX);
                 CopyPlaneData<uint16_t>(pSrc, pDst, static_cast<size_t>(layouts[plane].rowPitch), static_cast<size_t>(yuvPlaneLayouts[plane].rowPitch),
-                                       frameWidth, imageHeight);
+                                       frameWidth, imageHeight, 1, bitShift);
             }
         }
 
@@ -457,7 +457,7 @@ public:
                     assert(layouts[srcPlane].rowPitch <= SIZE_MAX);
                     assert(yuvPlaneLayouts[plane].rowPitch <= SIZE_MAX);
                     CopyPlaneData<uint16_t>(pSrc, pDst, static_cast<size_t>(layouts[srcPlane].rowPitch), static_cast<size_t>(yuvPlaneLayouts[plane].rowPitch),
-                                            planeWidth, 1, 2);
+                                            planeWidth, 1, 2, bitShift);
                 }
                 pDst += yuvPlaneLayouts[plane].rowPitch;
             }

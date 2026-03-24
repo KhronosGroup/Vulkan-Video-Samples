@@ -156,7 +156,7 @@ struct EncoderConfigH264 : public EncoderConfig {
     const LevelLimits* levelLimits;
     size_t levelLimitsSize;
 
-    virtual int DoParseArguments(int argc, char* argv[]) override;
+    virtual int DoParseArguments(int argc, const char* argv[]) override;
 
     StdVideoH264LevelIdc DetermineLevel(uint8_t dpbSize,
                                         uint32_t bitrate,
