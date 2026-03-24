@@ -17,7 +17,7 @@
 #include "VulkanFilterYuvCompute.h"
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
 
-static bool dumpShaders = true;
+static bool dumpShaders = false;
 
 VkResult VulkanFilterYuvCompute::Create(const VulkanDeviceContext* vkDevCtx,
                                         uint32_t queueFamilyIndex,
@@ -176,7 +176,7 @@ VkResult VulkanFilterYuvCompute::InitDescriptorSetLayout(uint32_t maxNumFrames)
     VkPushConstantRange pushConstantRange = {};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT; // Stage the push constant is for
     pushConstantRange.offset = 0;
-    pushConstantRange.size = 6 * sizeof(uint32_t); // Size of the push constant - source and destination image layers + 2 * ivec2
+    pushConstantRange.size = sizeof(PushConstants); // Size of the push constant - source and destination image layers + 2 * ivec2
 
     return m_descriptorSetLayout.CreateDescriptorSet(m_vkDevCtx,
                                                      setLayoutBindings,
@@ -2327,7 +2327,7 @@ uint32_t VulkanFilterYuvCompute::UpdateImageDescriptorSets(
 
     validImageAspects &= validAspects;
     uint32_t curImageAspect = 0;
-    const uint32_t numPlanes = imageView->GetNumberOfPlanes();
+    [[maybe_unused]] const uint32_t numPlanes = imageView->GetNumberOfPlanes();
     while(validImageAspects) {
 
         if (validImageAspects & (VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect) ) {
@@ -2474,7 +2474,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
     };
 
-    struct PushConstants {
+    struct ImagePushConstants {
         uint32_t srcLayer;
         uint32_t dstLayer;
         ivec2    inputSize;
@@ -2487,7 +2487,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         uint32_t crPitch;   // Cr plane pitch
     };
 
-    PushConstants pushConstants = {
+    ImagePushConstants pushConstants = {
             inImageResourceInfo->baseArrayLayer, // Set the source layer index
             outImageResourceInfo->baseArrayLayer, // Set the destination layer index
             ivec2(inImageResourceInfo->codedExtent.width, inImageResourceInfo->codedExtent.height),
@@ -2504,7 +2504,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
                                  m_descriptorSetLayout.GetPipelineLayout(),
                                  VK_SHADER_STAGE_COMPUTE_BIT,
                                  0,
-                                 sizeof(PushConstants),
+                                 sizeof(ImagePushConstants),
                                  &pushConstants);
 
     const uint32_t  workgroupWidth  = (pushConstants.outputSize.width  + (m_workgroupSizeX - 1)) / m_workgroupSizeX;
@@ -2625,7 +2625,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
     };
 
-    struct PushConstants {
+    struct BufferToImagePushConstants {
         uint32_t srcLayer;
         uint32_t dstLayer;
         ivec2    inputSize;
@@ -2657,7 +2657,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
     VkDeviceSize cbOffset = yOffset + planeSize;
     VkDeviceSize crOffset = cbOffset + (planeSize / 4);
 
-    PushConstants pushConstants = {
+    BufferToImagePushConstants pushConstants = {
             pBufferImageCopy->imageSubresource.baseArrayLayer,
             outImageResourceInfo->baseArrayLayer,
             ivec2(width, height),
@@ -2674,7 +2674,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
                                  m_descriptorSetLayout.GetPipelineLayout(),
                                  VK_SHADER_STAGE_COMPUTE_BIT,
                                  0,
-                                 sizeof(PushConstants),
+                                 sizeof(BufferToImagePushConstants),
                                  &pushConstants);
 
     const uint32_t workgroupWidth = (pushConstants.outputSize.width + (m_workgroupSizeX - 1)) / m_workgroupSizeX;
@@ -2792,7 +2792,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
     };
 
-    struct PushConstants {
+    struct ImageToBufferPushConstants {
         uint32_t srcLayer;
         uint32_t dstLayer;
         ivec2    inputSize;
@@ -2828,7 +2828,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
     VkDeviceSize cbOffset = yOffset + planeSize;
     VkDeviceSize crOffset = cbOffset + (planeSize / 4);
 
-    PushConstants pushConstants = {
+    ImageToBufferPushConstants pushConstants = {
             inImageResourceInfo->baseArrayLayer,
             0, // Destination layer (buffer has no layers)
             ivec2(inputExtent.width, inputExtent.height),
@@ -2845,7 +2845,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
                                m_descriptorSetLayout.GetPipelineLayout(),
                                VK_SHADER_STAGE_COMPUTE_BIT,
                                0,
-                               sizeof(PushConstants),
+                               sizeof(ImageToBufferPushConstants),
                                &pushConstants);
 
     const uint32_t workgroupWidth = (pushConstants.outputSize.width + (m_workgroupSizeX - 1)) / m_workgroupSizeX;
@@ -2965,7 +2965,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
     };
 
-    struct PushConstants {
+    struct BufferToBufferPushConstants {
         uint32_t srcLayer;    // src image layer to use
         uint32_t dstLayer;    // dst image layer to use
         ivec2    inputSize;   // input image or buffer extent
@@ -2991,7 +2991,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
     VkDeviceSize cbOffset = planeSize;
     VkDeviceSize crOffset = cbOffset + (planeSize / 4);
 
-    PushConstants pushConstants = {
+    BufferToBufferPushConstants pushConstants = {
             0, // Source layer (buffer has no layers)
             0, // Destination layer (buffer has no layers)
             ivec2(inBufferExtent.width, inBufferExtent.height),
@@ -3008,7 +3008,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
                                m_descriptorSetLayout.GetPipelineLayout(),
                                VK_SHADER_STAGE_COMPUTE_BIT,
                                0,
-                               sizeof(PushConstants),
+                               sizeof(BufferToBufferPushConstants),
                                &pushConstants);
 
     const uint32_t workgroupWidth = (pushConstants.outputSize.width + (m_workgroupSizeX - 1)) / m_workgroupSizeX;

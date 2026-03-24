@@ -117,6 +117,7 @@ static inline uint32_t GetBitsPerChannel(const YcbcrPlanesLayoutInfo& pYcbcrPlan
         case YCBCRA_16BPP:
             return 16;
         default:
+            assert(!"Unknown bpp value in GetBitsPerChannel");
             return 8;
     }
 }
