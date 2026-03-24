@@ -68,7 +68,10 @@ public:
             ss << "VkResult " << res << " returned";
 #ifdef __cpp_exceptions
             throw std::runtime_error(ss.str());
-#endif // __cpp_exceptions
+#else
+            fprintf(stderr, "Error: %s\n", ss.str().c_str());
+            assert(!"Vulkan call failed");
+#endif
 
         }
 

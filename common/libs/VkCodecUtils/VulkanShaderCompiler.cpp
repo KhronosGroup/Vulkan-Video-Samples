@@ -103,7 +103,6 @@ VkShaderModule VulkanShaderCompiler::BuildShaderFromFile(const char *fileName,
                                                          VkShaderStageFlagBits type,
                                                          const VulkanDeviceContext* vkDevCtx)
 {
-#ifdef seekg
     // read file from the path
     std::ifstream is(fileName, std::ios::binary | std::ios::in | std::ios::ate);
 
@@ -128,7 +127,6 @@ VkShaderModule VulkanShaderCompiler::BuildShaderFromFile(const char *fileName,
 
         return shaderModule;
     }
-#endif
 
     return VK_NULL_HANDLE;
 }

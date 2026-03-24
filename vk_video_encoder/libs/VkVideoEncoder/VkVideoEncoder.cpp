@@ -1491,6 +1491,9 @@ VkImageLayout VkVideoEncoder::TransitionImageLayout(VkCommandBuffer cmdBuf,
     } else {
 #ifdef __cpp_exceptions
         throw std::invalid_argument("unsupported layout transition!");
+#else
+        assert(!"unsupported layout transition!");
+        return VK_IMAGE_LAYOUT_UNDEFINED;
 #endif
     }
 
