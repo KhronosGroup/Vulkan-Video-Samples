@@ -2350,9 +2350,9 @@ uint32_t VulkanFilterYuvCompute::UpdateImageDescriptorSets(
 
             VkSampler ccSampler = (curImageAspect == 0) ? convSampler : VK_NULL_HANDLE;
             uint32_t planeNum = GetPlaneIndex((VkImageAspectFlagBits)(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect));
-            assert(planeNum < numPlanes);
             uint32_t dstBinding = baseBinding;
             if (curImageAspect > 0) {
+                assert(planeNum < numPlanes);
                 // the first plane is 1, second plane is 2, the 3rd is 3
                 dstBinding += (1 + planeNum);
             }
