@@ -90,6 +90,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     // Assume 4k content for testing surfaces
     const uint32_t surfaceMinWidthExtent  = 4096;
     const uint32_t surfaceMinHeightExtent = 4096;
+    VkVideoCoreProfile videoProfile;
 
     m_codedExtent.width  = pVideoFormat->coded_width;
     m_codedExtent.height = pVideoFormat->coded_height;
@@ -148,15 +149,30 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     bool bitstreamHasFilmGrain = (videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR)
                                  && pVideoFormat->filmGrainUsed;
 
-    VkVideoCoreProfile videoProfile = (videoCodec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR)
-        ? VkVideoCoreProfile::CreateDecodeAV1Profile(
+    switch (videoCodec)
+    {
+    case VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR:
+        videoProfile = VkVideoCoreProfile::CreateDecodeH264Profile(
               pVideoFormat->chromaSubsampling, pVideoFormat->lumaBitDepth,
               pVideoFormat->chromaBitDepth, pVideoFormat->codecProfile,
-              bitstreamHasFilmGrain)
-        : VkVideoCoreProfile::CreateDecodeProfile(
+              pVideoFormat->progressive_sequence ? VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_PROGRESSIVE_KHR :
+                                                   VK_VIDEO_DECODE_H264_PICTURE_LAYOUT_INTERLACED_INTERLEAVED_LINES_BIT_KHR);
+        break;
+    case VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR:
+        videoProfile = VkVideoCoreProfile::CreateDecodeAV1Profile(
+              pVideoFormat->chromaSubsampling, pVideoFormat->lumaBitDepth,
+              pVideoFormat->chromaBitDepth, pVideoFormat->codecProfile,
+              bitstreamHasFilmGrain);
+        break;
+
+    default:
+        videoProfile = VkVideoCoreProfile::CreateDecodeProfile(
               videoCodec, pVideoFormat->chromaSubsampling,
               pVideoFormat->lumaBitDepth, pVideoFormat->chromaBitDepth,
               pVideoFormat->codecProfile);
+        break;
+    };
+
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
                                                        m_vkDevCtx->GetVideoDecodeQueueFamilyIdx(),
                                                        videoCodec)) {
