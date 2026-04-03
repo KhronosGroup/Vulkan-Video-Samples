@@ -71,9 +71,9 @@ Windows 10 or Windows 11 with the following software packages:
          - For Windows ARM64  https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-winarm64-lgpl-shared.zip
   - Extract to <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg
   - Verify that <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\win64\bin or <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\winarm64\bin contains the required DLLs:
-    - avformat-59.dll
-    - avutil-59.dll
-    - avcodec-59.dll
+    - avformat-62.dll
+    - avutil-60.dll
+    - avcodec-62.dll
     - Note: the version might be different since the latest release is downloaded
   - Verify that <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\win64\lib or <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\winarm64\lib contains the corresponding .lib files
 
