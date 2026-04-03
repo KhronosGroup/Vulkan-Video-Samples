@@ -201,7 +201,7 @@ jobs:
   Vulkan-Video-Samples-win:
     strategy:
       matrix:
-        platform: [windows-x64, windows-x64-clang, windows-x64-ffmpeg, windows-x86, windows-x86-clang, win-arm64]
+        platform: [windows-x64, windows-x64-clang, windows-x64-without-ffmpeg, windows-x86, windows-x86-clang, win-arm64]
         include:
           - platform: windows-x64
             arch: x64
@@ -210,16 +210,19 @@ jobs:
             arch: x64
             cmake_arch: x64
             toolset: ClangCL
-          - platform: windows-x64-ffmpeg
+          - platform: windows-x64-without-ffmpeg
             arch: x64
             cmake_arch: x64
+            extra_cmake_flags: -DDOWNLOAD_FFMPEG=OFF
           - platform: windows-x86
             arch: x86
             cmake_arch: Win32
+            extra_cmake_flags: -DDOWNLOAD_FFMPEG=OFF
           - platform: windows-x86-clang
             arch: x86
             cmake_arch: Win32
             toolset: ClangCL
+            extra_cmake_flags: -DDOWNLOAD_FFMPEG=OFF
           - platform: win-arm64
             arch: arm64
             cmake_arch: ARM64
@@ -243,31 +246,6 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install FFmpeg
-        if: matrix.platform == 'windows-x64-ffmpeg'
-        run: |
-          # Define the custom installation location
-          $currentDir = pwd
-          $finalDestination = "$currentDir\vk_video_decoder\bin\libs\ffmpeg\win64"
-          echo $finalDestination
-
-          # Create the directory
-          New-Item -ItemType Directory -Force -Path $finalDestination
-
-          # Download FFmpeg static build
-          Invoke-WebRequest -Uri https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip -OutFile ffmpeg.zip
-
-          # Extract FFmpeg to the tmp location
-          $tempExtractPath = "$currentDir\temp\extracted"
-
-          # Extract the entire archive to a temporary folder
-          Expand-Archive -Path ffmpeg.zip -DestinationPath $tempExtractPath -Force
-          Get-ChildItem -Path $tempExtractPath\ffmpeg-master-latest-win64-gpl-shared
-
-          # Get the contents of the first folder in the archive
-          Get-ChildItem -Path $tempExtractPath\ffmpeg-master-latest-win64-gpl-shared | Where-Object { $_.PSIsContainer } | Copy-Item -Destination $finalDestination -Force -Recurse
-          echo "$finalDestination\bin" | Out-File -Encoding ASCII -Append $env:GITHUB_PATH
-
       - name: Build Debug
         shell: bash
         run: |
@@ -275,6 +253,7 @@ jobs:
           cd BUILD_DEBUG
           cmake -DCMAKE_GENERATOR_PLATFORM=${{ matrix.cmake_arch }} \
             ${{ matrix.toolset && format('-T {0}', matrix.toolset) || '' }} \
+            ${{ matrix.extra_cmake_flags || '' }} \
             -DCMAKE_BUILD_TYPE=Debug ..
           cmake --build . --parallel $BUILD_JOBS --config Debug
 
@@ -285,6 +264,7 @@ jobs:
             pushd BUILD_RELEASE
             cmake -DCMAKE_GENERATOR_PLATFORM=${{ matrix.cmake_arch }} \
               ${{ matrix.toolset && format('-T {0}', matrix.toolset) || '' }} \
+              ${{ matrix.extra_cmake_flags || '' }} \
               -DCMAKE_BUILD_TYPE=Release ..
             cmake --build . --parallel $BUILD_JOBS --config Release
             mkdir release-artifacts
