@@ -1916,9 +1916,10 @@ VkResult VkVideoEncoder::RecordVideoCodingCmd(VkSharedBaseObj<VkVideoEncodeFrame
                                                           encodeFrameInfo->controlCmd};
         vkDevCtx->CmdControlVideoCodingKHR(cmdBuf, &renderControlInfo);
 
+        assert(encodeFrameInfo->pControlCmdChain);
+
         m_beginRateControlInfo = *(VkVideoEncodeRateControlInfoKHR*)encodeFrameInfo->pControlCmdChain;
-        // Do not walk the chain, otherwise we end up creating a loop here.
-        m_beginRateControlInfo.pNext = NULL;
+        const_cast<VkBaseInStructure*>(static_cast<const VkBaseInStructure*>(m_beginRateControlInfo.pNext))->pNext = NULL;
     }
 
     if (m_videoMaintenance1FeaturesSupported)
