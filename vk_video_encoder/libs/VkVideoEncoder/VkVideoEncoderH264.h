@@ -48,6 +48,10 @@ private:
         StdVideoEncodeH264RefListModEntry        refList1ModOperations[MAX_REFFERENCES];
         StdVideoEncodeH264RefPicMarkingEntry     refPicMarkingEntry[MAX_MEM_MGMNT_CTRL_OPS_COMMANDS];
 
+        VkVideoCodecOperationFlagBitsKHR GetCodecType() const override {
+            return VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR;
+        }
+
         VkVideoEncodeFrameInfoH264()
           : VkVideoEncodeFrameInfo(&pictureInfo)
           , pictureInfo { VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PICTURE_INFO_KHR }
@@ -153,7 +157,7 @@ protected:
 private:
 
     VkVideoEncodeFrameInfoH264* GetEncodeFrameInfoH264(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo) {
-        assert(VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PICTURE_INFO_KHR == encodeFrameInfo->GetType());
+        assert(VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR == encodeFrameInfo->GetCodecType());
         VkVideoEncodeFrameInfo* pEncodeFrameInfo = encodeFrameInfo;
         return (VkVideoEncodeFrameInfoH264*)pEncodeFrameInfo;
     }

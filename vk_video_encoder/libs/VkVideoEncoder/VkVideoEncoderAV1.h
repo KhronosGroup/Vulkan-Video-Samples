@@ -48,6 +48,10 @@ public:
         VkVideoEncodeAV1RateControlInfoKHR rateControlInfoAV1;
         VkVideoEncodeAV1RateControlLayerInfoKHR rateControlLayersInfoAV1[1];
 
+        VkVideoCodecOperationFlagBitsKHR GetCodecType() const override {
+            return VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR;
+        }
+
         VkVideoEncodeFrameInfoAV1()
             : VkVideoEncodeFrameInfo(&pictureInfo)
             , pictureInfo{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_PICTURE_INFO_KHR }
@@ -184,7 +188,7 @@ protected:
 
 private:
     VkVideoEncodeFrameInfoAV1* GetEncodeFrameInfoAV1(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo) {
-        assert(VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_PICTURE_INFO_KHR == encodeFrameInfo->GetType());
+        assert(VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR == encodeFrameInfo->GetCodecType());
         VkVideoEncodeFrameInfo* pEncodeFrameInfo = encodeFrameInfo;
         return (VkVideoEncodeFrameInfoAV1*)pEncodeFrameInfo;
     }

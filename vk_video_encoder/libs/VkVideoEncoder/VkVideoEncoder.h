@@ -56,10 +56,7 @@ public:
 
     struct VkVideoEncodeFrameInfo : public VkVideoRefCountBase
     {
-        VkStructureType GetType() {
-            return (encodeInfo.pNext == nullptr) ?
-                    VK_STRUCTURE_TYPE_VIDEO_ENCODE_INFO_KHR : reinterpret_cast<const VkBaseInStructure*>(encodeInfo.pNext)->sType;
-        }
+        virtual VkVideoCodecOperationFlagBitsKHR GetCodecType() const = 0;
 
         VkVideoEncodeFrameInfo(const void* pNext = nullptr)
             : encodeInfo{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_INFO_KHR, pNext}
