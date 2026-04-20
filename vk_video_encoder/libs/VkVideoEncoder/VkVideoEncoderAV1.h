@@ -79,6 +79,10 @@ public:
 
             // Reset the base first
             VkVideoEncodeFrameInfo::Reset(releaseResources);
+
+            // After resetting the base structure parameters, start building the pNext chain again
+            assert(pictureInfo.sType == VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_PICTURE_INFO_KHR);
+            encodeInfo.pNext = &pictureInfo;
         }
 
         virtual ~VkVideoEncodeFrameInfoAV1() {
