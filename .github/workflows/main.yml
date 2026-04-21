@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Set i386 environment variables
         if: matrix.platform == 'linux-x86'
@@ -193,7 +193,7 @@ jobs:
           zip -r ../${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip ${{ env.REPO_NAME }}-release/
           popd
       - name: Upload linux release
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}
           path: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip
@@ -232,16 +232,16 @@ jobs:
         with:
           arch: ${{ matrix.arch }}
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Install dependencies
         run: |
           choco install --yes zip
 
       - name: Install python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install FFmpeg
         if: matrix.platform == 'windows-x64-ffmpeg'
@@ -302,7 +302,7 @@ jobs:
             zip -r ../${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip ${{ env.REPO_NAME }}-release
             popd
       - name: Upload windows release
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}
           path: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip
