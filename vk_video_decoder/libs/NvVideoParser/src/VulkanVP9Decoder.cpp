@@ -187,7 +187,9 @@ bool VulkanVP9Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
 
                 }
 
-                ParseFrameHeader(frame_size);
+                if (!ParseFrameHeader(frame_size)) {
+                    return false;
+                }
 
                 if (frames_in_superframe > 0) {
                     sizeparsed += frame_sizes[framesdone];
@@ -231,8 +233,8 @@ bool VulkanVP9Decoder::ParseFrameHeader(uint32_t framesize)
     //parse uncompressed header
     if(!ParseUncompressedHeader())
     {
-        assert((!"Error in ParseUncompressedVP9\n"));
-        return 0;
+        nvParserLog("Error in ParseUncompressedVP9\n");
+        return false;
     }
     if (m_PicData.show_existing_frame == true)  {
         // display an existing frame
@@ -243,7 +245,7 @@ bool VulkanVP9Decoder::ParseFrameHeader(uint32_t framesize)
 
         AddBuffertoOutputQueue(pDispPic);
 
-        return 0;
+        return true;
     }
 
     // handle bitstream start offset alignment (for super frame)
@@ -261,7 +263,7 @@ bool VulkanVP9Decoder::ParseFrameHeader(uint32_t framesize)
     m_pVkPictureData->bitstreamDataOffset = (size_t)(m_nalu.start_offset & ~((int64_t)m_bufferOffsetAlignment - 1));
 
     if (!BeginPicture(m_pVkPictureData)) {
-        assert(!"BeginPicture failed");
+        nvParserLog("BeginPicture failed\n");
         return false;
     }
 
@@ -291,7 +293,7 @@ bool VulkanVP9Decoder::ParseFrameHeader(uint32_t framesize)
         m_pCurrPic = nullptr;
     }
 
-    return 1;
+    return true;
 }
 
 void VulkanVP9Decoder::UpdateFramePointers(VkPicIf* currentPicture)
@@ -387,7 +389,7 @@ bool VulkanVP9Decoder::ParseUncompressedHeader()
     pStdPicInfo->profile = (StdVideoVP9Profile)profile;
     if (pStdPicInfo->profile == STD_VIDEO_VP9_PROFILE_3) {
         if (u(1) != 0) {
-            assert(!"Invalid syntax");
+            nvParserLog("Invalid syntax\n");
             return false;
         }
     }
@@ -878,7 +880,7 @@ bool VulkanVP9Decoder::BeginPicture(VkParserPictureData* pnvpd)
     }
 
     if (!init_sequence(&nvsi)) {
-        assert(!"init_sequence failed!");
+        nvParserLog("init_sequence failed!\n");
         return false;
     }
 
