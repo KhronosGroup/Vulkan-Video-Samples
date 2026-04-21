@@ -22,7 +22,7 @@ jobs:
         platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, windows-x64, windows-x64-ffmpeg, win-arm64]
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}
           path: ./
@@ -31,7 +31,7 @@ jobs:
         run: |
           mv ${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip ${{ env.REPO_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}.zip
       - name: Upload renamed artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.REPO_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}
           path: ${{ env.REPO_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}.zip
@@ -44,7 +44,7 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -67,7 +67,7 @@ jobs:
         platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, windows-x64, windows-x64-ffmpeg, win-arm64]
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.REPO_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}
           path: ./
