@@ -361,7 +361,6 @@ bool VulkanFrame<FrameDataType>::OnFrame( int32_t renderIndex,
 
         VkVideoQueueResult result = m_videoQueue->GetNextFrame(pLastDecodedFrame);
         if (result == VkVideoQueueResult::Error) {
-            std::cerr << "Error: decoder reported a fatal error during frame retrieval" << std::endl;
             continueLoop = false;
         } else if (result == VkVideoQueueResult::EndOfStream) {
             continueLoop = false;
