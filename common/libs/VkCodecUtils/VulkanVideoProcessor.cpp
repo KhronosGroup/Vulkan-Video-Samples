@@ -465,6 +465,14 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
 
     if (parserError) {
         m_videoStreamsCompleted = true;
+        VkResult lastResult = GetDecoderLastResult();
+        if (IsVideoUnsupportedResult(lastResult)) {
+            fprintf(stderr, "ERROR: decoder reported unsupported video configuration (VkResult %d)\n", lastResult);
+        } else if (lastResult == VK_SUCCESS) {
+            fprintf(stderr, "ERROR: parser reported a fatal error (no VkResult set by decoder)\n");
+        } else {
+            fprintf(stderr, "ERROR: decoder reported a fatal error (VkResult %d)\n", lastResult);
+        }
         return VkVideoQueueResult::Error;
     }
 
