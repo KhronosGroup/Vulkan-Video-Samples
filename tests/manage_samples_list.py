@@ -592,7 +592,10 @@ def add_decode_sample(sample_list: Dict) -> None:
     # Source file information
     source_url = get_input("Source URL", allow_empty=True)
     source_checksum = get_input("Source checksum (SHA256)", allow_empty=True)
-    source_filepath = get_input("Source filepath", allow_empty=True)
+    default_filepath = (
+        f"video/{codec}/{Path(source_url).name}" if source_url else None)
+    source_filepath = get_input("Source filepath", default=default_filepath,
+                                allow_empty=True)
 
     # Optional fields
     expected_md5 = get_input("Expected output MD5 (optional)",
@@ -668,7 +671,10 @@ def add_encode_sample(sample_list: Dict) -> None:
     # Source file information
     source_url = get_input("Source URL", allow_empty=True)
     source_checksum = get_input("Source checksum (SHA256)", allow_empty=True)
-    source_filepath = get_input("Source filepath", allow_empty=True)
+    default_filepath = (
+        f"video/{codec}/{Path(source_url).name}" if source_url else None)
+    source_filepath = get_input("Source filepath", default=default_filepath,
+                                allow_empty=True)
 
     # Extra args
     extra_args_str = get_input("Extra args (space-separated, optional)",
