@@ -101,11 +101,15 @@ def write_binary_file(filename: str, data: bytes) -> None:
 
 @dataclass
 class FetchableResource:
-    """A resource that can be downloaded and verified"""
+    """A resource that can be downloaded and verified.
+
+    When checksum is an empty string, fetch_and_verify_file skips
+    verification and exposes the computed hash via actual_checksum.
+    """
     url: str
     filename: str
-    checksum: str
-    base_dir: str
+    checksum: str = ""
+    base_dir: str = ""
     checksum_algorithm: str = 'sha256'  # 'sha256' or 'md5'
 
     # Class variable shared across all instances
@@ -248,11 +252,10 @@ class FetchableResource:
                 # No content length, download without progress bar
                 data = bytes(req.read())
 
-            # Verify checksum
+            # Compute and optionally verify checksum
             file_checksum = compute_checksum(data, self.checksum_algorithm)
-            if file_checksum != self.checksum:
-                # Store actual checksum for reporting
-                self.actual_checksum = file_checksum
+            self.actual_checksum = file_checksum
+            if self.checksum and file_checksum != self.checksum:
                 raise ValueError(
                     f"Checksum mismatch for {self.filename}, "
                     f"expected {self.checksum}, got {file_checksum}"
@@ -261,7 +264,11 @@ class FetchableResource:
             # Save file
             self.full_path.parent.mkdir(parents=True, exist_ok=True)
             write_binary_file(str(self.full_path), data)
-            print(f"✓ Downloaded and verified: {self.full_path}")
+            if self.checksum:
+                print(f"✓ Downloaded and verified: {self.full_path}")
+            else:
+                print(f"✓ Downloaded {self.full_path} "
+                      f"({self.checksum_algorithm}: {file_checksum})")
             return True
 
         except (OSError, IOError, ValueError) as e:
