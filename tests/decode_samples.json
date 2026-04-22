@@ -487,6 +487,15 @@
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/vp9/vp9-1280x720-svc.ivf",
       "source_checksum": "8a8dc19ce33eaeb48a1b800fb775a45b358cf8a779ea97face108e2e6ea958f2",
       "source_filepath": "video/vp9/vp9-1280x720-svc.ivf"
+    },
+    {
+      "name": "vp90-2-02-size-64x34",
+      "codec": "vp9",
+      "description": "low resolution",
+      "expected_output_md5": "a9252d8d594f13602b49469fec1e7560",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/vp9/vp90-2-02-size-64x34.webm",
+      "source_checksum": "cf6cef4b67865f515d6f59986e6e4822a4da8060bac92b54009c5f6f17b1c641",
+      "source_filepath": "video/vp9/vp90-2-02-size-64x34.webm"
     }
   ]
 }
