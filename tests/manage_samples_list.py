@@ -31,14 +31,18 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 # Allow running both as package and as script (exception for this file only)
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 # pylint: disable=wrong-import-position
+from tests.generate_sample_md5 import calculate_md5  # noqa: E402
 from tests.libs.video_test_utils import normalize_test_name  # noqa: E402
+from tests.libs.video_test_fetch_sample import (  # noqa: E402
+    FetchableResource,
+)
 
 
 # Default file paths
@@ -142,6 +146,28 @@ def save_sample_list(path: Path, data: Dict, list_type: str) -> None:
     except (OSError, IOError) as e:
         print(f"✗ Error saving sample list: {e}")
         sys.exit(1)
+
+
+def download_and_hash(
+        url: str,
+        keep_file: bool = False) -> Tuple[Optional[str], Optional[Path]]:
+    """Download URL via the framework's FetchableResource and compute SHA256.
+
+    Returns (sha256_hex, path or None). The downloaded file is removed
+    unless keep_file is True.
+    """
+    resource = FetchableResource(
+        url=url,
+        filename=Path(url).name or "downloaded_sample",
+        base_dir="_sample_management_tmp",
+    )
+    if not resource.fetch_and_verify_file():
+        return None, None
+    path = resource.full_path
+    if not keep_file:
+        resource.clean()
+        path = None
+    return resource.actual_checksum, path
 
 
 def get_input(prompt: str, default: Optional[str] = None,
@@ -591,15 +617,29 @@ def add_decode_sample(sample_list: Dict) -> None:
 
     # Source file information
     source_url = get_input("Source URL", allow_empty=True)
-    source_checksum = get_input("Source checksum (SHA256)", allow_empty=True)
+    default_checksum: Optional[str] = None
+    downloaded_path: Optional[Path] = None
+    if source_url:
+        auto = get_input(
+            "Compute SHA256 by downloading the URL?",
+            default="y", choices=["y", "n"])
+        if auto.lower() == 'y':
+            default_checksum, downloaded_path = download_and_hash(
+                source_url, keep_file=True)
+    source_checksum = get_input("Source checksum (SHA256)",
+                                default=default_checksum, allow_empty=True)
     default_filepath = (
         f"video/{codec}/{Path(source_url).name}" if source_url else None)
     source_filepath = get_input("Source filepath", default=default_filepath,
                                 allow_empty=True)
 
-    # Optional fields
+    # Optional fields — compute MD5 from the downloaded file if available
+    default_md5: Optional[str] = None
+    if downloaded_path is not None:
+        default_md5 = calculate_md5(str(downloaded_path))
+        downloaded_path.unlink(missing_ok=True)
     expected_md5 = get_input("Expected output MD5 (optional)",
-                             allow_empty=True)
+                             default=default_md5, allow_empty=True)
     expected_crc = get_input("Expected output CRC (optional)",
                              allow_empty=True)
 
@@ -670,7 +710,15 @@ def add_encode_sample(sample_list: Dict) -> None:
 
     # Source file information
     source_url = get_input("Source URL", allow_empty=True)
-    source_checksum = get_input("Source checksum (SHA256)", allow_empty=True)
+    default_checksum: Optional[str] = None
+    if source_url:
+        auto = get_input(
+            "Compute SHA256 by downloading the URL?",
+            default="y", choices=["y", "n"])
+        if auto.lower() == 'y':
+            default_checksum, _ = download_and_hash(source_url)
+    source_checksum = get_input("Source checksum (SHA256)",
+                                default=default_checksum, allow_empty=True)
     default_filepath = (
         f"video/{codec}/{Path(source_url).name}" if source_url else None)
     source_filepath = get_input("Source filepath", default=default_filepath,
