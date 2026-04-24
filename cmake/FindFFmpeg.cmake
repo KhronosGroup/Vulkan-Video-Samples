@@ -8,7 +8,6 @@
 #   FFMPEG_LIBAVCODEC_LIBRARY      - avcodec library
 #   FFMPEG_LIBAVFORMAT_LIBRARY     - avformat library
 #   FFMPEG_LIBAVUTIL_LIBRARY       - avutil library
-#   FFMPEG_LIBSWSCALE_LIBRARY      - swscale library (optional)
 #   FFMPEG_LIB_DIR                 - Directory containing FFmpeg libraries
 #
 # Accepts:
@@ -26,7 +25,6 @@ if(NOT FFMPEG_ROOT)
         pkg_check_modules(PC_LIBAVCODEC QUIET libavcodec)
         pkg_check_modules(PC_LIBAVFORMAT QUIET libavformat)
         pkg_check_modules(PC_LIBAVUTIL   QUIET libavutil)
-        pkg_check_modules(PC_LIBSWSCALE  QUIET libswscale)
     endif()
 endif()
 
@@ -37,9 +35,6 @@ if(PC_LIBAVCODEC_FOUND AND PC_LIBAVFORMAT_FOUND AND PC_LIBAVUTIL_FOUND)
     set(FFMPEG_LIBAVCODEC_LIBRARY "${PC_LIBAVCODEC_LINK_LIBRARIES}")
     set(FFMPEG_LIBAVFORMAT_LIBRARY "${PC_LIBAVFORMAT_LINK_LIBRARIES}")
     set(FFMPEG_LIBAVUTIL_LIBRARY   "${PC_LIBAVUTIL_LINK_LIBRARIES}")
-    if(PC_LIBSWSCALE_FOUND)
-        set(FFMPEG_LIBSWSCALE_LIBRARY "${PC_LIBSWSCALE_LINK_LIBRARIES}")
-    endif()
 else()
     # Windows FFmpeg paths
     if(WIN32)
@@ -127,12 +122,6 @@ else()
         HINTS ${FFMPEG_LIB_HINTS}
         PATHS ${FFMPEG_LIB_SEARCH_PATHS}
     )
-
-    find_library(FFMPEG_LIBSWSCALE_LIBRARY
-        NAMES swscale
-        HINTS ${FFMPEG_LIB_HINTS}
-        PATHS ${FFMPEG_LIB_SEARCH_PATHS}
-    )
 endif()
 
 include(FindPackageHandleStandardArgs)
@@ -153,7 +142,6 @@ mark_as_advanced(
     FFMPEG_LIBAVCODEC_LIBRARY
     FFMPEG_LIBAVFORMAT_LIBRARY
     FFMPEG_LIBAVUTIL_LIBRARY
-    FFMPEG_LIBSWSCALE_LIBRARY
 )
 
 if(FFMPEG_FOUND)
@@ -168,8 +156,5 @@ if(FFMPEG_FOUND)
         ${FFMPEG_LIBAVFORMAT_LIBRARY}
         ${FFMPEG_LIBAVUTIL_LIBRARY}
     )
-    if(FFMPEG_LIBSWSCALE_LIBRARY)
-        list(APPEND FFMPEG_LIBRARIES ${FFMPEG_LIBSWSCALE_LIBRARY})
-    endif()
     get_filename_component(FFMPEG_LIB_DIR "${FFMPEG_LIBAVCODEC_LIBRARY}" DIRECTORY)
 endif()
