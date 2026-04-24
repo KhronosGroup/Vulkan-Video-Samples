@@ -25,6 +25,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <mutex>
 #include <set>
 #include <unordered_set>
 #include <algorithm>    // std::find_if
@@ -443,10 +444,24 @@ bool VulkanDeviceContext::DebugReportCallback(VkDebugReportFlagsEXT flags, VkDeb
                                               uint64_t, size_t,
                                               int32_t msg_code, const char *layer_prefix, const char *msg)
 {
-    // Suppress known validation layer false positives (see explanations above)
+    // Suppress known validation layer false positives (see explanations above).
+    // Print the first occurrence of each suppressed id so developers retain
+    // visibility that a suppression is active; subsequent occurrences stay silent.
     for (uint32_t ignoredId : g_ignoredValidationMessageIds) {
         if (static_cast<uint32_t>(msg_code) == ignoredId) {
-            return false;  // Silently ignore this message
+            static std::mutex s_suppressMutex;
+            static std::unordered_set<uint32_t> s_firstSeen;
+            bool firstOccurrence = false;
+            {
+                std::lock_guard<std::mutex> lock(s_suppressMutex);
+                firstOccurrence = s_firstSeen.insert(ignoredId).second;
+            }
+            if (firstOccurrence) {
+                fprintf(stderr,
+                        "[VVL-suppress] %s: %s (messageId=0x%08x, suppressing further occurrences)\n",
+                        layer_prefix, msg, ignoredId);
+            }
+            return false;
         }
     }
 
