@@ -692,14 +692,14 @@ VkResult VulkanPerDrawContext::RecordCommandBuffer(VkCommandBuffer cmdBuffer,
     if (pFormatInfo == NULL) {
         // Non-planar input image.
         setImageLayout(m_vkDevCtx, cmdBuffer, inputImageToDrawFrom->image,
-                       VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                       inputImageToDrawFrom->imageLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                        VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                        VK_IMAGE_ASPECT_COLOR_BIT);
     } else {
         // Multi-planar input image.
         for (uint32_t planeIndx = 0; (planeIndx < (uint32_t)pFormatInfo->planesLayout.numberOfExtraPlanes + 1); planeIndx++) {
             setImageLayout(m_vkDevCtx, cmdBuffer, inputImageToDrawFrom->image,
-                       VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                       inputImageToDrawFrom->imageLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                        VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                        (VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << planeIndx));
 
@@ -821,14 +821,14 @@ VkResult VulkanPerDrawContext::RecordCommandBuffer(VkCommandBuffer cmdBuffer,
     if (pFormatInfo == NULL) {
         // Non-planar input image.
         setImageLayout(m_vkDevCtx, cmdBuffer, inputImageToDrawFrom->image,
-                       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR,
+                       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, inputImageToDrawFrom->imageLayout,
                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR,
                        VK_IMAGE_ASPECT_COLOR_BIT);
     } else {
         // Multi-planar input image.
         for (uint32_t planeIndx = 0; (planeIndx < (uint32_t)pFormatInfo->planesLayout.numberOfExtraPlanes + 1); planeIndx++) {
             setImageLayout(m_vkDevCtx, cmdBuffer, inputImageToDrawFrom->image,
-                       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR,
+                       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, inputImageToDrawFrom->imageLayout,
                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR,
                        (VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << planeIndx));
 
