@@ -893,6 +893,8 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
         CHECK_VULKAN_FEATURE(timelineSemaphoreFeatures.timelineSemaphore, "timelineSemaphore", false);
         CHECK_VULKAN_FEATURE(videoMaintenance1Features.videoMaintenance1, "videoMaintenance1", true);
         CHECK_VULKAN_FEATURE(synchronization2Features.synchronization2, "synchronization2", false);
+        CHECK_VULKAN_FEATURE(samplerYcbcrConversionFeatures.samplerYcbcrConversion,
+                             "samplerYcbcrConversion", true);
         CHECK_VULKAN_FEATURE(((videoCodecs & VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR) != 0) ==
                              (videoEncodeAV1Feature.videoEncodeAV1 != VK_FALSE), "videoEncodeAV1", false);
         CHECK_VULKAN_FEATURE(((videoCodecs & VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) != 0) ==

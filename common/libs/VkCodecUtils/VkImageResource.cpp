@@ -193,23 +193,14 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
     viewInfo.flags = 0;
 
     const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(viewInfo.format);
-    VkSamplerYcbcrConversionInfo ycbcrInfo = {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO
-    };
+    VkSamplerYcbcrConversionInfo ycbcrInfo = {};
+    ycbcrInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO;
 
-    VulkanSamplerYcbcrConversion  samplerYcbcrConversion;
+    // Heap-allocated so ownership can be transferred to the VkImageResourceView;
+    // the conversion handle must outlive the image view that references it in pNext.
+    VulkanSamplerYcbcrConversion* samplerYcbcrConversion = nullptr;
 
     if (mpInfo && (imageResource->GetImageCreateInfo().usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
-#if 0
-        const VkSamplerCreateInfo defaultSamplerInfo = {
-            VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, NULL, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST,
-            VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            // mipLodBias  anisotropyEnable  maxAnisotropy  compareEnable      compareOp         minLod  maxLod          borderColor
-            // unnormalizedCoordinates
-            0.0, false, 0.00, false, VK_COMPARE_OP_NEVER, 0.0, 16.0, VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, false
-        };
-#endif
-
         const VkSamplerYcbcrConversionCreateInfo defaultSamplerYcbcrConversionCreateInfo = {
             VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
             NULL,
@@ -224,17 +215,20 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
             false
         };
 
-        VkResult result = samplerYcbcrConversion.CreateVulkanSampler(vkDevCtx, NULL, &defaultSamplerYcbcrConversionCreateInfo);
+        samplerYcbcrConversion = new VulkanSamplerYcbcrConversion();
+        VkResult result = samplerYcbcrConversion->CreateVulkanSampler(vkDevCtx, NULL, &defaultSamplerYcbcrConversionCreateInfo);
         if (result != VK_SUCCESS) {
+            delete samplerYcbcrConversion;
             return result;
         }
 
-        ycbcrInfo.conversion = samplerYcbcrConversion.GetSamplerYcbcrConversion();
+        ycbcrInfo.conversion = samplerYcbcrConversion->GetSamplerYcbcrConversion();
         viewInfo.pNext = &ycbcrInfo;
     }
 
     VkResult result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
     if (result != VK_SUCCESS) {
+        delete samplerYcbcrConversion;
         return result;
     }
     numViews++;
@@ -247,6 +241,7 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
         result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
         if (result != VK_SUCCESS) {
+            delete samplerYcbcrConversion;
             return result;
         }
         numViews++;
@@ -257,6 +252,7 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
             viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
             result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
             if (result != VK_SUCCESS) {
+                delete samplerYcbcrConversion;
                 return result;
             }
             numViews++;
@@ -267,6 +263,7 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
                 viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
                 result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
                 if (result != VK_SUCCESS) {
+                    delete samplerYcbcrConversion;
                     return result;
                 }
                 numViews++;
@@ -277,7 +274,8 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
 
     imageResourceView = new VkImageResourceView(vkDevCtx, imageResource,
                                                 numViews, numViews - 1,
-                                                imageViews, imageSubresourceRange);
+                                                imageViews, imageSubresourceRange,
+                                                samplerYcbcrConversion);
 
     return result;
 }
@@ -290,6 +288,10 @@ VkImageResourceView::~VkImageResourceView()
             m_imageViews[imageViewIndx] = VK_NULL_HANDLE;
         }
     }
+
+    // Destroy ycbcr conversion after all image views referencing it have been destroyed.
+    delete m_samplerYcbcrConversion;
+    m_samplerYcbcrConversion = nullptr;
 
     m_imageResource = nullptr;
     m_vkDevCtx = nullptr;
