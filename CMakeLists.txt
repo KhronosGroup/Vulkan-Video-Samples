@@ -59,6 +59,10 @@ if(BUILD_DECODER OR USE_ENCODER_SHADERC)
     include(FindShaderc)
 endif()
 
+if(WIN32)
+    option(DOWNLOAD_FFMPEG "Automatically download FFmpeg for Windows builds" ON)
+endif()
+
 ############ VULKAN_FFMPEG_LIB_PATH ######################################
 if (DEFINED ENV{VULKAN_FFMPEG_LIB_DIR_PATH})
     MESSAGE(STATUS "VULKAN_FFMPEG_LIB_DIR_PATH ENV VAR is set to $ENV{VULKAN_FFMPEG_LIB_DIR_PATH}")

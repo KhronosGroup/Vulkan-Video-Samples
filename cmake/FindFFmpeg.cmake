@@ -7,6 +7,52 @@
 # FFMPEG_ROOT, if this module use this path to find FFMPEG headers
 # and libraries.
 
+if(WIN32 AND DOWNLOAD_FFMPEG)
+    set(FFMPEG_BTBN_TAG        "autobuild-2026-03-31-13-11")
+    set(FFMPEG_BTBN_REVISION   "n8.1-7-ga3475e2554")
+    set(FFMPEG_BTBN_SUFFIX     "8.1")
+    set(FFMPEG_WIN64_SHA256    "6093603479c4bf6f14268d399a46f9ce2d050cce0a9f5e4ed81af2ac373e367b")
+    set(FFMPEG_WINARM64_SHA256 "055fd2c58a01042e9da66bfa046c8aa3fa7ea69b9d60fa82bfc9a1a96fc694a0")
+
+    if(CMAKE_GENERATOR_PLATFORM MATCHES "^(aarch64|arm64|ARM64)")
+        set(FFMPEG_PLATFORM_DIR "winarm64")
+        set(FFMPEG_EXPECTED_HASH "${FFMPEG_WINARM64_SHA256}")
+    else()
+        set(FFMPEG_PLATFORM_DIR "win64")
+        set(FFMPEG_EXPECTED_HASH "${FFMPEG_WIN64_SHA256}")
+    endif()
+
+    set(FFMPEG_ARCHIVE_NAME "ffmpeg-${FFMPEG_BTBN_REVISION}-${FFMPEG_PLATFORM_DIR}-lgpl-shared-${FFMPEG_BTBN_SUFFIX}")
+    set(FFMPEG_DOWNLOAD_URL "https://github.com/BtbN/FFmpeg-Builds/releases/download/${FFMPEG_BTBN_TAG}/${FFMPEG_ARCHIVE_NAME}.zip")
+    set(FFMPEG_DEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vk_video_decoder/bin/libs/ffmpeg/${FFMPEG_PLATFORM_DIR}")
+
+    file(GLOB FFMPEG_EXISTING_LIBS "${FFMPEG_DEST_DIR}/lib/avcodec*.lib")
+    if(FFMPEG_EXISTING_LIBS)
+        message(STATUS "FFmpeg libraries already present in ${FFMPEG_DEST_DIR}")
+    else()
+        message(STATUS "FFmpeg libraries not found in ${FFMPEG_DEST_DIR}")
+        message(STATUS "Downloading FFmpeg from ${FFMPEG_DOWNLOAD_URL} ...")
+
+        include(FetchContent)
+        FetchContent_Declare(
+            ffmpeg_prebuilt
+            URL                        "${FFMPEG_DOWNLOAD_URL}"
+            URL_HASH                   "SHA256=${FFMPEG_EXPECTED_HASH}"
+            TLS_VERIFY                 ON
+            DOWNLOAD_EXTRACT_TIMESTAMP FALSE
+        )
+        FetchContent_MakeAvailable(ffmpeg_prebuilt)
+
+        foreach(SUBDIR bin lib include)
+            if(EXISTS "${ffmpeg_prebuilt_SOURCE_DIR}/${SUBDIR}")
+                file(COPY "${ffmpeg_prebuilt_SOURCE_DIR}/${SUBDIR}/" DESTINATION "${FFMPEG_DEST_DIR}/${SUBDIR}")
+            endif()
+        endforeach()
+
+        message(STATUS "FFmpeg libraries installed to ${FFMPEG_DEST_DIR}")
+    endif()
+endif()
+
 # Macro to find header and lib directories
 # example: FFMPEG_FIND(AVFORMAT avformat avformat.h)
 MACRO(FFMPEG_FIND varname shortname headername)
