@@ -830,6 +830,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     VkDeviceSize srcOffset = pCurrFrameDecParams->bitstreamDataOffset;
     // Safety: force to 0 for codecs that should not have non-zero offset
     if (m_videoFormat.codec != VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
+        assert(srcOffset == 0 && "non-zero bitstreamDataOffset for non-VP9 codec");
         if (srcOffset != 0) {
             fprintf(stderr, "WARNING: bitstreamDataOffset=%zu is non-zero for non-VP9 codec, forcing to 0\n",
                     (size_t)srcOffset);
