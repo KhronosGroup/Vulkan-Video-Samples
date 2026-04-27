@@ -102,6 +102,8 @@ struct EncoderConfigAV1 : public EncoderConfig {
         pic_height_in_sbs = DivUp<uint32_t>(encodeHeight, 16);
 
         if ((pic_width_in_sbs > 0) && (pic_height_in_sbs > 0)) {
+            // Initialize profile, level, and tier based on encoder configuration
+            InitProfileLevel();
             return VK_SUCCESS;
         }
 
@@ -111,7 +113,12 @@ struct EncoderConfigAV1 : public EncoderConfig {
 
     virtual VkResult InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx) override;
 
-    virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_AV1_PROFILE_MAIN; }
+    void InitProfileLevel();
+
+    virtual uint32_t GetCodecProfile() override {
+        assert(profile != STD_VIDEO_AV1_PROFILE_INVALID);
+        return static_cast<uint32_t>(profile);
+    }
 
     virtual int8_t InitDpbCount() override;
 
@@ -185,8 +192,8 @@ struct EncoderConfigAV1 : public EncoderConfig {
         return ((encodeWidth * encodeHeight * picSizeProfileFactor) >> 3);
     }
 
-    StdVideoAV1Profile                      profile{ STD_VIDEO_AV1_PROFILE_MAIN };
-    StdVideoAV1Level                        level{ STD_VIDEO_AV1_LEVEL_5_0 };
+    StdVideoAV1Profile                      profile{ STD_VIDEO_AV1_PROFILE_INVALID };
+    StdVideoAV1Level                        level{ STD_VIDEO_AV1_LEVEL_INVALID };
     uint8_t                                 tier{};
     VkVideoEncodeAV1CapabilitiesKHR         av1EncodeCapabilities{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_CAPABILITIES_KHR };
     VkVideoEncodeAV1QualityLevelPropertiesKHR av1QualityLevelProperties{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_QUALITY_LEVEL_PROPERTIES_KHR };
