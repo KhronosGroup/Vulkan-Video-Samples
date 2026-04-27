@@ -84,7 +84,7 @@ private:
             stdDpbSlotInfo->pStdReferenceInfo = stdReferenceInfo;
         };
 
-        virtual void Reset(bool releaseResources = true) {
+        virtual void Reset(bool releaseResources = true) override {
 
             pictureInfo.pNext = nullptr;
 
