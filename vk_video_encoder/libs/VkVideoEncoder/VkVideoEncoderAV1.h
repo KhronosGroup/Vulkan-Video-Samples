@@ -73,7 +73,7 @@ public:
             pictureInfo.pStdPictureInfo = &stdPictureInfo;
         }
 
-        virtual void Reset(bool releaseResources = true) {
+        virtual void Reset(bool releaseResources = true) override {
 
             pictureInfo.pNext = nullptr;
 
