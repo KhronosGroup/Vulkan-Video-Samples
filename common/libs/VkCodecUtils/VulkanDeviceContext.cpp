@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <assert.h>
+#include <cstdlib>
 #include <string.h>
 #include <array>
 #include <iostream>
@@ -444,24 +445,31 @@ bool VulkanDeviceContext::DebugReportCallback(VkDebugReportFlagsEXT flags, VkDeb
                                               uint64_t, size_t,
                                               int32_t msg_code, const char *layer_prefix, const char *msg)
 {
+    // Allow developers to bypass all VVL suppressions for regression hunts.
+    static const bool s_suppressionsDisabled =
+        (std::getenv("VKVS_DISABLE_VVL_SUPPRESSION") != nullptr);
+
+    static std::mutex s_suppressMutex;
+    static std::unordered_set<uint32_t> s_firstSeen;
+
     // Suppress known validation layer false positives (see explanations above).
     // Print the first occurrence of each suppressed id so developers retain
     // visibility that a suppression is active; subsequent occurrences stay silent.
-    for (uint32_t ignoredId : g_ignoredValidationMessageIds) {
-        if (static_cast<uint32_t>(msg_code) == ignoredId) {
-            static std::mutex s_suppressMutex;
-            static std::unordered_set<uint32_t> s_firstSeen;
-            bool firstOccurrence = false;
-            {
-                std::lock_guard<std::mutex> lock(s_suppressMutex);
-                firstOccurrence = s_firstSeen.insert(ignoredId).second;
+    if (!s_suppressionsDisabled) {
+        for (uint32_t ignoredId : g_ignoredValidationMessageIds) {
+            if (static_cast<uint32_t>(msg_code) == ignoredId) {
+                bool firstOccurrence = false;
+                {
+                    std::lock_guard<std::mutex> lock(s_suppressMutex);
+                    firstOccurrence = s_firstSeen.insert(ignoredId).second;
+                }
+                if (firstOccurrence) {
+                    fprintf(stderr,
+                            "[VVL-suppress] %s: %s (messageId=0x%08x, suppressing further occurrences)\n",
+                            layer_prefix, msg, ignoredId);
+                }
+                return false;
             }
-            if (firstOccurrence) {
-                fprintf(stderr,
-                        "[VVL-suppress] %s: %s (messageId=0x%08x, suppressing further occurrences)\n",
-                        layer_prefix, msg, ignoredId);
-            }
-            return false;
         }
     }
 
