@@ -537,6 +537,15 @@ public:
                     if (trackedLayout == VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR ||
                         trackedLayout == VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR) {
                         pDecodedFrame->outputImageLayout = trackedLayout;
+                    } else {
+                        // The tracker should always report DPB_KHR (coincided mode)
+                        // or DST_KHR (distinct mode) at dequeue time. Anything else
+                        // would mean a previous pass left the image in an unexpected
+                        // state and the default DST_KHR transition would be wrong.
+                        fprintf(stderr,
+                                "WARNING: unexpected output image layout %d at dequeue, "
+                                "defaulting to VIDEO_DECODE_DST_KHR\n",
+                                (int)trackedLayout);
                     }
                 }
             }
