@@ -174,6 +174,22 @@ VkResult ElementaryStreamCreate(const char *pFilePath,
                                 VkSharedBaseObj<VideoStreamDemuxer>& videoStreamDemuxer)
 {
     VkSharedBaseObj<ElementaryStream> elementaryStream;
+
+    if (codecType == VK_VIDEO_CODEC_OPERATION_NONE_KHR) {
+        fprintf(stderr, "Error: No video codec specified for %s.\n", pFilePath);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
+    }
+    if (defaultWidth <= 0 || defaultHeight <= 0) {
+        fprintf(stderr, "Error: Invalid video dimensions %dx%d for %s.\n",
+                defaultWidth, defaultHeight, pFilePath);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
+    }
+    if (defaultBitDepth != 8 && defaultBitDepth != 10 && defaultBitDepth != 12) {
+        fprintf(stderr, "Error: Unsupported bit depth %d for %s. Must be 8, 10, or 12.\n",
+                defaultBitDepth, pFilePath);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
+    }
+
     VkResult result = ElementaryStream::Create(pFilePath,
                                                codecType,
                                                defaultWidth,
