@@ -1,3 +1,14 @@
+v0.4.3:
+  - Encoder: fix DPB heap-buffer-overflow and add bounds checking across
+    all codecs; clean up pNext chaining and restore CPU fallback
+  - Decoder: add H.264 picture layout selection and fall back to valid
+    profiles when the demuxer reports an unknown one
+  - Common: fix memory alignment, image pool creation, output filename
+    handling, and descriptor set asserts
+  - Filter: validate --enablePostProcessFilter and fix YCBCR2RGBA shader
+  - Tests/CI: add low-res VP9 sample, auto-compute checksums, bump CI
+    actions, allow build without shaderc
+
 v0.4.2:
   - Fix multiple AV1 decode issues (segmentation flags, DPB slot preservation,
     SIGFPE crash, num_cb_points bounds, film grain detection)
