@@ -425,7 +425,6 @@ public:
         }
 
         if ((pFrameSynchronizationInfo->syncOnFrameConsumerDoneFence  == 1) &&
-             (m_perFrameDecodeImageSet[picId].m_useConsummerSignalSemaphore == 0) &&
              (m_perFrameDecodeImageSet[picId].m_hasConsummerSignalFence == 1) &&
              (m_perFrameDecodeImageSet[picId].m_frameConsumerDoneFence != VK_NULL_HANDLE)) {
 
@@ -529,6 +528,25 @@ public:
                     pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].view = m_perFrameDecodeImageSet[pictureIndex].GetImageView(displayOutImageType);
                     pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].singleLevelView = m_perFrameDecodeImageSet[pictureIndex].GetSingleLevelImageView(displayOutImageType);
                     pDecodedFrame->imageViews[VulkanDisplayFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].inUse = true;
+
+                    VulkanVideoFrameBuffer::PictureResourceInfo displayResInfo{};
+                    m_perFrameDecodeImageSet[pictureIndex].GetImageSetNewLayout(
+                        displayOutImageType, VK_IMAGE_LAYOUT_MAX_ENUM,
+                        nullptr, &displayResInfo);
+                    VkImageLayout trackedLayout = displayResInfo.currentImageLayout;
+                    if (trackedLayout == VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR ||
+                        trackedLayout == VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR) {
+                        pDecodedFrame->outputImageLayout = trackedLayout;
+                    } else {
+                        // The tracker should always report DPB_KHR (coincided mode)
+                        // or DST_KHR (distinct mode) at dequeue time. Anything else
+                        // would mean a previous pass left the image in an unexpected
+                        // state and the default DST_KHR transition would be wrong.
+                        fprintf(stderr,
+                                "WARNING: unexpected output image layout %d at dequeue, "
+                                "defaulting to VIDEO_DECODE_DST_KHR\n",
+                                (int)trackedLayout);
+                    }
                 }
             }
 
@@ -946,14 +964,23 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
         }
     }
 
-    // Create timeline semaphores instead of binary semaphores
+    VkExportSemaphoreCreateInfo exportInfo = {};
+    exportInfo.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
+    exportInfo.pNext = nullptr;
+#ifdef _WIN32
+    exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#else
+    exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+#endif
+
     VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
     timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-    timelineCreateInfo.pNext = nullptr;
+    timelineCreateInfo.pNext = &exportInfo;
     timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
     timelineCreateInfo.initialValue = 0ULL;
 
     VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
+
     if (m_frameCompleteSemaphore == VK_NULL_HANDLE) {
         result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_frameCompleteSemaphore);
         assert(result == VK_SUCCESS);
