@@ -48,7 +48,7 @@ static void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
     --encodeMaxHeight               <integer> : Encoded max height - the maximum content height supported. Used with content resize. \n\
     --minQp                         <integer> : Minimum QP value in the range [0, 51] \n\
     --maxQp                         <integer> : Maximum QP value in the range [0, 51] \n\
-    --qpMap                         <string>  : selct quantization map type : deltaQpMap or emaphasisMap \n\
+    --qpMap                         <string>  : select quantization map type : deltaQpMap or emphasisMap \n\
     --qpMapFileName                 <string>  : quantization map file name \n\
     --gopFrameCount                 <integer> : Number of frame in the GOP, default 16\n\
     --idrPeriod                     <integer> : Number of frame between 2 IDR frame, default 60\n\

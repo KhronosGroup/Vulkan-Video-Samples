@@ -39,7 +39,7 @@ from tests.libs.video_test_fetch_sample import (
 )
 
 
-@dataclass(init=False)
+@dataclass
 # pylint: disable=too-many-instance-attributes
 class EncodeTestSample(BaseTestConfig):
     """Configuration for an encode test with YUV file information"""
@@ -47,21 +47,16 @@ class EncodeTestSample(BaseTestConfig):
     source_format: str = "yuv"  # "yuv" or "y4m"
     width: int = 0
     height: int = 0
+    qpmap: str = ""
+    qpmap_filepath: str = ""
 
-    def __init__(
-        self,
-        profile: Optional[str] = None,
-        source_format: str = "yuv",
-        width: int = 0,
-        height: int = 0,
-        **kwargs,
-    ):
-        """Initialize EncodeTestSample with all fields from base and child"""
-        super().__init__(**kwargs)
-        self.profile = profile
-        self.source_format = source_format
-        self.width = width
-        self.height = height
+    def __post_init__(self):
+        if bool(self.qpmap) != bool(self.qpmap_filepath):
+            raise ValueError(
+                f"{self.name}: qpmap and qpmap_filepath must both be set "
+                f"or both omitted (got qpmap={self.qpmap!r}, "
+                f"filepath={self.qpmap_filepath!r})"
+            )
 
     @classmethod
     def from_dict(cls, data: dict) -> 'EncodeTestSample':
@@ -72,6 +67,8 @@ class EncodeTestSample(BaseTestConfig):
             source_format=data.get("source_format", "yuv"),
             width=data.get("width", 0),
             height=data.get("height", 0),
+            qpmap=data.get("qpmap", ""),
+            qpmap_filepath=data.get("qpmap_filepath", ""),
         )
 
     @property
@@ -84,6 +81,14 @@ class EncodeTestSample(BaseTestConfig):
         """Get the full path to the YUV file"""
         resources_dir = Path(__file__).parent.parent / "resources"
         return resources_dir / self.source_filepath
+
+    @property
+    def full_qpmap_path(self) -> Optional[Path]:
+        """Get the full path to the QP map file, or None if not set"""
+        if not self.qpmap_filepath:
+            return None
+        resources_dir = Path(__file__).parent.parent / "resources"
+        return resources_dir / self.qpmap_filepath
 
     def yuv_exists(self) -> bool:
         """Check if the YUV file exists"""
@@ -266,6 +271,12 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
         # Add extra arguments
         if config.extra_args:
             cmd.extend(config.extra_args)
+
+        # Append --qpMap and --qpMapFileName if a QP map is configured
+        qpmap_path = config.full_qpmap_path
+        if qpmap_path is not None:
+            cmd.extend(["--qpMap", config.qpmap,
+                        "--qpMapFileName", str(qpmap_path)])
 
         # Output file to results folder
         output_file = self.results_dir / (

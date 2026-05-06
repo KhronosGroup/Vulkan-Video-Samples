@@ -609,8 +609,12 @@ public:
 
         const uint64_t mappedLength = (uint64_t)m_memMapedFile.mapped_length();
         if (mappedLength < fileOffset) {
-            printf("File overflow at fileOffset %llu\n",  (unsigned long long int)fileOffset);
-            assert(!"Input file overflow");
+            fprintf(stderr,
+                    "QP map file overflow: requested offset %llu exceeds file size %llu. "
+                    "The file is too small for the driver's reported QP map texel size and format. "
+                    "Regenerate it with the values printed by --verbose at encoder init time.\n",
+                    (unsigned long long int)fileOffset,
+                    (unsigned long long int)mappedLength);
             return nullptr;
         }
         return m_memMapedFile.data() + fileOffset;
