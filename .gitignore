@@ -41,3 +41,4 @@ vk_video_decoder/bin/libs/ffmpeg/
 BUILD*
 tests/resources/
 tests/results/
+node_modules/
