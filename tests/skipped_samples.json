@@ -124,48 +124,6 @@
   ],
   "encode": [
     {
-      "name": "h265_main10_profile",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "Capabilities issue",
-      "bug_url": "",
-      "date_added": "2026-01-16"
-    },
-    {
-      "name": "h264_cbr_ratecontrol",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "the driver does not support rate control such as cbr or vbr",
-      "bug_url": "",
-      "date_added": "2026-01-19"
-    },
-    {
-      "name": "h264_vbr_ratecontrol",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "the driver does not support rate control such as cbr or vbr",
-      "bug_url": "",
-      "date_added": "2026-01-19"
-    },
-    {
       "name": "h265_default",
       "format": "vvs",
       "drivers": [

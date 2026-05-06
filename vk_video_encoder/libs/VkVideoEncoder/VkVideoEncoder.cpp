@@ -108,6 +108,9 @@ VkResult VkVideoEncoder::LoadNextQpMapFrameFromFile(VkSharedBaseObj<VkVideoEncod
         uint32_t qpMapHeight = (m_encoderConfig->encodeHeight + m_qpMapTexelSize.height - 1) / m_qpMapTexelSize.height;
         uint64_t qpMapFileOffset = qpMapWidth * qpMapHeight * encodeFrameInfo->frameInputOrderNum * formatSize;
         const uint8_t* pQpMapData = m_encoderConfig->qpMapFileHandler.GetMappedPtr(qpMapFileOffset);
+        if (pQpMapData == nullptr) {
+            return VK_ERROR_INITIALIZATION_FAILED;
+        }
 
         const VkSubresourceLayout* dstQpMapSubresourceLayout = dstQpMapImageResource->GetSubresourceLayout();
 
@@ -773,8 +776,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                        m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                        encoderConfig->codec)) {
         std::cout << "*** The video codec " << VkVideoCoreProfile::CodecToName(encoderConfig->codec) << " is not supported! ***" << std::endl;
-        assert(!"The video codec is not supported");
-        return VK_ERROR_INITIALIZATION_FAILED;
+        return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 
     m_encoderConfig = encoderConfig;
@@ -796,6 +798,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         printf("+-------------------------------------------+\n");
         printf("|         Encoder Capabilities              |\n");
         printf("+---------------------------+---------------+\n");
+        printf("| flags                     | %13u |\n", encCaps.flags);
         printf("| minCodedExtent            | %5u x %-5u |\n",
                vidCaps.minCodedExtent.width, vidCaps.minCodedExtent.height);
         printf("| maxCodedExtent            | %5u x %-5u |\n",
@@ -809,6 +812,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         printf("| maxQualityLevels          | %13u |\n", encCaps.maxQualityLevels);
         printf("| maxRateControlLayers      | %13u |\n", encCaps.maxRateControlLayers);
         printf("| maxBitrate                | %13" PRIu64 " |\n", encCaps.maxBitrate);
+        printf("| rateControlModes          | %13u |\n", encCaps.rateControlModes);
         printf("| minBitstreamBufferOffset  | %13" PRIu64 " |\n", vidCaps.minBitstreamBufferOffsetAlignment);
         printf("| minBitstreamBufferSize    | %13" PRIu64 " |\n", vidCaps.minBitstreamBufferSizeAlignment);
         printf("+---------------------------+---------------+\n");
@@ -818,7 +822,22 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         std::cerr << "Quality level " << encoderConfig->qualityLevel
                   << " is greater than the maximum supported quality level "
                   << (encoderConfig->videoEncodeCapabilities.maxQualityLevels - 1) << std::endl;
-        return VK_ERROR_INITIALIZATION_FAILED;
+        return VK_ERROR_FEATURE_NOT_PRESENT;
+    }
+
+    // Validate user-requested rate control mode against advertised capabilities.
+    // DEFAULT_KHR (0) means the driver picks; FLAG_BITS_MAX_ENUM_KHR is the
+    // sentinel meaning "unset" and will be resolved later from
+    // qualityLevelProperties.preferredRateControlMode. Both are skipped here.
+    if (encoderConfig->rateControlMode != VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR &&
+        encoderConfig->rateControlMode != VK_VIDEO_ENCODE_RATE_CONTROL_MODE_FLAG_BITS_MAX_ENUM_KHR &&
+        (encoderConfig->videoEncodeCapabilities.rateControlModes & encoderConfig->rateControlMode) == 0) {
+        fprintf(stderr,
+                "\nInitEncoder Error: rate control mode 0x%x is not supported by the implementation "
+                "(advertised rateControlModes: 0x%x)\n",
+                encoderConfig->rateControlMode,
+                encoderConfig->videoEncodeCapabilities.rateControlModes);
+        return VK_ERROR_FEATURE_NOT_PRESENT;
     }
 
     if (encoderConfig->useDpbArray == false &&
@@ -832,14 +851,12 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         if ((m_encoderConfig->qpMapMode == EncoderConfig::DELTA_QP_MAP) &&
             ((m_encoderConfig->videoEncodeCapabilities.flags & VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR) == 0)) {
                 std::cout << "Delta QP Map was requested, but the implementation does not support it!" << std::endl;
-                assert(!"Delta QP Map is not supported");
-                return VK_ERROR_INITIALIZATION_FAILED;
+                return VK_ERROR_FEATURE_NOT_PRESENT;
         }
         if ((m_encoderConfig->qpMapMode == EncoderConfig::EMPHASIS_MAP) &&
             ((m_encoderConfig->videoEncodeCapabilities.flags & VK_VIDEO_ENCODE_CAPABILITY_EMPHASIS_MAP_BIT_KHR) == 0)) {
                 std::cout << "Emphasis Map was requested, but the implementation does not support it!" << std::endl;
-                assert(!"Emphasis QP Map is not supported");
-                return VK_ERROR_INITIALIZATION_FAILED;
+                return VK_ERROR_FEATURE_NOT_PRESENT;
         }
     }
 
@@ -849,7 +866,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
         if (!VulkanVideoCapabilities::IsVideoEncodeIntraRefreshSupported(m_vkDevCtx)) {
             std::cout << "Intra-refresh has been requested, but the implementation does not support it." << std::endl;
-            return VK_ERROR_INITIALIZATION_FAILED;
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
         switch (m_encoderConfig->intraRefreshMode) {
@@ -875,7 +892,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
         if ((mode & m_encoderConfig->intraRefreshCapabilities.intraRefreshModes) == 0) {
             std::cout << modeString << " intra-refresh was requested, but the implementation does not support it." << std::endl;
-            return VK_ERROR_INITIALIZATION_FAILED;
+            return VK_ERROR_FEATURE_NOT_PRESENT;
         }
 
         if (m_encoderConfig->intraRefreshCycleDuration >
@@ -883,7 +900,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             std::cout << "The requested intra-refresh cycle duration is greater than the maximum ("
                       << m_encoderConfig->intraRefreshCapabilities.maxIntraRefreshCycleDuration
                       << ") supported by the implementation" << std::endl;
-            return VK_ERROR_INITIALIZATION_FAILED;
+            return VK_ERROR_FEATURE_NOT_PRESENT;
         }
     }
 
@@ -993,6 +1010,13 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         m_imageQpMapFormat = supportedQpMapFormats[0];
         m_qpMapTexelSize = supportedQpMapTexelSize[0];
         m_qpMapTiling = supportedQpMapTiling[0];
+
+        if (encoderConfig->verbose) {
+            printf("QP map: format=%d, texelSize=%ux%u, formatSize=%zu bytes\n",
+                   (int)m_imageQpMapFormat,
+                   m_qpMapTexelSize.width, m_qpMapTexelSize.height,
+                   getFormatTexelSize(m_imageQpMapFormat));
+        }
     }
 
     if (encoderConfig->encodeWidth < encoderConfig->videoCapabilities.minCodedExtent.width ||

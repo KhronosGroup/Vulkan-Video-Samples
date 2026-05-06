@@ -116,6 +116,21 @@
       "source_filepath": "video/yuv/352x288_15_i420.yuv"
     },
     {
+      "name": "h264_quality_level",
+      "codec": "h264",
+      "profile": "high",
+      "extra_args": [
+        "--qualityLevel",
+        "4"
+      ],
+      "description": "Test H.264 quality level",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
       "name": "h264_small_frame",
       "codec": "h264",
       "profile": "main",
@@ -320,6 +335,37 @@
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/7680x4320_420_8le.yuv",
       "source_checksum": "0a7799afe89ad34aeb62b293c4c310a9a15c34961e9203a8499027ad775929b0",
       "source_filepath": "video/yuv/7680x4320_420_8le.yuv"
+    },
+    {
+      "name": "h264_qpmap",
+      "codec": "h264",
+      "profile": "main",
+      "extra_args": null,
+      "qpmap": "deltaQpMap",
+      "qpmap_filepath": "qpmap/352x288_15_deltaqp.bin",
+      "description": "Test H.264 encoding with delta QP map (zero-filled, neutral); rejected as unsupported on drivers lacking the capability",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h264_intrarefresh",
+      "codec": "h264",
+      "profile": "main",
+      "extra_args": [
+        "--intraRefreshMode",
+        "picpartition",
+        "--intraRefreshCycleDuration",
+        "30"
+      ],
+      "description": "Test H.264 encoding rejects intra-refresh when not supported by the implementation",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
     }
   ]
 }
