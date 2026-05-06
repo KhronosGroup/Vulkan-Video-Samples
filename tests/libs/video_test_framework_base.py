@@ -408,7 +408,7 @@ class VulkanVideoTestFrameworkBase:
             return self.results_dir
         return None
 
-    def _result_to_dict(self, result: TestResult, test_type: str) -> dict:
+    def result_to_dict(self, result: TestResult, test_type: str) -> dict:
         """Convert a TestResult to a dictionary for JSON export."""
         test_name = (result.config.display_name
                      if hasattr(result.config, 'display_name')
@@ -438,10 +438,6 @@ class VulkanVideoTestFrameworkBase:
             result_dict["profile"] = result.config.profile
 
         return result_dict
-
-    def result_to_dict(self, result: TestResult, test_type: str) -> dict:
-        """Public wrapper for converting a TestResult to dictionary form."""
-        return self._result_to_dict(result, test_type)
 
     def export_results_json(self, output_file: str, test_type: str) -> bool:
         """Export test results to JSON file. Returns True on success."""

@@ -31,14 +31,30 @@ def get_status_display(status: VideoTestStatus) -> tuple:
         Tuple of (status_text, status_symbol)
     """
     if status == VideoTestStatus.SUCCESS:
-        return "PASS", "✓"
+        return "PASS", "✔️"
     if status == VideoTestStatus.NOT_SUPPORTED:
         return "N/S", "○"
     if status == VideoTestStatus.CRASH:
         return "CRASH", "💥"
     if status == VideoTestStatus.SKIPPED:
         return "SKIP", "⊘"
-    return "FAIL", "✗"
+    return "FAIL", "❌"
+
+
+def get_status_symbol_from_str(status) -> str:
+    """Return the symbol for a status, accepting either a status string
+    (e.g. "success") or a VideoTestStatus enum value.
+    """
+    if isinstance(status, VideoTestStatus):
+        status = status.value
+    symbols = {
+        VideoTestStatus.SUCCESS.value: "✔️",
+        VideoTestStatus.NOT_SUPPORTED.value: "○",
+        VideoTestStatus.CRASH.value: "💥",
+        VideoTestStatus.SKIPPED.value: "⊘",
+        VideoTestStatus.ERROR.value: "❌",
+    }
+    return symbols.get(status, status)
 
 
 def print_codec_breakdown(codec_results: dict) -> None:
@@ -77,39 +93,40 @@ def print_detailed_results(results: List[TestResult]) -> None:
         )
 
 
-def print_final_summary(counts: tuple, test_type: str) -> bool:
+def print_final_summary(counts: tuple, test_type: str = "") -> bool:
     """Print final summary and return success status
 
     Args:
         counts: Tuple of (passed, not_supported, crashed, failed)
-        test_type: Type of test (e.g., "decoder", "encoder")
+        test_type: Type of test (e.g., "decoder", "encoder"). When empty,
+                   the type label is omitted from the messages.
 
     Returns:
         True if all tests passed (or only not supported), False otherwise
     """
     passed, not_supported, crashed, failed = counts
     total_errors = failed + crashed
-    test_type_upper = test_type.upper()
+    label = f"{test_type.upper()} " if test_type else ""
 
     if total_errors == 0:
         if not_supported > 0:
             print(
-                f"\n✓ ALL TESTS COMPLETED - {passed} passed, "
+                f"\n✔️ ALL TESTS COMPLETED - {passed} passed, "
                 f"{not_supported} not supported by hardware/driver"
             )
         else:
-            print(f"\n🎉 ALL {test_type_upper} TESTS PASSED!")
+            print(f"\n🎉 ALL {label}TESTS PASSED!")
         return True
 
     if crashed > 0 and failed > 0:
         print(
-            f"\n💥 {crashed} {test_type_upper} TEST(S) CRASHED, "
+            f"\n💥 {crashed} {label}TEST(S) CRASHED, "
             f"{failed} FAILED!"
         )
     elif crashed > 0:
-        print(f"\n💥 {crashed} {test_type_upper} TEST(S) CRASHED!")
+        print(f"\n💥 {crashed} {label}TEST(S) CRASHED!")
     else:
-        print(f"\n✗ {failed} {test_type_upper} TEST(S) FAILED!")
+        print(f"\n❌ {failed} {label}TEST(S) FAILED!")
     return False
 
 
