@@ -27,6 +27,7 @@ if __package__ is None or __package__ == "":
     sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent))
 
 import json
+import csv
 from pathlib import Path
 from typing import List, Tuple, Optional
 from enum import Enum
@@ -57,6 +58,11 @@ from tests.libs.video_test_framework_encode import (
 from tests.libs.video_test_framework_decode import (
     VulkanVideoDecodeTestFramework,
     DecodeTestSample,
+)
+
+from tests.libs.video_test_result_reporter import (
+    get_status_symbol_from_str,
+    print_final_summary,
 )
 
 
@@ -358,34 +364,21 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
                     total_enabled += 1
         return total_enabled
 
-    def _print_final_status(self, overall_success: bool,
-                            test_counts: dict) -> None:
-        """Print final status message
+    def _print_final_status(self, test_counts: dict) -> None:
+        """Print final status message via the shared print_final_summary.
 
         Args:
-            overall_success: Whether all tests passed
             test_counts: Dict with keys 'passed', 'not_supported',
-                        'crashed', 'failed'
+                         'crashed', 'failed'
         """
-        passed = test_counts['passed']
-        not_supported = test_counts['not_supported']
-        crashed = test_counts['crashed']
-        failed = test_counts['failed']
-
-        if overall_success:
-            if not_supported > 0:
-                print(f"\n✓ ALL TESTS COMPLETED - {passed} passed, "
-                      f"{not_supported} not supported by "
-                      f"hardware/driver")
-            else:
-                print("\n🎉 ALL TESTS PASSED!")
-        elif crashed > 0 and failed > 0:
-            print(f"\n💥 {crashed} TEST(S) CRASHED, "
-                  f"{failed} FAILED!")
-        elif crashed > 0:
-            print(f"\n💥 {crashed} TEST(S) CRASHED!")
-        else:
-            print(f"\n✗ {failed} TEST(S) FAILED!")
+        print_final_summary(
+            (
+                test_counts['passed'],
+                test_counts['not_supported'],
+                test_counts['crashed'],
+                test_counts['failed'],
+            ),
+        )
 
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     def print_summary(self, encode_results: Optional[List] = None,
@@ -455,7 +448,6 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
 
         overall_success = encode_success and decode_success
         self._print_final_status(
-            overall_success,
             {
                 'passed': total_passed,
                 'not_supported': total_not_supported,
@@ -474,7 +466,7 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             # Combine results from both frameworks using base class helper
             if self.encode_framework:
                 for result in self.encode_framework.results:
-                    result_dict = self.encode_framework._result_to_dict(
+                    result_dict = self.encode_framework.result_to_dict(
                         result,
                         "encoder",
                     )
@@ -482,7 +474,7 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
 
             if self.decode_framework:
                 for result in self.decode_framework.results:
-                    result_dict = self.decode_framework._result_to_dict(
+                    result_dict = self.decode_framework.result_to_dict(
                         result,
                         "decoder",
                     )
@@ -513,6 +505,42 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
                     "results": combined_results
                 }, f, indent=2)
 
+            print(f"✓ Results exported to {output_file}")
+            return True
+
+        except (OSError, IOError) as e:
+            print(f"✗ Failed to export results: {e}")
+            return False
+
+    def export_results_csv(self, output_file: str) -> bool:
+        """Export test results to CSV file"""
+        try:
+            combined_results = []
+            # Combine results from both frameworks using base class helper
+            if self.encode_framework:
+                for result in self.encode_framework.results:
+                    result_dict = self.encode_framework.result_to_dict(
+                        result,
+                        "encoder",
+                    )
+                    combined_results.append(result_dict)
+
+            if self.decode_framework:
+                for result in self.decode_framework.results:
+                    result_dict = self.decode_framework.result_to_dict(
+                        result,
+                        "decoder",
+                    )
+                    combined_results.append(result_dict)
+            Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, mode="w", encoding="utf8",
+                      newline="") as file:
+                writer = csv.writer(file, delimiter="|")
+                for r in combined_results:
+                    res_row = []
+                    res_row.append(r["name"])
+                    res_row.append(get_status_symbol_from_str(r["status"]))
+                    writer.writerow(res_row)
             print(f"✓ Results exported to {output_file}")
             return True
 
@@ -626,6 +654,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--export-json", "-j",
         help="Export results to JSON file")
+    parser.add_argument(
+        "--export-csv",
+        help="Export results to CSV file")
     parser.add_argument(
         "--codec", "-c",
         choices=["h264", "h265", "av1", "vp9"],
@@ -840,6 +871,11 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
         if not json_path.is_absolute():
             json_path = Path.cwd() / json_path
         framework.export_results_json(str(json_path))
+    if args.export_csv:
+        csv_path = Path(args.export_csv)
+        if not csv_path.is_absolute():
+            csv_path = Path.cwd() / csv_path
+        framework.export_results_csv(str(csv_path))
 
     return success
 
