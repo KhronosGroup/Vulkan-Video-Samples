@@ -1019,7 +1019,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     encoderConfig->encodeAlignedHeight = vk::alignedSize (encoderConfig->encodeHeight, encoderConfig->videoCapabilities.pictureAccessGranularity.height);
 
     const uint32_t maxActiveReferencePicturesCount = encoderConfig->videoCapabilities.maxActiveReferencePictures;
-    const uint32_t maxDpbPicturesCount = std::min<uint32_t>(m_maxDpbPicturesCount, encoderConfig->videoCapabilities.maxDpbSlots);
+    m_maxDpbPicturesCount = std::min<uint32_t>(m_maxDpbPicturesCount, encoderConfig->videoCapabilities.maxDpbSlots);
 
     VkVideoSessionCreateFlagsKHR sessionCreateFlags{};
     void* sessionCreateInfoChain = nullptr;
@@ -1074,7 +1074,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                            m_imageInFormat,
                                            m_maxCodedExtent,
                                            m_imageDpbFormat,
-                                           maxDpbPicturesCount,
+                                           m_maxDpbPicturesCount,
                                            maxActiveReferencePicturesCount) ) {
 
         result = VulkanVideoSession::Create( m_vkDevCtx,
@@ -1084,7 +1084,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                              m_imageInFormat,
                                              m_maxCodedExtent,
                                              m_imageDpbFormat,
-                                             maxDpbPicturesCount,
+                                             m_maxDpbPicturesCount,
                                              maxActiveReferencePicturesCount,
                                              sessionCreateInfoChain,
                                              m_videoSession);
@@ -1304,7 +1304,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     uint32_t numEncodeImagesInFlight = std::max<uint32_t>(m_holdRefFramesInQueue + m_holdRefFramesInQueue * m_encoderConfig->gopStructure.GetConsecutiveBFrameCount(), 4);
     result = m_dpbImagePool->Configure(m_vkDevCtx,
-                                       std::max<uint32_t>(maxDpbPicturesCount, maxActiveReferencePicturesCount) + numEncodeImagesInFlight,
+                                       std::max<uint32_t>(m_maxDpbPicturesCount, maxActiveReferencePicturesCount) + numEncodeImagesInFlight,
                                        m_imageDpbFormat,
                                        imageExtent,
                                        dpbImageUsage,
