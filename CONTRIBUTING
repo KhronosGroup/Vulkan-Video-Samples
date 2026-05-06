@@ -39,6 +39,17 @@ ci: add commit message validation workflow
 
 Commit messages are automatically validated on pull requests via commitlint. See `commitlint.config.js` for the full ruleset.
 
+To validate commit messages locally before pushing, install commitlint:                                                                                                             
+                                                                                                                                                                                          
+```                                                                                                                                                                                 
+npm install --save-dev @commitlint/cli @commitlint/config-conventional                                                                                                              
+```                                                                                                                                                                                 
+                                                                                                                                                                                          
+Then check the latest commit with:                                                                                                                                                  
+                                                                                                                                                                                       
+```                                                                                                                                                                                 
+npx commitlint --from=HEAD~1    
+```
 ---
 
 ## Pull Request Guidelines
