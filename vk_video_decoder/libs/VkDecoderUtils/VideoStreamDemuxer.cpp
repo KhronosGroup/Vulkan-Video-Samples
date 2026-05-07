@@ -37,12 +37,10 @@ VkResult VideoStreamDemuxer::Create(const char *pFilePath,
                                    defaultBitDepth,
                                    videoStreamDemuxer);
     }  else
+#else
+    fprintf(stdout, "Note: This build does not include FFmpeg demuxer support.\n");
 #endif // FFMPEG_DEMUXER_SUPPORT
     {
-        assert(codecType != VK_VIDEO_CODEC_OPERATION_NONE_KHR);
-        assert(defaultWidth > 0);
-        assert(defaultHeight > 0);
-        assert((defaultBitDepth == 8) || (defaultBitDepth == 10) || (defaultBitDepth == 12));
         return ElementaryStreamCreate(pFilePath,
                                       codecType,
                                       defaultWidth,
