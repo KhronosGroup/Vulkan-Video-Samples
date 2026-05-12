@@ -816,6 +816,15 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
             feedback2Features.pNext = pNext;
             pNext = (VkBaseInStructure*)&feedback2Features;
         }
+        VkPhysicalDeviceVideoMaintenance2FeaturesKHR videoMaintenance2Features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_MAINTENANCE_2_FEATURES_KHR,
+                                                                                 nullptr,
+                                                                                 VK_FALSE
+                                                                               };
+        // The encoder device does not enable this extension.
+        if (FindRequiredDeviceExtension(VK_KHR_VIDEO_MAINTENANCE_2_EXTENSION_NAME)) {
+            videoMaintenance2Features.pNext = pNext;
+            pNext = (VkBaseInStructure*)&videoMaintenance2Features;
+        }
 
         VkPhysicalDeviceTimelineSemaphoreFeatures timelineSemaphoreFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
                                                                               pNext,
@@ -845,6 +854,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
 
         VkPhysicalDeviceFeatures2 deviceFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &quantizationMapFeatures};
         GetPhysicalDeviceFeatures2(m_physDevice, &deviceFeatures);
+        m_videoMaintenance2Enabled = (videoMaintenance2Features.videoMaintenance2 != VK_FALSE);
 
         CHECK_VULKAN_FEATURE(timelineSemaphoreFeatures.timelineSemaphore, "timelineSemaphore", false);
         CHECK_VULKAN_FEATURE(videoMaintenance1Features.videoMaintenance1, "videoMaintenance1", true);
@@ -986,6 +996,7 @@ VulkanDeviceContext::VulkanDeviceContext()
     , m_videoDecodeQueryResultStatusSupport(false)
     , m_videoEncodeQueryResultStatusSupport(false)
     , m_videoEncodeFeedback2Enabled(false)
+    , m_videoMaintenance2Enabled(false)
     , m_device()
     , m_gfxQueue()
     , m_computeQueue()
@@ -1175,6 +1186,7 @@ VkResult VulkanDeviceContext::InitVulkanDecoderDevice(const char * pAppName,
         VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
         VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
         VK_KHR_VIDEO_MAINTENANCE_1_EXTENSION_NAME,
+        VK_KHR_VIDEO_MAINTENANCE_2_EXTENSION_NAME,
         nullptr
     };
 
