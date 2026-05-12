@@ -163,6 +163,8 @@ public:
 
     void SetDryRun(bool dryRun) { m_dryRun = dryRun ? VK_TRUE : VK_FALSE; }
 
+    void SetUseInlineSessionParameters(bool enable) { m_useInlineSessionParameters = enable ? VK_TRUE : VK_FALSE; }
+
     virtual int32_t AddRef();
     virtual int32_t Release();
 
@@ -237,6 +239,7 @@ private:
         , m_dumpDecodeData(VK_FALSE)
         , m_verbose(VK_FALSE)
         , m_dryRun(VK_FALSE)
+        , m_useInlineSessionParameters(VK_FALSE)
         , m_numImageTypes(1) // At least the decoder requires images for DPB
         , m_numImageTypesEnabled(DecodeFrameBufferIf::IMAGE_TYPE_MASK_DECODE_DPB)
         , m_imageSpecsIndex()
@@ -345,6 +348,7 @@ private:
     uint32_t m_dumpDecodeData : 1;
     uint32_t m_verbose : 1;
     uint32_t m_dryRun : 1;
+    uint32_t m_useInlineSessionParameters : 1;
     uint32_t m_numImageTypes;
     uint32_t m_numImageTypesEnabled;
     DecodeFrameBufferIf::ImageSpecsIndex m_imageSpecsIndex;

@@ -20,6 +20,18 @@
       "source_filepath": "video/avc/clip-a.h264"
     },
     {
+      "name": "h264_clip_a_no_inline_params",
+      "codec": "h264",
+      "description": "Test H.264 decoding with session parameters objects (inline session parameters disabled)",
+      "extra_args": [
+        "--noInlineParams"
+      ],
+      "expected_output_md5": "9a629a99a9870197022265fcb1fc4bb2",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/avc/clip-a.h264",
+      "source_checksum": "b119d5d667eb7791613d0e39f375b61f0fa41baa5ee1f216a678e0483c69333c",
+      "source_filepath": "video/avc/clip-a.h264"
+    },
+    {
       "name": "h264_clip_a_max10frames",
       "codec": "h264",
       "description": "Test H.264 decoding with max 10 frames limit",
@@ -120,6 +132,19 @@
       "source_filepath": "video/hevc/clip-d.h265"
     },
     {
+      "name": "h265_clip_d_no_inline_params",
+      "codec": "h265",
+      "description": "Test H.265 decoding with session parameters objects (inline session parameters disabled)",
+      "extra_args": [
+        "--noInlineParams"
+      ],
+      "expected_output_crc": "491789f3",
+      "expected_output_md5": "9a629a99a9870197022265fcb1fc4bb2",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/hevc/clip-d.h265",
+      "source_checksum": "d7db8cb323e10c5e30667b141554e88bab3bacf6bc878b544866867b76c3d35a",
+      "source_filepath": "video/hevc/clip-d.h265"
+    },
+    {
       "name": "h265_itu_slist_a",
       "codec": "h265",
       "description": "Test H.265 decoding with ITU slist-a sample",
@@ -150,6 +175,18 @@
       "name": "av1_basic_8bit",
       "codec": "av1",
       "description": "Test AV1 decoding with 8-bit basic sample",
+      "expected_output_md5": "29acd067561df7acee5837e5e3359d8c",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/av1/av1-176x144-main-basic-8.ivf",
+      "source_checksum": "798b52f372a95b4da01334ba97c651e8c2e21e887180f6ad401cf9d4e3a15aa7",
+      "source_filepath": "video/av1/av1-176x144-main-basic-8.ivf"
+    },
+    {
+      "name": "av1_basic_8bit_no_inline_params",
+      "codec": "av1",
+      "description": "Test AV1 decoding with session parameters objects (inline session parameters disabled)",
+      "extra_args": [
+        "--noInlineParams"
+      ],
       "expected_output_md5": "29acd067561df7acee5837e5e3359d8c",
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/av1/av1-176x144-main-basic-8.ivf",
       "source_checksum": "798b52f372a95b4da01334ba97c651e8c2e21e887180f6ad401cf9d4e3a15aa7",

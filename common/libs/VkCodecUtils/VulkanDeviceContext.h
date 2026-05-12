@@ -118,6 +118,7 @@ public:
         }
     }
     bool GetVideoEncodeFeedback2Enabled() const { return m_videoEncodeFeedback2Enabled; }
+    bool GetVideoMaintenance2Enabled() const { return m_videoMaintenance2Enabled; }
     class MtQueueMutex {
 
     public:
@@ -349,6 +350,7 @@ private:
     uint32_t m_videoDecodeQueryResultStatusSupport : 1;
     uint32_t m_videoEncodeQueryResultStatusSupport : 1;
     uint32_t m_videoEncodeFeedback2Enabled : 1;
+    uint32_t m_videoMaintenance2Enabled : 1;
     VkDevice                m_device;
     VkQueue                 m_gfxQueue;
     VkQueue                 m_computeQueue;

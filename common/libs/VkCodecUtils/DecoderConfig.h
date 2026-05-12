@@ -79,6 +79,7 @@ struct DecoderConfig {
         outputy4m = false;
         outputcrcPerFrame = false;
         outputcrc = false;
+        useInlineSessionParameters = true;
         crcOutputFileName.clear();
     }
 
@@ -377,6 +378,12 @@ struct DecoderConfig {
                     crcInitValue = crcInitValueTemp;
                     return true;
                 }},
+            {"--noInlineParams", nullptr, 0,
+                "Use session parameters objects even when VK_KHR_video_maintenance2 inline session parameters are supported",
+                [this](const char **, const ProgramArgs &) {
+                    useInlineSessionParameters = false;
+                    return true;
+                }},
         };
 
         for (int i = 1; i < argc; i++) {
@@ -490,6 +497,7 @@ struct DecoderConfig {
     uint32_t outputy4m : 1;
     uint32_t outputcrc : 1;
     uint32_t outputcrcPerFrame : 1;
+    uint32_t useInlineSessionParameters : 1;
 };
 
 #endif /* _PROGRAMSETTINGS_H_ */
