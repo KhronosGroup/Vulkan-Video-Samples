@@ -228,7 +228,7 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
                                                                                  av1QualityLevelProperties);
     if (result != VK_SUCCESS) {
         std::cout << "*** Could not get Video Encode QualityLevel Properties :" << result << " ***" << std::endl;
-        assert(!"Could not get Video Encode QualityLevel Properties");
+        VKVS_FAIL("Could not get Video Encode QualityLevel Properties");
         return result;
     }
 

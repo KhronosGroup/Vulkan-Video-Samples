@@ -125,7 +125,7 @@ int8_t VkEncDpbH265::DpbPictureStart(uint64_t frameId, const StdVideoEncodeH265P
             break;
     }
     if (m_curDpbIndex >= m_dpbSize) {
-        assert(!"Dpb index out of bounds");
+        VKVS_FAIL("Dpb index out of bounds");
         return false;
     }
 
@@ -217,7 +217,7 @@ void VkEncDpbH265::DpbBumping() {
     }
 
     if (dpbIndxWithMinPoc < 0) {
-        assert(!"Invalid Dpb state");
+        VKVS_FAIL("Invalid Dpb state");
         return;
     }
 
@@ -429,7 +429,7 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
         if (pRefPicSet->ltCurr[i] != -1) {
             // encoder driver should have already done the reference picture marking process
             if (m_stDpb[pRefPicSet->ltCurr[i]].marking != 2) {
-                assert(!"Forcing reference picture marking to be used as long term");
+                VKVS_FAIL("Forcing reference picture marking to be used as long term");
                 m_stDpb[pRefPicSet->ltCurr[i]].marking = 2;
             }
         }
@@ -439,7 +439,7 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
         if (pRefPicSet->ltFoll[i] != -1) {
             // encoder driver should have already done the reference picture marking process
             if (m_stDpb[pRefPicSet->ltCurr[i]].marking != 2) {
-                assert(!"Forcing reference picture marking to be used as long term");
+                VKVS_FAIL("Forcing reference picture marking to be used as long term");
                 m_stDpb[pRefPicSet->ltCurr[i]].marking = 2;
             }
         }
@@ -751,7 +751,7 @@ void VkEncDpbH265::InitializeShortTermRPSPFrame(int32_t numPocLtCurr,
         assert((numPocStCurrBefore + numPocStCurrAfter + numPocLtCurr) == 0);
     } else {
         if ((numPocStCurrBefore + numPocStCurrAfter + numPocLtCurr) == 0) {
-            assert(!"Invalid configuration - no reference pictures selected for inter picture");
+            VKVS_FAIL("Invalid configuration - no reference pictures selected for inter picture");
             return;
         }
     }

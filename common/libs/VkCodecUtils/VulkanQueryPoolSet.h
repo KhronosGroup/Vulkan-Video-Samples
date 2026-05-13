@@ -41,7 +41,7 @@ public:
 
         VkResult result = vkDevCtx->CreateQueryPool(*vkDevCtx, &queryPoolCreateInfo, NULL, &m_queryPool);
         if (result != VK_SUCCESS) {
-            assert(!"Failed to create query pool!");
+            VKVS_FAIL("Failed to create query pool!");
             return result;
         }
 

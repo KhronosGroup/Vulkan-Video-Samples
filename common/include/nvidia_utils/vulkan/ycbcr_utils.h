@@ -21,6 +21,7 @@
 #include <cassert>
 #include <math.h>
 #include <sstream>
+#include "VkVSCommon.h"
 
 typedef enum YCBCR_PLANES_LAYOUT {
     YCBCR_SINGLE_PLANE_UNNORMALIZED       = 0, // Single unnormalized plane;
@@ -117,7 +118,7 @@ static inline uint32_t GetBitsPerChannel(const YcbcrPlanesLayoutInfo& pYcbcrPlan
         case YCBCRA_16BPP:
             return 16;
         default:
-            assert(!"Unknown bpp value in GetBitsPerChannel");
+            VKVS_FAIL("Unknown bpp value in GetBitsPerChannel");
             return 8;
     }
 }

@@ -338,7 +338,7 @@ public:
             return VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR;
             break;
         default:
-            assert(!"Unknown Luma Bit Depth!");
+            VKVS_FAIL("Unknown Luma Bit Depth!");
         }
         return VK_VIDEO_COMPONENT_BIT_DEPTH_INVALID_KHR;
     }
@@ -356,7 +356,7 @@ public:
             return VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR;
             break;
         default:
-            assert(!"Unknown Chroma Bit Depth!");
+            VKVS_FAIL("Unknown Chroma Bit Depth!");
         }
         return VK_VIDEO_COMPONENT_BIT_DEPTH_INVALID_KHR;
     }
@@ -387,7 +387,7 @@ public:
         default:
             break;
         }
-        // assert(!"Unknown CHROMA_SUBSAMPLING!");
+        // VKVS_FAIL("Unknown CHROMA_SUBSAMPLING!");
         std::cerr << "\nUnknown CHROMA_SUBSAMPLING from format: " << format << std::endl;
         return VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR;
     }

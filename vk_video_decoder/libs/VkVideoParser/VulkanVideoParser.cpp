@@ -317,7 +317,7 @@ public:
     int8_t AllocateSlot()
     {
         if (m_dpbSlotsAvailable.empty()) {
-            assert(!"No more DPB slots are available");
+            VKVS_FAIL("No more DPB slots are available");
             return -1;
         }
         int8_t slot = (int8_t)m_dpbSlotsAvailable.front();
@@ -855,7 +855,7 @@ bool VulkanVideoParser::DisplayPicture(VkPicIf* pPicBuff, int64_t timestamp)
         if (picIdx == retVal) {
             result = true;
         } else {
-            assert(!"QueueDecodedPictureForDisplay failed");
+            VKVS_FAIL("QueueDecodedPictureForDisplay failed");
         }
     }
 
@@ -994,7 +994,7 @@ VkResult VulkanVideoParser::Initialize(
     } else if (m_codecType == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
         pStdExtensionVersion = &vp9StdExtensionVersion;
     } else {
-        assert(!"Unsupported codec type");
+        VKVS_FAIL("Unsupported codec type");
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 
@@ -1202,7 +1202,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
         } else if ((StdChromaFormatIdc)pnvsi->nChromaFormat == chroma_format_idc_444) {
             detectedFormat.chromaSubsampling = VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR;
         } else {
-            assert(!"Invalid chroma sub-sampling format");
+            VKVS_FAIL("Invalid chroma sub-sampling format");
         }
 
         switch (pnvsi->uBitDepthLumaMinus8) {
@@ -1266,7 +1266,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
             m_maxNumDecodeSurfaces = (uint32_t)maxDecodeRTs;
         }
     } else {
-        assert(!"m_pDecoderHandler is NULL");
+        VKVS_FAIL("m_pDecoderHandler is NULL");
     }
 
     // AV1 and VP9 support cross-sequence referencing.
@@ -1285,7 +1285,7 @@ int32_t VulkanVideoParser::BeginSequence(const VkParserSequenceInfo* pnvsi)
             m_maxNumDpbSlots = (uint32_t)m_dpb.Init(configDpbSlots, false);
         }
     } else {
-        assert(!"Codec DPB management not fully implemented");
+        VKVS_FAIL("Codec DPB management not fully implemented");
     }
 
     return (int32_t)m_maxNumDecodeSurfaces;
@@ -2141,7 +2141,7 @@ bool VulkanVideoParser::UpdatePictureParameters(
     }
 
     if (m_decoderHandler == NULL) {
-        assert(!"m_pDecoderHandler is NULL");
+        VKVS_FAIL("m_pDecoderHandler is NULL");
         return false;
     }
 
@@ -2166,7 +2166,7 @@ bool VulkanVideoParser::DecodePicture(
     // };
 
     if (m_decoderHandler == NULL) {
-        assert(!"m_pDecoderHandler is NULL");
+        VKVS_FAIL("m_pDecoderHandler is NULL");
         return false;
     }
 
@@ -2713,26 +2713,26 @@ VkResult vulkanCreateVideoParser(
 {
     if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR) {
         if (!pStdExtensionVersion || strcmp(pStdExtensionVersion->extensionName, VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_EXTENSION_NAME) || (pStdExtensionVersion->specVersion != VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_SPEC_VERSION)) {
-            assert(!"Decoder h264 Codec version is NOT supported");
+            VKVS_FAIL("Decoder h264 Codec version is NOT supported");
             return VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR;
         }
     } else if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR) {
         if (!pStdExtensionVersion || strcmp(pStdExtensionVersion->extensionName, VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_EXTENSION_NAME) || (pStdExtensionVersion->specVersion != VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_SPEC_VERSION)) {
-            assert(!"Decoder h265 Codec version is NOT supported");
+            VKVS_FAIL("Decoder h265 Codec version is NOT supported");
             return VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR;
         }
     } else if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) {
         if (!pStdExtensionVersion || strcmp(pStdExtensionVersion->extensionName, VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_EXTENSION_NAME) || (pStdExtensionVersion->specVersion != VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION)) {
-            assert(!"Decoder AV1 Codec version is NOT supported");
+            VKVS_FAIL("Decoder AV1 Codec version is NOT supported");
             return VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR;
         }
     } else if (videoCodecOperation == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
         if (!pStdExtensionVersion || strcmp(pStdExtensionVersion->extensionName, VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_EXTENSION_NAME) || (pStdExtensionVersion->specVersion != VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_SPEC_VERSION)) {
-            assert(!"Decoder VP9 Codec version is NOT supported");
+            VKVS_FAIL("Decoder VP9 Codec version is NOT supported");
             return VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR;
         }
     } else {
-        assert(!"Decoder Codec is NOT supported");
+        VKVS_FAIL("Decoder Codec is NOT supported");
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 

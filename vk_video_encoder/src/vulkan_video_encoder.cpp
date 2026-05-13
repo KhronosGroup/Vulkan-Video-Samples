@@ -165,7 +165,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
                                             m_encoderConfig->verbose);
     if (result != VK_SUCCESS) {
 
-        assert(!"Can't initialize the Vulkan physical device!");
+        VKVS_FAIL("Can't initialize the Vulkan physical device!");
         return result;
     }
 
@@ -188,13 +188,13 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
                                           );
     if (result != VK_SUCCESS) {
 
-        assert(!"Failed to create Vulkan device!");
+        VKVS_FAIL("Failed to create Vulkan device!");
         return result;
     }
 
     result = VkVideoEncoder::CreateVideoEncoder(&m_vkDevCtxt, m_encoderConfig, m_encoder);
     if (result != VK_SUCCESS) {
-        assert(!"Can't initialize the Vulkan physical device!");
+        VKVS_FAIL("Can't initialize the Vulkan physical device!");
         return result;
     }
 
@@ -249,7 +249,7 @@ VkResult CreateVulkanVideoEncoder(VkVideoCodecOperationFlagBitsKHR videoCodecOpe
         break;
 
     default:
-        assert(!"Unsupported codec type!!!\n");
+        VKVS_FAIL("Unsupported codec type!!!\n");
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 

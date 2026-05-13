@@ -392,7 +392,7 @@ void Shell::AcquireBackBuffer(bool) {
 
     } else {
         // If the queue is empty - the is nothing that can be done here.
-        assert(!"Swapchain queue is empty!");
+        VKVS_FAIL("Swapchain queue is empty!");
         m_ctx.currentBackBuffer = -1;
     }
 }

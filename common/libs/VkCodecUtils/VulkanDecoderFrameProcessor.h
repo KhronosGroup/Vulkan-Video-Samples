@@ -46,7 +46,7 @@ public:
     {
         VkResult result = Init(vkDevCtx, videoQueue, maxNumberOfFrames);
         if (result != VK_SUCCESS) {
-            assert(!"DecoderFrameProcessorState::Init() has failed");
+            VKVS_FAIL("DecoderFrameProcessorState::Init() has failed");
         }
     }
 

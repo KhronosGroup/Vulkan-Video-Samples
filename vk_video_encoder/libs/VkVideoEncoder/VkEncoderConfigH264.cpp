@@ -16,6 +16,7 @@
 
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkVideoEncoderH264.h"
+#include "VkVSCommon.h"
 
 int EncoderConfigH264::DoParseArguments(int argc, const char* argv[])
 {
@@ -77,7 +78,7 @@ StdVideoH264LevelIdc EncoderConfigH264::DetermineLevel(uint8_t dpbSize,
         return levelLimits[idx].level;
     }
 
-    assert(!"Invalid h264_level");
+    VKVS_FAIL("Invalid h264_level");
     return STD_VIDEO_H264_LEVEL_IDC_INVALID;
 }
 
@@ -432,7 +433,7 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
                                                                                  h264QualityLevelProperties);
     if (result != VK_SUCCESS) {
         std::cout << "*** Could not get Video Encode QualityLevel Properties :" << result << " ***" << std::endl;
-        assert(!"Could not get Video Encode QualityLevel Properties");
+        VKVS_FAIL("Could not get Video Encode QualityLevel Properties");
         return result;
     }
 

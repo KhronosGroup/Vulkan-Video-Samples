@@ -610,7 +610,7 @@ int VulkanAV1Decoder::ChooseOperatingPoint()
         operating_point = 0; // GetOperatingPoint was deprecated because it always returned 0 - m_pClient->GetOperatingPoint(&OPInfo);
 
         if (operating_point < 0) {
-            assert(!"GetOperatingPoint callback failed");
+            VKVS_FAIL("GetOperatingPoint callback failed");
             // ignoring error and continue with operating point 0
             operating_point = 0;
         }
@@ -1030,7 +1030,7 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
         for (uint32_t i = 0; i < pFilmGrain->num_y_points; i++) {
             pFilmGrain->point_y_value[i] = (uint8_t)u(8);
             if (i && pFilmGrain->point_y_value[i-1] >= pFilmGrain->point_y_value[i]) {
-                assert(!"Y cordinates should be increasing\n");
+                VKVS_FAIL("Y cordinates should be increasing\n");
             }
             pFilmGrain->point_y_scaling[i] = (uint8_t)u(8);
         }
@@ -1044,26 +1044,26 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
         } else {
             pFilmGrain->num_cb_points = (uint8_t)u(4);
             if (pFilmGrain->num_cb_points > STD_VIDEO_AV1_MAX_NUM_CB_POINTS) {
-                assert(!"num_cb_points exceeds the maximum value\n");
+                VKVS_FAIL("num_cb_points exceeds the maximum value\n");
             }
 
             for (uint32_t i = 0; i < pFilmGrain->num_cb_points; i++) {
                 pFilmGrain->point_cb_value[i] = (uint8_t)u(8);
                 if (i && pFilmGrain->point_cb_value[i-1] >= pFilmGrain->point_cb_value[i]) {
-                    assert(!"cb cordinates should be increasing\n");
+                    VKVS_FAIL("cb cordinates should be increasing\n");
                 }
                 pFilmGrain->point_cb_scaling[i] = (uint8_t)u(8);
             }
 
             pFilmGrain->num_cr_points = (uint8_t)u(4);
             if (pFilmGrain->num_cr_points > STD_VIDEO_AV1_MAX_NUM_CR_POINTS) {
-                assert(!"num_cr_points exceeds the maximum value\n");
+                VKVS_FAIL("num_cr_points exceeds the maximum value\n");
             }
 
             for (uint32_t i = 0; i < pFilmGrain->num_cr_points; i++) {
                 pFilmGrain->point_cr_value[i] = (uint8_t)u(8);
                 if (i && pFilmGrain->point_cr_value[i-1] >= pFilmGrain->point_cr_value[i]) {
-                    assert(!"cr cordinates should be increasing\n");
+                    VKVS_FAIL("cr cordinates should be increasing\n");
                 }
                 pFilmGrain->point_cr_scaling[i] = (uint8_t)u(8);
             }
@@ -1999,7 +1999,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         if (intra_only || pStd->frame_type != 3) {
             pStd->refresh_frame_flags = (uint8_t)u(STD_VIDEO_AV1_NUM_REF_FRAMES);
             if (pStd->refresh_frame_flags == 0xFF && intra_only) {
-                assert(!"Intra_only frames cannot have refresh flags 0xFF");
+                VKVS_FAIL("Intra_only frames cannot have refresh flags 0xFF");
             }
 
             //  memset(&ref_frame_names, -1, sizeof(ref_frame_names));
@@ -2047,7 +2047,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                 const int gld_idx = gld_ref;
 
                 if (lst_idx == -1 || gld_idx == -1) {
-                    assert(!"invalid reference");
+                    VKVS_FAIL("invalid reference");
                 }
 
                 SetFrameRefs(lst_ref, gld_ref);
@@ -2059,7 +2059,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                     ref_frame_idx[i] = ref_frame_index;
 
                     if (ref_frame_index == -1) {
-                        assert(!"invalid reference");
+                        VKVS_FAIL("invalid reference");
                     }
                     ref_frame_idx[i] = ref_frame_index;
                 }
@@ -2071,7 +2071,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                         ((uint32_t)1 << frame_id_length)) % ((uint32_t)1 << frame_id_length));
 
                     if (ref_id != ref_frame_id[ref_frame_idx[i]] || RefValid[ref_frame_idx[i]] == 0) {
-                        //assert(!"Ref frame ID mismatch");
+                        //VKVS_FAIL("Ref frame ID mismatch");
                     }
                 }
             }

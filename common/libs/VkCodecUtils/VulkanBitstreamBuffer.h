@@ -129,7 +129,7 @@ public:
         VkSharedBaseObj<VulkanBitstreamBuffer> newVulkanBitstreamBuffer;
         VkDeviceSize retSize = m_bitstreamBuffer->Clone(newSize, copySize, copyOffset, newVulkanBitstreamBuffer);
         if (!(retSize >= newSize)) {
-            assert(!"Could not resize the bitstream buffer!");
+            VKVS_FAIL("Could not resize the bitstream buffer!");
             return retSize;
         }
         m_bitstreamBuffer = newVulkanBitstreamBuffer;

@@ -932,7 +932,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
 {
     VkResult result = VK_SUCCESS;
     if (numImages > m_perFrameDecodeResources.size()) {
-        assert(!"Number of requested images exceeds the max size of the image array");
+        VKVS_FAIL("Number of requested images exceeds the max size of the image array");
         return -1;
     }
 

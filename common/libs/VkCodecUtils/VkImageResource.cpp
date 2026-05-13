@@ -107,7 +107,7 @@ VkResult VkImageResource::Create(const VulkanDeviceContext* vkDevCtx,
 
         result = vkDevCtx->CreateImage(device, pImageCreateInfo, nullptr, &image);
         if (result != VK_SUCCESS) {
-            assert(!"CreateImage Failed!");
+            VKVS_FAIL("CreateImage Failed!");
             break;
         }
 
@@ -124,14 +124,14 @@ VkResult VkImageResource::Create(const VulkanDeviceContext* vkDevCtx,
                                                 false,    // clearMemory
                                                 vkDeviceMemory);
         if (result != VK_SUCCESS) {
-            assert(!"Create Memory Failed!");
+            VKVS_FAIL("Create Memory Failed!");
             break;
         }
 
         VkDeviceSize imageOffset = 0;
         result = vkDevCtx->BindImageMemory(device, image, *vkDeviceMemory, imageOffset);
         if (result != VK_SUCCESS) {
-            assert(!"BindImageMemory Failed!");
+            VKVS_FAIL("BindImageMemory Failed!");
             break;
         }
 

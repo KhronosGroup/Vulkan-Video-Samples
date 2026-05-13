@@ -35,7 +35,7 @@ VkBufferResource::Create(const VulkanDeviceContext* vkDevCtx,
                                                                              queueFamilyCount,
                                                                              queueFamilyIndexes));
     if (!vkBitstreamBuffer) {
-        assert(!"Out of host memory!");
+        VKVS_FAIL("Out of host memory!");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
@@ -45,7 +45,7 @@ VkBufferResource::Create(const VulkanDeviceContext* vkDevCtx,
     if (result == VK_SUCCESS) {
         vulkanBitstreamBuffer = vkBitstreamBuffer;
     } else {
-        assert(!"Initialize failed!");
+        VKVS_FAIL("Initialize failed!");
     }
 
     return result;
@@ -62,7 +62,7 @@ VkDeviceSize VkBufferResource::Clone(VkDeviceSize newSize, VkDeviceSize copySize
                                                                              (uint32_t)m_queueFamilyIndexes.size(),
                                                                              m_queueFamilyIndexes.data()));
     if (!vkBitstreamBuffer) {
-        assert(!"Out of host memory!");
+        VKVS_FAIL("Out of host memory!");
         return 0;
     }
 
@@ -75,7 +75,7 @@ VkDeviceSize VkBufferResource::Clone(VkDeviceSize newSize, VkDeviceSize copySize
     if (result == VK_SUCCESS) {
         vulkanBitstreamBuffer = vkBitstreamBuffer;
     } else {
-        assert(!"Initialize failed!");
+        VKVS_FAIL("Initialize failed!");
     }
 
     return newSize;
@@ -108,7 +108,7 @@ VkResult VkBufferResource::CreateBuffer(const VulkanDeviceContext* vkDevCtx,
 
     VkResult result = vkDevCtx->CreateBuffer(*vkDevCtx, &createBufferInfo, nullptr, &buffer);
     if (result != VK_SUCCESS) {
-        assert(!"Create Buffer failed!");
+        VKVS_FAIL("Create Buffer failed!");
         return result;
     }
 
@@ -130,14 +130,14 @@ VkResult VkBufferResource::CreateBuffer(const VulkanDeviceContext* vkDevCtx,
                                             vkDeviceMemory);
     if (result != VK_SUCCESS) {
         vkDevCtx->DestroyBuffer(*vkDevCtx, buffer, nullptr);
-        assert(!"Create Memory Failed!");
+        VKVS_FAIL("Create Memory Failed!");
         return result;
     }
 
     result = vkDevCtx->BindBufferMemory(*vkDevCtx, buffer, *vkDeviceMemory, bufferOffset);
     if (result != VK_SUCCESS) {
         vkDevCtx->DestroyBuffer(*vkDevCtx, buffer, nullptr);
-        assert(!"Bind buffer memory failed!");
+        VKVS_FAIL("Bind buffer memory failed!");
         return result;
     }
 
@@ -154,7 +154,7 @@ VkResult VkBufferResource::Initialize(VkDeviceSize bufferSize,
 #ifdef CLEAR_BITSTREAM_BUFFERS_ON_CREATE
         VkDeviceSize ret = MemsetData(0x00, 0, m_bufferSize);
         if (ret != m_bufferSize) {
-            assert(!"Could't MemsetData()!");
+            VKVS_FAIL("Could't MemsetData()!");
             return VK_ERROR_INITIALIZATION_FAILED;
         }
 #endif
@@ -176,7 +176,7 @@ VkResult VkBufferResource::Initialize(VkDeviceSize bufferSize,
                                    m_vulkanDeviceMemory);
 
     if (result != VK_SUCCESS) {
-        assert(!"Create new buffer failed!");
+        VKVS_FAIL("Create new buffer failed!");
         return result;
     }
 
@@ -203,7 +203,7 @@ VkResult VkBufferResource::CopyDataToBuffer(const uint8_t* pData,
                                             VkDeviceSize &dstBufferOffset) const
 {
     if ((pData == nullptr) || (size == 0)) {
-        assert(!"CopyDataToBuffer failed!");
+        VKVS_FAIL("CopyDataToBuffer failed!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -258,7 +258,7 @@ VkDeviceSize VkBufferResource::Resize(VkDeviceSize newSize, VkDeviceSize copySiz
                                    newDeviceMemory);
 
     if (result != VK_SUCCESS) {
-        assert(!"CreateBuffer failed!");
+        VKVS_FAIL("CreateBuffer failed!");
         return 0;
     }
 
@@ -279,13 +279,13 @@ uint8_t* VkBufferResource::CheckAccess(VkDeviceSize offset, VkDeviceSize size) c
         uint8_t* bufferDataPtr = m_vulkanDeviceMemory->CheckAccess(m_bufferOffset, size);
 
         if (bufferDataPtr == nullptr) {
-            assert(!"Bad buffer access - can't map buffer!");
+            VKVS_FAIL("Bad buffer access - can't map buffer!");
             return nullptr;
         }
         return bufferDataPtr + offset;
     }
 
-    assert(!"Bad buffer access - out of range!");
+    VKVS_FAIL("Bad buffer access - out of range!");
     return nullptr;
 }
 
@@ -314,7 +314,7 @@ int64_t VkBufferResource::CopyDataToBuffer(VkSharedBaseObj<VkBufferResource>& ds
     }
     const uint8_t* readData = CheckAccess(srcOffset, size);
     if (readData == nullptr) {
-        assert(!"Could not CopyDataToBuffer!");
+        VKVS_FAIL("Could not CopyDataToBuffer!");
         return -1;
     }
     return dstBuffer->CopyDataFromBuffer(readData, 0, m_bufferOffset + dstOffset, size);
@@ -337,7 +337,7 @@ int64_t VkBufferResource::CopyDataFromBuffer(const VkSharedBaseObj<VkBufferResou
     }
     const uint8_t* readData = sourceBuffer->GetReadOnlyDataPtr(srcOffset, size);
     if (readData == nullptr) {
-        assert(!"Could not CopyDataFromBuffer!");
+        VKVS_FAIL("Could not CopyDataFromBuffer!");
         return -1;
     }
 
@@ -348,7 +348,7 @@ uint8_t* VkBufferResource::GetDataPtr(VkDeviceSize offset, VkDeviceSize &maxSize
 {
     uint8_t* readData = CheckAccess(offset, 1);
     if (readData == nullptr) {
-        assert(!"Could not GetDataPtr()!");
+        VKVS_FAIL("Could not GetDataPtr()!");
         return nullptr;
     }
     maxSize = m_bufferSize - offset;
@@ -359,7 +359,7 @@ const uint8_t* VkBufferResource::GetReadOnlyDataPtr(VkDeviceSize offset, VkDevic
 {
     uint8_t* readData = CheckAccess(offset, 1);
     if (readData == nullptr) {
-        assert(!"Could not GetReadOnlyDataPtr()!");
+        VKVS_FAIL("Could not GetReadOnlyDataPtr()!");
         return nullptr;
     }
     maxSize = m_bufferSize - offset;

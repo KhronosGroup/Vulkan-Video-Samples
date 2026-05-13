@@ -128,20 +128,20 @@ VkResult VulkanCommandBufferPool::Configure(const VulkanDeviceContext*   vkDevCt
 {
     std::lock_guard<std::mutex> lock(m_queueMutex);
     if (numPoolNodes > m_poolNodes.size()) {
-        assert(!"Number of requested number of pool nodes exceeds the max size of the m_poolNodes array");
+        VKVS_FAIL("Number of requested number of pool nodes exceeds the max size of the m_poolNodes array");
         return VK_ERROR_TOO_MANY_OBJECTS;
     }
 
     VkResult result = m_commandBuffersSet.CreateCommandBufferPool(vkDevCtx, queueFamilyIndex, numPoolNodes);
     if (result != VK_SUCCESS) {
-        assert(!"ERROR: CreateCommandBufferPool!");
+        VKVS_FAIL("ERROR: CreateCommandBufferPool!");
         return result;
     }
 
     if (createSemaphores) {
         result = m_semaphoreSet.CreateSet(vkDevCtx, numPoolNodes);
         if (result != VK_SUCCESS) {
-            assert(!"ERROR: m_filterWaitSemaphoreSet.CreateSet!");
+            VKVS_FAIL("ERROR: m_filterWaitSemaphoreSet.CreateSet!");
             return result;
         }
     }
@@ -149,7 +149,7 @@ VkResult VulkanCommandBufferPool::Configure(const VulkanDeviceContext*   vkDevCt
     if (createFences) {
         result = m_fenceSet.CreateSet(vkDevCtx, numPoolNodes);
         if (result != VK_SUCCESS) {
-            assert(!"ERROR: CreateCommandBufferPool!");
+            VKVS_FAIL("ERROR: CreateCommandBufferPool!");
             return result;
         }
     }

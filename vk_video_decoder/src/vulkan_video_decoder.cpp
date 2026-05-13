@@ -200,7 +200,7 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
 
     if (result != VK_SUCCESS) {
 
-        assert(!"Can't initialize the Vulkan physical device!");
+        VKVS_FAIL("Can't initialize the Vulkan physical device!");
         return result;
     }
 
@@ -219,7 +219,7 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
 
     if (result != VK_SUCCESS) {
 
-        assert(!"Failed to create Vulkan device!");
+        VKVS_FAIL("Failed to create Vulkan device!");
         return result;
     }
 
@@ -256,7 +256,7 @@ VkResult CreateVulkanVideoDecoder(VkInstance vkInstance, VkPhysicalDevice vkPhys
         break;
 
     default:
-        assert(!"Unsupported codec type!!!\n");
+        VKVS_FAIL("Unsupported codec type!!!\n");
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 

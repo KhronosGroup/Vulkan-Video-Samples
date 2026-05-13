@@ -503,7 +503,7 @@ VkResult VkVideoEncoderH265::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
             sliceType = STD_VIDEO_H265_SLICE_TYPE_I;
             break;
         default:
-            assert(!"Invalid picture type");
+            VKVS_FAIL("Invalid picture type");
             return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -539,7 +539,7 @@ VkResult VkVideoEncoderH265::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
                 constantQp = (int32_t)encodeFrameInfo->constQp.qpInterB;
                 break;
             default:
-                assert(!"Invalid picture type");
+                VKVS_FAIL("Invalid picture type");
                 break;
         }
 

@@ -49,7 +49,7 @@ public:
         std::error_code error;
         m_inputVideoStreamMmap.map(pFilePath, 0, mio::map_entire_file, error);
         if (error) {
-            assert(!"Can't map the input stream file!");
+            VKVS_FAIL("Can't map the input stream file!");
         }
 
         m_bitstreamDataSize = m_inputVideoStreamMmap.mapped_length();
@@ -113,9 +113,9 @@ public:
             return VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR;
             break;
         default:
-            assert(!"Unknown Luma Bit Depth!");
+            VKVS_FAIL("Unknown Luma Bit Depth!");
         }
-        assert(!"Unknown Luma Bit Depth!");
+        VKVS_FAIL("Unknown Luma Bit Depth!");
         return VK_VIDEO_COMPONENT_BIT_DEPTH_INVALID_KHR;
     }
 
@@ -137,9 +137,9 @@ public:
             return VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR;
             break;
         default:
-            assert(!"Unknown Chroma Bit Depth!");
+            VKVS_FAIL("Unknown Chroma Bit Depth!");
         }
-        assert(!"Unknown Chroma Bit Depth!");
+        VKVS_FAIL("Unknown Chroma Bit Depth!");
         return VK_VIDEO_COMPONENT_BIT_DEPTH_INVALID_KHR;
     }
     virtual uint32_t GetProfileIdc() const

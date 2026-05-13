@@ -18,6 +18,7 @@
 #define _VKPARSERVIDEOREFCOUNTBASE_H_
 
 #include "assert.h"
+#include "VkVSCommon.h"
 
 class VkVideoRefCountBase {
 
@@ -35,7 +36,7 @@ public:
     //!
     //! Obtains the current reference count.
     //! Returns INVALID_REF_COUNT_VALUE if not implemented.
-    virtual int32_t GetRefCount() { assert(!"Must Implement"); return INVALID_REF_COUNT_VALUE; }
+    virtual int32_t GetRefCount() { VKVS_FAIL("Must Implement"); return INVALID_REF_COUNT_VALUE; }
 
 protected:
     virtual ~VkVideoRefCountBase() { }
@@ -57,14 +58,14 @@ public:
             if (newObjectPtr != nullptr) {
                 refCount = newObjectPtr->AddRef();
                 if (!(refCount > 0)) {
-                    assert(!"RefCount is smaller not bigger than zero");
+                    VKVS_FAIL("RefCount is smaller not bigger than zero");
                 }
             }
 
             if (oldObject != nullptr) {
                 refCount = oldObject->Release();
                 if (refCount < 0) {
-                    assert(!"RefCount is smaller than zero");
+                    VKVS_FAIL("RefCount is smaller than zero");
                 }
             }
         }

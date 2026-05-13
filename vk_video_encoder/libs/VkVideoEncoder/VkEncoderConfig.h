@@ -272,7 +272,7 @@ public:
         const uint64_t mappedLength = (uint64_t)m_memMapedFile.mapped_length();
         if (mappedLength < offset) {
             printf("File overflow at fileOffset %lld\n", (long long unsigned int)offset);
-            assert(!"Input file overflow");
+            VKVS_FAIL("Input file overflow");
             return nullptr;
         }
 
@@ -418,7 +418,7 @@ beach:
             samplingFactor = 3.0; // Full Y + full U + full V = 3.0
             break;
         default:
-            assert(!"Unknown chroma subsampling");
+            VKVS_FAIL("Unknown chroma subsampling");
             break;
         }
         uint32_t frameSize = (uint32_t)(width * height * nBytes * samplingFactor);

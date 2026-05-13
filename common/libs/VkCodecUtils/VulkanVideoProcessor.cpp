@@ -550,7 +550,7 @@ VkResult VulkanVideoProcessor::CreateParser(const char*,
     } else if (vkCodecType == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
         pStdExtensionVersion = &vp9StdExtensionVersion;
     } else {
-        assert(!"Unsupported Codec Type");
+        VKVS_FAIL("Unsupported Codec Type");
         return VK_ERROR_FORMAT_NOT_SUPPORTED;
     }
 
@@ -579,7 +579,7 @@ VkResult VulkanVideoProcessor::ParseVideoStreamData(const uint8_t* pData, size_t
                                                     size_t *pnVideoBytes, bool doPartialParsing,
                                                     uint32_t flags, int64_t timestamp) {
     if (!m_vkParser) {
-        assert(!"Parser not initialized!");
+        VKVS_FAIL("Parser not initialized!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
