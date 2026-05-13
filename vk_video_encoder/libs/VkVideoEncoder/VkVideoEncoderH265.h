@@ -51,7 +51,7 @@ private:
         }
 
         VkVideoEncodeFrameInfoH265()
-          : VkVideoEncodeFrameInfo(&pictureInfo)
+          : VkVideoEncodeFrameInfo()
           , pictureInfo { VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_PICTURE_INFO_KHR }
           , naluSliceSegmentInfo{}
           , stdPictureInfo()
@@ -64,6 +64,8 @@ private:
           , stdReferenceInfo{}
           , stdDpbSlotInfo{}
         {
+            encodeInfo.pNext = &pictureInfo;
+
             pictureInfo.naluSliceSegmentEntryCount = 1;
             pictureInfo.pNaluSliceSegmentEntries = naluSliceSegmentInfo;
             pictureInfo.pStdPictureInfo = &stdPictureInfo;

@@ -53,7 +53,7 @@ private:
         }
 
         VkVideoEncodeFrameInfoH264()
-          : VkVideoEncodeFrameInfo(&pictureInfo)
+          : VkVideoEncodeFrameInfo()
           , pictureInfo { VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_PICTURE_INFO_KHR }
           , naluSliceInfo{}
           , stdPictureInfo()
@@ -67,6 +67,8 @@ private:
           , refList1ModOperations{}
           , refPicMarkingEntry{}
         {
+            encodeInfo.pNext = &pictureInfo;
+
             pictureInfo.naluSliceEntryCount = 1; // FIXME: support more than one
             pictureInfo.pNaluSliceEntries = naluSliceInfo;
             pictureInfo.pStdPictureInfo = &stdPictureInfo;
