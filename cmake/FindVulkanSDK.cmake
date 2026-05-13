@@ -22,6 +22,7 @@ MACRO(FIND_VULKAN_HEADERS VK_MINIMUM_MAJOR_VERSION VK_MINIMUM_MINOR_VERSION VK_M
                 set(VULKAN_HEADERS_INCLUDE_DIR ${VULKAN_PC_INCLUDEDIR})
                 set(VULKAN_LIBRARIES ${VULKAN_PC_LIBRARIES})
                 message(STATUS "VULKAN_HEADERS_INCLUDE_DIR: ${VULKAN_HEADERS_INCLUDE_DIR}")
+                link_directories(${VULKAN_PC_LIBRARY_DIRS})
                 set(USE_SYSTEM_VULKAN ON)
             endif()
         endif()
