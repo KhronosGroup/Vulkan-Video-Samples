@@ -53,7 +53,7 @@ public:
         }
 
         VkVideoEncodeFrameInfoAV1()
-            : VkVideoEncodeFrameInfo(&pictureInfo)
+            : VkVideoEncodeFrameInfo()
             , pictureInfo{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_PICTURE_INFO_KHR }
             , stdPictureInfo{}
             , stdTileInfo{}
@@ -70,6 +70,8 @@ public:
             , rateControlInfoAV1{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_RATE_CONTROL_INFO_KHR }
             , rateControlLayersInfoAV1{{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_RATE_CONTROL_LAYER_INFO_KHR }}
         {
+            encodeInfo.pNext = &pictureInfo;
+
             pictureInfo.pStdPictureInfo = &stdPictureInfo;
         }
 

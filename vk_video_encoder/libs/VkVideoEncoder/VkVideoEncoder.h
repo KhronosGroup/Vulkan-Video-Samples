@@ -58,8 +58,8 @@ public:
     {
         virtual VkVideoCodecOperationFlagBitsKHR GetCodecType() const = 0;
 
-        VkVideoEncodeFrameInfo(const void* pNext = nullptr)
-            : encodeInfo{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_INFO_KHR, pNext}
+        VkVideoEncodeFrameInfo()
+            : encodeInfo{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_INFO_KHR, nullptr }
             , quantizationMapInfo()
             , intraRefreshInfo()
             , frameInputOrderNum(uint64_t(-1))
