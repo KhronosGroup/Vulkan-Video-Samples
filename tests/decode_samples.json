@@ -496,6 +496,15 @@
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/vp9/vp90-2-02-size-64x34.webm",
       "source_checksum": "cf6cef4b67865f515d6f59986e6e4822a4da8060bac92b54009c5f6f17b1c641",
       "source_filepath": "video/vp9/vp90-2-02-size-64x34.webm"
+    },
+    {
+      "name": "vp9_skip",
+      "codec": "vp9",
+      "description": "skip test for vp9",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/vp9/vp9-skip.ivf",
+      "source_checksum": "d9a6f09bbb92bd59b585cac2aff12476d4e1674f303dc13a1d95f6b5cf1faebe",
+      "source_filepath": "video/vp9/vp9-skip.ivf",
+      "expected_output_md5": "c2d6e7e425d883f2c2cce7c80711c566"
     }
   ]
 }
