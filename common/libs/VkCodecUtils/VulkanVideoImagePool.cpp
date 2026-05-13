@@ -243,7 +243,7 @@ VkResult VulkanVideoImagePool::Configure(const VulkanDeviceContext*   vkDevCtx,
 {
     std::lock_guard<std::mutex> lock(m_queueMutex);
     if (numImages > m_imageResources.size()) {
-        assert(!"Number of requested images exceeds the max size of the image array");
+        VKVS_FAIL("Number of requested images exceeds the max size of the image array");
         return VK_ERROR_TOO_MANY_OBJECTS;
     }
 

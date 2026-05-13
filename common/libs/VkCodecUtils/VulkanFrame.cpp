@@ -76,7 +76,7 @@ int VulkanFrame<FrameDataType>::AttachShell(const Shell& sh)
         std::cerr << std::endl << "Incompatible Vulkan API version: " << apiMajorVersion << "." << apiMinorVersion << "." << apiPatchVersion << std::endl;
         std::cerr << "Info: Driver version is: " << m_physicalDevProps.driverVersion << std::endl;
         std::cerr << "Please upgrade your driver. The version supported is: 1.2.199 or later aka " << std::hex << VK_MAKE_API_VERSION(0, 1, 2, 199) << std::endl;
-        assert(!"Incompatible API version - please upgrade your driver.");
+        VKVS_FAIL("Incompatible API version - please upgrade your driver.");
         return -1;
     }
 
@@ -212,7 +212,7 @@ int VulkanFrame<FrameDataType>::AttachSwapchain(const Shell& sh)
     // Create Vulkan's RenderPass
     VkResult result = m_videoRenderer->m_renderPass.CreateRenderPass(m_videoRenderer->m_vkDevCtx, ctx.format.format);
     if (result != VK_SUCCESS) {
-        assert(!"ERROR: Could't create RenderPass!");
+        VKVS_FAIL("ERROR: Could't create RenderPass!");
         return -1;
     }
 
@@ -226,7 +226,7 @@ int VulkanFrame<FrameDataType>::AttachSwapchain(const Shell& sh)
                                                                   &defaultSamplerInfo,
                                                                   &defaultSamplerYcbcrConversionCreateInfo);
     if (result != VK_SUCCESS) {
-        assert(!"ERROR: Could't create rawContexts!");
+        VKVS_FAIL("ERROR: Could't create rawContexts!");
         return -1;
     }
     return 0;

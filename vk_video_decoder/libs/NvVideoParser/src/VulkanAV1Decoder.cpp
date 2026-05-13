@@ -610,7 +610,7 @@ int VulkanAV1Decoder::ChooseOperatingPoint()
         operating_point = 0; // GetOperatingPoint was deprecated because it always returned 0 - m_pClient->GetOperatingPoint(&OPInfo);
 
         if (operating_point < 0) {
-            assert(!"GetOperatingPoint callback failed");
+            VKVS_FAIL("GetOperatingPoint callback failed");
             // ignoring error and continue with operating point 0
             operating_point = 0;
         }
@@ -908,9 +908,11 @@ void VulkanAV1Decoder::SetupFrameSize(int frame_size_override_flag)
     if (frame_size_override_flag) {
         frame_width = (uint16_t)u(sps->frame_width_bits_minus_1 + 1) + 1;
         frame_height = (uint16_t)u(sps->frame_height_bits_minus_1 + 1) + 1;
-        if (frame_width > (sps->max_frame_width_minus_1 + 1) || frame_height > (sps->max_frame_height_minus_1 + 1)) {
-            assert(false);
-        }
+        VKVS_ASSERT((frame_width <= (sps->max_frame_width_minus_1 + 1)) &&
+                    (frame_height <= (sps->max_frame_height_minus_1 + 1)),
+                    "frame size %ux%u exceeds sequence header max %ux%u",
+                    frame_width, frame_height,
+                    sps->max_frame_width_minus_1 + 1, sps->max_frame_height_minus_1 + 1);
     } else {
         frame_width = sps->max_frame_width_minus_1 + 1;
         frame_height = sps->max_frame_height_minus_1 + 1;
@@ -1030,7 +1032,7 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
         for (uint32_t i = 0; i < pFilmGrain->num_y_points; i++) {
             pFilmGrain->point_y_value[i] = (uint8_t)u(8);
             if (i && pFilmGrain->point_y_value[i-1] >= pFilmGrain->point_y_value[i]) {
-                assert(!"Y cordinates should be increasing\n");
+                VKVS_FAIL("Y cordinates should be increasing\n");
             }
             pFilmGrain->point_y_scaling[i] = (uint8_t)u(8);
         }
@@ -1044,26 +1046,26 @@ bool VulkanAV1Decoder::ReadFilmGrainParams()
         } else {
             pFilmGrain->num_cb_points = (uint8_t)u(4);
             if (pFilmGrain->num_cb_points > STD_VIDEO_AV1_MAX_NUM_CB_POINTS) {
-                assert(!"num_cb_points exceeds the maximum value\n");
+                VKVS_FAIL("num_cb_points exceeds the maximum value\n");
             }
 
             for (uint32_t i = 0; i < pFilmGrain->num_cb_points; i++) {
                 pFilmGrain->point_cb_value[i] = (uint8_t)u(8);
                 if (i && pFilmGrain->point_cb_value[i-1] >= pFilmGrain->point_cb_value[i]) {
-                    assert(!"cb cordinates should be increasing\n");
+                    VKVS_FAIL("cb cordinates should be increasing\n");
                 }
                 pFilmGrain->point_cb_scaling[i] = (uint8_t)u(8);
             }
 
             pFilmGrain->num_cr_points = (uint8_t)u(4);
             if (pFilmGrain->num_cr_points > STD_VIDEO_AV1_MAX_NUM_CR_POINTS) {
-                assert(!"num_cr_points exceeds the maximum value\n");
+                VKVS_FAIL("num_cr_points exceeds the maximum value\n");
             }
 
             for (uint32_t i = 0; i < pFilmGrain->num_cr_points; i++) {
                 pFilmGrain->point_cr_value[i] = (uint8_t)u(8);
                 if (i && pFilmGrain->point_cr_value[i-1] >= pFilmGrain->point_cr_value[i]) {
-                    assert(!"cr cordinates should be increasing\n");
+                    VKVS_FAIL("cr cordinates should be increasing\n");
                 }
                 pFilmGrain->point_cr_scaling[i] = (uint8_t)u(8);
             }
@@ -1999,7 +2001,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         if (intra_only || pStd->frame_type != 3) {
             pStd->refresh_frame_flags = (uint8_t)u(STD_VIDEO_AV1_NUM_REF_FRAMES);
             if (pStd->refresh_frame_flags == 0xFF && intra_only) {
-                assert(!"Intra_only frames cannot have refresh flags 0xFF");
+                VKVS_FAIL("Intra_only frames cannot have refresh flags 0xFF");
             }
 
             //  memset(&ref_frame_names, -1, sizeof(ref_frame_names));
@@ -2047,7 +2049,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                 const int gld_idx = gld_ref;
 
                 if (lst_idx == -1 || gld_idx == -1) {
-                    assert(!"invalid reference");
+                    VKVS_FAIL("invalid reference");
                 }
 
                 SetFrameRefs(lst_ref, gld_ref);
@@ -2059,7 +2061,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                     ref_frame_idx[i] = ref_frame_index;
 
                     if (ref_frame_index == -1) {
-                        assert(!"invalid reference");
+                        VKVS_FAIL("invalid reference");
                     }
                     ref_frame_idx[i] = ref_frame_index;
                 }
@@ -2071,7 +2073,7 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
                         ((uint32_t)1 << frame_id_length)) % ((uint32_t)1 << frame_id_length));
 
                     if (ref_id != ref_frame_id[ref_frame_idx[i]] || RefValid[ref_frame_idx[i]] == 0) {
-                        //assert(!"Ref frame ID mismatch");
+                        //VKVS_FAIL("Ref frame ID mismatch");
                     }
                 }
             }
@@ -2109,9 +2111,9 @@ bool VulkanAV1Decoder::ParseObuFrameHeader()
         // According to AV1 specification: "5.9.2. Uncompressed header syntax"
         for (uint32_t i = 0; i < STD_VIDEO_AV1_REFS_PER_FRAME; i++) {
             // Range check ref_frame_idx, RefOrderHint[] needs to be of size: BUFFER_POOL_MAX_SIZE.
-            if ((ref_frame_idx[i] >= BUFFER_POOL_MAX_SIZE) && (ref_frame_idx[i] < 0)) {
-                assert(false);
-            }
+            VKVS_ASSERT((ref_frame_idx[i] >= 0) && (ref_frame_idx[i] < BUFFER_POOL_MAX_SIZE),
+                        "ref_frame_idx[%u] = %d out of range [0, %d)",
+                        i, ref_frame_idx[i], BUFFER_POOL_MAX_SIZE);
 
             pStd->OrderHints[i + STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] = (uint8_t)RefOrderHint[ref_frame_idx[i]];
          }

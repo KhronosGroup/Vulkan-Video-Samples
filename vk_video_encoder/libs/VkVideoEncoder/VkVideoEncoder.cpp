@@ -40,7 +40,7 @@ static size_t getFormatTexelSize(VkFormat format)
     case VK_FORMAT_R32_SINT:
         return 4;
     default:
-        assert(!"unknown format");
+        VKVS_FAIL("unknown format");
         return 0;
     }
 }
@@ -251,7 +251,7 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
                         (int)width, (int)height, shiftBits);
             }
         } else {
-            assert(!"Requested bit-depth is not supported!");
+            VKVS_FAIL("Requested bit-depth is not supported!");
             return VK_ERROR_INITIALIZATION_FAILED;
         }
 
@@ -1612,7 +1612,7 @@ VkImageLayout VkVideoEncoder::TransitionImageLayout(VkCommandBuffer cmdBuf,
 #ifdef __cpp_exceptions
         throw std::invalid_argument("unsupported layout transition!");
 #else
-        assert(!"unsupported layout transition!");
+        VKVS_FAIL("unsupported layout transition!");
         return VK_IMAGE_LAYOUT_UNDEFINED;
 #endif
     }
@@ -2138,7 +2138,7 @@ VkResult VkVideoEncoder::PushOrderedFrames()
             if (success) {
                 m_lastDeferredFrame = nullptr;
             } else {
-                assert(!"Queue returned not ready");
+                VKVS_FAIL("Queue returned not ready");
                 result = VK_NOT_READY;
             }
 

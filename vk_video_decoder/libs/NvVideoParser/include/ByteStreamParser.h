@@ -6,6 +6,7 @@
 #include "VulkanVideoDecoder.h"
 #include "NvVideoParser/nvVulkanVideoUtils.h"
 #include "NvVideoParser/nvVulkanVideoParser.h"
+#include "VkVSCommon.h"
 #include <algorithm>
 
 template<SIMD_ISA T>

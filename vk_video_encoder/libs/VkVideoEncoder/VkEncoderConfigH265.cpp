@@ -262,11 +262,11 @@ uint8_t EncoderConfigH265::VerifyDpbSize()
     if (levelIdxFound != -1) {
         uint32_t maxDpbSize = GetMaxDpbSize(picSize, levelIdxFound);
         if ((uint32_t)dpbCount > maxDpbSize) {
-            assert(!"DpbSize is greater than the maximum supported value.");
+            VKVS_FAIL("DpbSize is greater than the maximum supported value.");
             return (uint8_t)maxDpbSize;
         }
     } else {
-        assert(!"Invalid level idc");
+        VKVS_FAIL("Invalid level idc");
         return 0;
     }
 
@@ -410,7 +410,7 @@ EncoderConfigH265::InitVuiParameters(StdVideoH265SequenceParameterSetVui *vuiInf
 bool EncoderConfigH265::IsSuitableLevel(uint32_t levelIdx, bool highTier)
 {
     if (levelIdx >= levelLimitsTblSize) {
-        assert(!"The h.265 level index is invalid");
+        VKVS_FAIL("The h.265 level index is invalid");
         return false;
     }
 
@@ -507,7 +507,7 @@ StdVideoH265ProfileTierLevel EncoderConfigH265::GetLevelTier()
     }
 
     if (levelIdx >= levelLimitsTblSize) {
-        assert(!"No suitable level selected");
+        VKVS_FAIL("No suitable level selected");
     }
 
     return profileTierLevel;
@@ -522,7 +522,7 @@ bool EncoderConfigH265::InitRateControl()
     }
     uint32_t level = profileTierLevel.general_level_idc;
     if (level >= levelLimitsTblSize) {
-        assert(!"The h.265 level index is invalid");
+        VKVS_FAIL("The h.265 level index is invalid");
         return false;
     }
     uint32_t cpbVclFactor = GetCpbVclFactor();

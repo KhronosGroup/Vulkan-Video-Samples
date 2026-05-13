@@ -3185,7 +3185,7 @@ void VulkanH264Decoder::picture_order_count(const seq_parameter_set_s *sps, cons
         picture_order_count_type_2(sps, slh);
         break;
     default:
-        assert(!"Unsupported sps->pic_order_cnt_type type");
+        VKVS_FAIL("Unsupported sps->pic_order_cnt_type type");
 
     }
     // (8-1)
@@ -3383,7 +3383,7 @@ void VulkanH264Decoder::picture_order_count_SVC(dependency_data_s *dd, dependenc
         picture_order_count_type_2_SVC(dd, ds);
         break;
     default:
-        assert(!"Unsupported sps->pic_order_cnt_type type");
+        VKVS_FAIL("Unsupported sps->pic_order_cnt_type type");
     }
     // (8-1)
     if (!dd->slh.field_pic_flag || ds->dpb_entry[16].complementary_field_pair)

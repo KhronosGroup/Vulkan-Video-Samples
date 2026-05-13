@@ -49,7 +49,7 @@ public:
         if (m_refClassId == pPictureParameters->m_classId) {
             return pPictureParameters;
         }
-        assert(!"Invalid VkParserVideoPictureParameters from base");
+        VKVS_FAIL("Invalid VkParserVideoPictureParameters from base");
         return nullptr;
     }
 

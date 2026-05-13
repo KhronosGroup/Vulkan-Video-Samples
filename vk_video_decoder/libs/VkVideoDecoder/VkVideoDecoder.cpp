@@ -73,7 +73,7 @@ const char* VkVideoDecoder::GetVideoChromaFormatString(VkVideoChromaSubsamplingF
     case VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR:
         return "YCbCr 444";
     default:
-        assert(!"Unknown Chroma sub-sampled format");
+        VKVS_FAIL("Unknown Chroma sub-sampled format");
     };
 
     return "Unknown";
@@ -614,7 +614,7 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
             imageSpecFilter.createInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         } else {
-            assert(!"Invalid filter usage - you must use the compute or transfer filter");
+            VKVS_FAIL("Invalid filter usage - you must use the compute or transfer filter");
         }
 
         if (m_enableGraphicsSampleFromDecodeOutput == VK_TRUE) {
@@ -874,7 +874,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                           VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR);
 
     if (pCurrFrameDecParams->currPicIdx != resourceIndexDpb) {
-        assert(!"GetImageResourcesByIndex has failed");
+        VKVS_FAIL("GetImageResourcesByIndex has failed");
     }
 
     pCurrFrameDecParams->dpbSetupPictureResource.codedOffset = { 0, 0 }; // FIXME: This parameter must to be adjusted based on the interlaced mode.
@@ -921,7 +921,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         pOutputPictureResourceInfo = &currentOutputPictureResourceInfo;
 
         if (pCurrFrameDecParams->currPicIdx != resourceIndexOut) {
-            assert(!"GetImageResourcesByIndex has failed");
+            VKVS_FAIL("GetImageResourcesByIndex has failed");
         }
 
         pOutputPictureResource->codedOffset = { 0, 0 }; // FIXME: This parameter must to be adjusted based on the interlaced mode.
@@ -989,7 +989,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         if (pCurrFrameDecParams->currPicIdx != resourceIndexFilter) {
-            assert(!"GetImageResourcesByIndex has failed");
+            VKVS_FAIL("GetImageResourcesByIndex has failed");
         }
     }
 
@@ -1006,7 +1006,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                        VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR);
 
         if (dpbResourceIndex < 0 || pCurrFrameDecParams->numGopReferenceSlots != static_cast<uint32_t>(dpbResourceIndex)) {
-            assert(!"GetImageResourcesByIndex has failed");
+            VKVS_FAIL("GetImageResourcesByIndex has failed");
         }
 
         for (uint32_t resId = 0; resId < pCurrFrameDecParams->numGopReferenceSlots; resId++) {
@@ -1159,7 +1159,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                                &referencedObjectsInfo,
                                                                &frameSynchronizationInfo);
     if (currPicIdx != retVal) {
-        assert(!"QueuePictureForDecode has failed");
+        VKVS_FAIL("QueuePictureForDecode has failed");
     }
 
     assert(VK_NOT_READY == m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, frameSynchronizationInfo.frameCompleteFence));

@@ -43,7 +43,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
 
     if (pCustomLoader) {
         handle = dlopen(pCustomLoader, RTLD_LAZY);
-        assert(!"ERROR: Could NOT get the custom Vulkan solib!");
+        VKVS_FAIL("ERROR: Could NOT get the custom Vulkan solib!");
     }
 
     if (handle == nullptr) {
@@ -51,14 +51,14 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
     }
 
     if (handle == nullptr) {
-        assert(!"ERROR: Can't get the Vulkan solib!");
+        VKVS_FAIL("ERROR: Can't get the Vulkan solib!");
         return nullptr;
     }
 
     if (pCustomLoader) {
         symbol = dlsym(handle, "vk_icdGetInstanceProcAddr");
         if (symbol == nullptr) {
-            assert(!"ERROR: Can't get the vk_icdGetInstanceProcAddr symbol!");
+            VKVS_FAIL("ERROR: Can't get the vk_icdGetInstanceProcAddr symbol!");
         }
     }
 
@@ -69,7 +69,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
     if (symbol == nullptr) {
 
         dlclose(handle);
-        assert(!"ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
+        VKVS_FAIL("ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
         return nullptr;
     }
 
@@ -87,7 +87,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
 
     HMODULE libModule = LoadLibrary(filename);
     if (libModule == nullptr) {
-        assert(!"ERROR: Can't get the Vulkan DLL!");
+        VKVS_FAIL("ERROR: Can't get the Vulkan DLL!");
         return nullptr;
     }
 
@@ -96,7 +96,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
 
         FreeLibrary(libModule);
 
-        assert(!"ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
+        VKVS_FAIL("ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
 
         return nullptr;
     }

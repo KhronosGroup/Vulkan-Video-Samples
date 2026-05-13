@@ -70,7 +70,7 @@ public:
             throw std::runtime_error(ss.str());
 #else
             fprintf(stderr, "Error: %s\n", ss.str().c_str());
-            assert(!"Vulkan call failed");
+            VKVS_FAIL("Vulkan call failed");
 #endif
 
         }

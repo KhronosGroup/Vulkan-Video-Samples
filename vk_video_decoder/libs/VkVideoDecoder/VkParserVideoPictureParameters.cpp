@@ -45,7 +45,7 @@ int32_t VkParserVideoPictureParameters::PopulateH264UpdateFields(const StdVideoP
         currentId = pStdPictureParametersSet->GetPpsId(isPps);
         assert(isPps);
     } else {
-        assert(!"Incorrect h.264 type");
+        VKVS_FAIL("Incorrect h.264 type");
     }
 
     return currentId;
@@ -84,7 +84,7 @@ int32_t VkParserVideoPictureParameters::PopulateH265UpdateFields(const StdVideoP
         currentId = pStdPictureParametersSet->GetPpsId(isPps);
         assert(isPps);
     } else {
-        assert(!"Incorrect h.265 type");
+        VKVS_FAIL("Incorrect h.265 type");
     }
 
     return currentId;
@@ -170,7 +170,7 @@ VkResult VkParserVideoPictureParameters::CreateParametersObject(const VulkanDevi
         }
         break;
         default:
-            assert(!"Invalid Parser format");
+            VKVS_FAIL("Invalid Parser format");
             return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -182,7 +182,7 @@ VkResult VkParserVideoPictureParameters::CreateParametersObject(const VulkanDevi
                                                                 &m_sessionParameters);
     if (result != VK_SUCCESS) {
 
-        assert(!"Could not create Session Parameters Object");
+        VKVS_FAIL("Could not create Session Parameters Object");
         return result;
 
     } else {
@@ -214,7 +214,7 @@ VkResult VkParserVideoPictureParameters::CreateParametersObject(const VulkanDevi
                 m_av1SpsIdsUsed.set((size_t)currentId, true);
                 break;
             default:
-                assert(!"Invalid StdVideoPictureParametersSet Parameter Type!");
+                VKVS_FAIL("Invalid StdVideoPictureParametersSet Parameter Type!");
         }
         m_Id = ++m_currentId;
     }
@@ -253,12 +253,12 @@ VkResult VkParserVideoPictureParameters::UpdateParametersObject(const StdVideoPi
         break;
         case StdVideoPictureParametersSet::TYPE_AV1_SPS:
         {
-            assert(false && "There should be no calls to UpdateParametersObject for AV1");
+            VKVS_FAIL("There should be no calls to UpdateParametersObject for AV1");
             return VK_SUCCESS;
         }
         break;
         default:
-            assert(!"Invalid Parser format");
+            VKVS_FAIL("Invalid Parser format");
             return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -289,11 +289,11 @@ VkResult VkParserVideoPictureParameters::UpdateParametersObject(const StdVideoPi
             m_av1SpsIdsUsed.set((size_t)currentId, true);
             break;
             default:
-                assert(!"Invalid StdVideoPictureParametersSet Parameter Type!");
+                VKVS_FAIL("Invalid StdVideoPictureParametersSet Parameter Type!");
         }
 
     } else {
-        assert(!"Could not update Session Parameters Object");
+        VKVS_FAIL("Could not update Session Parameters Object");
     }
 
     return result;
@@ -320,7 +320,7 @@ bool VkParserVideoPictureParameters::UpdatePictureParametersHierarchy(
         nodeParent = StdVideoPictureParametersSet::SPS_TYPE;
         nodeId = pictureParametersObject->GetPpsId(isNodeId);
         if (!((uint32_t)nodeId < VkParserVideoPictureParameters::MAX_PPS_IDS)) {
-            assert(!"PPS ID is out of bounds");
+            VKVS_FAIL("PPS ID is out of bounds");
             return false;
         }
         assert(isNodeId);
@@ -339,7 +339,7 @@ bool VkParserVideoPictureParameters::UpdatePictureParametersHierarchy(
         nodeChild = StdVideoPictureParametersSet::PPS_TYPE;
         nodeId = pictureParametersObject->GetSpsId(isNodeId);
         if (!((uint32_t)nodeId < VkParserVideoPictureParameters::MAX_SPS_IDS)) {
-            assert(!"SPS ID is out of bounds");
+            VKVS_FAIL("SPS ID is out of bounds");
             return false;
         }
         assert(isNodeId);
@@ -363,7 +363,7 @@ bool VkParserVideoPictureParameters::UpdatePictureParametersHierarchy(
         nodeChild = StdVideoPictureParametersSet::SPS_TYPE;
         nodeId = pictureParametersObject->GetVpsId(isNodeId);
         if (!((uint32_t)nodeId < VkParserVideoPictureParameters::MAX_VPS_IDS)) {
-            assert(!"VPS ID is out of bounds");
+            VKVS_FAIL("VPS ID is out of bounds");
             return false;
         }
         assert(isNodeId);

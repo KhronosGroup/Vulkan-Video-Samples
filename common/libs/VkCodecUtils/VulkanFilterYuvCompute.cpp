@@ -75,7 +75,7 @@ VkResult VulkanFilterYuvCompute::Init(const VkSamplerYcbcrConversionCreateInfo* 
                                                                pSamplerCreateInfo,
                                                                pYcbcrConversionCreateInfo);
          if (result != VK_SUCCESS) {
-             assert(!"ERROR: samplerYcbcrConversion!");
+             VKVS_FAIL("ERROR: samplerYcbcrConversion!");
              return result;
          }
     }
@@ -84,7 +84,7 @@ VkResult VulkanFilterYuvCompute::Init(const VkSamplerYcbcrConversionCreateInfo* 
 
     result = InitDescriptorSetLayout(m_maxNumFrames);
     if (result != VK_SUCCESS) {
-        assert(!"ERROR: InitDescriptorSetLayout!");
+        VKVS_FAIL("ERROR: InitDescriptorSetLayout!");
         return result;
     }
 
@@ -101,10 +101,10 @@ VkResult VulkanFilterYuvCompute::Init(const VkSamplerYcbcrConversionCreateInfo* 
          computeShaderSize = InitYCBCR2RGBA(computeShader);
          break;
      case RGBA2YCBCR:
-         assert(!"TODO RGBA2YCBCR");
+         VKVS_FAIL("TODO RGBA2YCBCR");
          break;
      default:
-         assert(!"Invalid filter type");
+         VKVS_FAIL("Invalid filter type");
          break;
     }
 

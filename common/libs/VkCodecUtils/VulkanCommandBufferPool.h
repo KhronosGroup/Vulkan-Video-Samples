@@ -78,7 +78,7 @@ public:
 
         const VkCommandBuffer* GetCommandBuffer() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return nullptr;
             }
             return m_parent->m_commandBuffersSet.GetCommandBuffer((uint32_t)m_parentIndex);
@@ -86,11 +86,11 @@ public:
 
         VkCommandBuffer BeginCommandBufferRecording(const VkCommandBufferBeginInfo& beginInfo) {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
             if (m_cmdBufState != CmdBufStateReset) {
-                assert(!"Command buffer is not in a reset state!");
+                VKVS_FAIL("Command buffer is not in a reset state!");
                 return VK_NULL_HANDLE;
             }
 
@@ -102,11 +102,11 @@ public:
 
         VkResult EndCommandBufferRecording(VkCommandBuffer cmdBuf) {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
             if (m_cmdBufState != CmdBufStateRecording) {
-                assert(!"Command buffer is not in recording state!");
+                VKVS_FAIL("Command buffer is not in recording state!");
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
 
@@ -116,18 +116,18 @@ public:
             if (result == VK_SUCCESS) {
                 m_cmdBufState = CmdBufStateRecorded;
             } else {
-                assert(!"Error in command buffer recording!");
+                VKVS_FAIL("Error in command buffer recording!");
             }
             return result;
         }
 
         bool SetCommandBufferSubmitted() {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return false;
             }
             if (m_cmdBufState != CmdBufStateRecorded) {
-                assert(!"Command Buffer is not in recorded state!");
+                VKVS_FAIL("Command Buffer is not in recorded state!");
                 return false;
             }
             m_cmdBufState = CmdBufStateSubmitted;
@@ -136,7 +136,7 @@ public:
 
         VkFence GetFence() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
             return m_parent->m_fenceSet.GetFence((uint32_t)m_parentIndex);
@@ -154,7 +154,7 @@ public:
             VkFence cmdBufferCompleteFence = GetFence();
 
             if ((m_vkDevCtx == nullptr) || (cmdBufferCompleteFence == VK_NULL_HANDLE)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
 
@@ -186,7 +186,7 @@ public:
 
         VkSemaphore GetSemaphore() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
             return m_parent->m_semaphoreSet.GetSemaphore((size_t)m_parentIndex);
@@ -194,7 +194,7 @@ public:
 
         VkQueryPool GetQueryPool(uint32_t& queryIdx) const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 queryIdx = (uint32_t)-1;
                 return VK_NULL_HANDLE;
             }
@@ -204,7 +204,7 @@ public:
 
         uint32_t GetNodePoolIndex() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return (uint32_t)-1;
             }
             return (uint32_t)m_parentIndex;

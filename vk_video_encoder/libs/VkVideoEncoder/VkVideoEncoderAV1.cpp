@@ -93,7 +93,7 @@ VkResult VkVideoEncoderAV1::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& enc
         encodeCaps.maxUnidirectionalCompoundReferenceCount == 0 &&
         encodeCaps.maxBidirectionalCompoundReferenceCount == 0) {
         std::cout << "B-frames were requested but the implementation does not support multiple reference frames!" << std::endl;
-        assert(!"B-frames not supported");
+        VKVS_FAIL("B-frames not supported");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -554,7 +554,7 @@ VkResult VkVideoEncoderAV1::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
                 pFrameInfo->pictureInfo.constantQIndex = (uint8_t)encodeFrameInfo->constQp.qpInterB;
                 break;
             default:
-                assert(!"Invalid picture type");
+                VKVS_FAIL("Invalid picture type");
                 break;
         }
         if (pFrameInfo->stdPictureInfo.pQuantization != nullptr) {

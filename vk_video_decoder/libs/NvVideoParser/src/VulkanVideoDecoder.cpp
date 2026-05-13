@@ -280,10 +280,10 @@ bool VulkanVideoDecoder::resizeBitstreamBuffer(VkDeviceSize extraBytes)
     VkDeviceSize newBitstreamDataLen = m_bitstreamDataLen + std::max<VkDeviceSize>(extraBytes, (2 * 1024 * 1024));
 
     VkDeviceSize retSize = m_bitstreamData.ResizeBitstreamBuffer(newBitstreamDataLen, m_bitstreamDataLen, 0);
-    if (retSize < newBitstreamDataLen)
-    {
-        assert(!"bitstream buffer resize failed");
-        nvParserLog("ERROR: bitstream buffer resize failed\n");
+    if (retSize < newBitstreamDataLen) {
+        nvParserLog("ERROR: bitstream buffer resize failed (got %llu, requested %llu)\n",
+                    (unsigned long long)retSize,
+                    (unsigned long long)newBitstreamDataLen);
         return false;
     }
 
@@ -306,7 +306,7 @@ VkDeviceSize VulkanVideoDecoder::swapBitstreamBuffer(VkDeviceSize copyCurrBuffOf
                                   pCopyData, copyCurrBuffSize, newBitstreamBuffer);
     assert(newBitstreamBuffer);
     if (!newBitstreamBuffer) {
-        assert(!"Cound't GetBitstreamBuffer()!");
+        VKVS_FAIL("Cound't GetBitstreamBuffer()!");
         return false;
     }
     // m_bitstreamDataLen = newBufferSize;

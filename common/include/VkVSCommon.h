@@ -39,6 +39,26 @@ extern "C" {
 // This is used when video codec features are not supported by hardware/driver
 #define VVS_EXIT_UNSUPPORTED  EX_UNAVAILABLE
 
+#ifdef NDEBUG
+#define VKVS_DEBUG_TRAP() ((void)0)
+#else
+#define VKVS_DEBUG_TRAP() abort()
+#endif
+
+#define VKVS_ASSERT(cond, fmt, ...) \
+    do { \
+        if (!(cond)) { \
+            fprintf(stderr, "ERROR [%s:%d]: assertion failed: " #cond " | " fmt "\n", \
+                    __FILE__, __LINE__, ##__VA_ARGS__); \
+            VKVS_DEBUG_TRAP(); \
+        } \
+    } while(0)
+
+#define VKVS_FAIL(msg) \
+    do { \
+        VKVS_ASSERT(false, msg); \
+    } while (0)
+
 #ifdef __cplusplus
 } // extern "C"
 

@@ -18,6 +18,7 @@
 #define _VKVIDEODECODER_STDVIDEOPICTUREPARAMETERSSET_H_
 
 #include "vulkan_interfaces.h"
+#include "VkVSCommon.h"
 
 class StdVideoPictureParametersSet : public VkVideoRefCountBase
 {
@@ -62,7 +63,7 @@ public:
         if (pPictureParameters->IsMyClassId(pPictureParameters->GetRefClassId())) {
             return pPictureParameters;
         }
-        assert(!"Invalid StdVideoPictureParametersSet from base");
+        VKVS_FAIL("Invalid StdVideoPictureParametersSet from base");
         return nullptr;
     }
 

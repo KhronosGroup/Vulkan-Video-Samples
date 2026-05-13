@@ -803,7 +803,7 @@ void VkEncDpbH264::AdaptiveMemoryManagement(const PicInfoH264 *pPicInfo, const S
         case STD_VIDEO_H264_MEM_MGMT_CONTROL_OP_END:
         case STD_VIDEO_H264_MEM_MGMT_CONTROL_OP_INVALID:
         default:
-            assert(!"Invalid case");
+            VKVS_FAIL("Invalid case");
             break;
         }
     }
@@ -1392,7 +1392,7 @@ void VkEncDpbH264::RefPicListReorderingLX(const PicInfoH264 *pPicInfo,
             break;
         case STD_VIDEO_H264_MODIFICATION_OF_PIC_NUMS_IDC_INVALID:
         default:
-            assert(!"Invalid case");
+            VKVS_FAIL("Invalid case");
             break;
         }
         refIdxLX++;

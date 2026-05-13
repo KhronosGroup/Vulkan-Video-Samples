@@ -22,6 +22,7 @@
 #include <array>
 #include <mutex>
 #include <vulkan_interfaces.h>
+#include "VkVSCommon.h"
 #include "VkCodecUtils/Helpers.h"
 #include <VkCodecUtils/HelpersDispatchTable.h>
 #include "VkShell/VkWsiDisplay.h"
@@ -144,7 +145,7 @@ public:
                 m_mutex = &devCtx->m_presentQueueMutex;
                 break;
             default:
-                assert(!"Invalid queue type!");
+                VKVS_FAIL("Invalid queue type!");
                 m_queue = nullptr;
                 m_mutex = nullptr;
                 break;

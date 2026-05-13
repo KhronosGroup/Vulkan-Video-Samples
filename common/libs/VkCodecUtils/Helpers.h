@@ -26,6 +26,7 @@
 #include <iomanip>
 #include <filesystem>
 #include "HelpersDispatchTable.h"
+#include "VkVSCommon.h"
 
 namespace vk {
 
@@ -256,7 +257,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\t **** ERROR: fence  %s(%llu) is not done after %llu mSec with result 0x%x ****\n",
                         fenceName, (long long unsigned int)fence, (long long unsigned int)fenceTotalWaitTimeout/(1000ULL * 1000ULL), vkIf->GetFenceStatus(device, fence));
-        assert(!"Fence is not signaled yet after more than 100 mSec wait");
+        VKVS_FAIL("Fence is not signaled yet after more than 100 mSec wait");
     }
 
     if (resetAfterWait) {

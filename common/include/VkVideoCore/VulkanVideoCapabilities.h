@@ -240,7 +240,7 @@ public:
         }
             break;
         default:
-            assert(!"Unsupported codec");
+            VKVS_FAIL("Unsupported codec");
             return VK_ERROR_FORMAT_NOT_SUPPORTED;
         }
 
@@ -275,7 +275,7 @@ public:
                         VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_EXTENSION_NAME,
                             sizeof (pVideoCapabilities->stdHeaderVersion.extensionName) - 1U) ||
                     (pVideoCapabilities->stdHeaderVersion.specVersion != VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_SPEC_VERSION)) {
-                    assert(!"Unsupported h.264 STD version");
+                    VKVS_FAIL("Unsupported h.264 STD version");
                     return VK_ERROR_INCOMPATIBLE_DRIVER;
                 }
             } else if (videoProfile.GetCodecType() == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR) {
@@ -285,7 +285,7 @@ public:
                         VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_EXTENSION_NAME,
                             sizeof (pVideoCapabilities->stdHeaderVersion.extensionName) - 1U) ||
                     (pVideoCapabilities->stdHeaderVersion.specVersion != VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_SPEC_VERSION)) {
-                    assert(!"Unsupported h.265 STD version");
+                    VKVS_FAIL("Unsupported h.265 STD version");
                     return VK_ERROR_INCOMPATIBLE_DRIVER;
                 }
             } else if (videoProfile.GetCodecType() == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) {
@@ -295,7 +295,7 @@ public:
                         VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_EXTENSION_NAME,
                             sizeof (pVideoCapabilities->stdHeaderVersion.extensionName) - 1U) ||
                     (pVideoCapabilities->stdHeaderVersion.specVersion != VK_STD_VULKAN_VIDEO_CODEC_AV1_DECODE_SPEC_VERSION)) {
-                    assert(!"Unsupported AV1 STD version");
+                    VKVS_FAIL("Unsupported AV1 STD version");
                     return VK_ERROR_INCOMPATIBLE_DRIVER;
                 }
             } else if (videoProfile.GetCodecType() == VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
@@ -305,11 +305,11 @@ public:
                         VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_EXTENSION_NAME,
                             sizeof (pVideoCapabilities->stdHeaderVersion.extensionName) - 1U) ||
                     (pVideoCapabilities->stdHeaderVersion.specVersion != VK_STD_VULKAN_VIDEO_CODEC_VP9_DECODE_SPEC_VERSION)) {
-                    assert(!"Unsupported VP9 STD version");
+                    VKVS_FAIL("Unsupported VP9 STD version");
                     return VK_ERROR_INCOMPATIBLE_DRIVER;
                 }
             } else {
-                assert(!"Unsupported codec");
+                VKVS_FAIL("Unsupported codec");
             }
         }
 

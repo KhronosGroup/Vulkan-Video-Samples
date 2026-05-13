@@ -194,7 +194,7 @@ int8_t VkEncDpbAV1::DpbPictureStart(StdVideoAV1FrameType frameType,
             }
         }
         if ((dpbIndx == INVALID_IDX) || (dpbIndx >= m_maxDpbSize)) {
-            assert(!"DPB mangement error");
+            VKVS_FAIL("DPB mangement error");
             return INVALID_IDX;
         }
 
