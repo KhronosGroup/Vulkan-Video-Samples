@@ -823,13 +823,15 @@ void EncoderConfig::InitVideoProfile()
         encodeBitDepthChroma = encodeBitDepthLuma;
     }
 
+    // Get the codec-specific profile (already set by InitProfileLevel)
+    uint32_t codecProfile = GetCodecProfile();
+
     // update the video profile
     videoCoreProfile = VkVideoCoreProfile::CreateEncodeProfile(
                                           codec, encodeChromaSubsampling,
                                           GetComponentBitDepthFlagBits(encodeBitDepthLuma),
                                           GetComponentBitDepthFlagBits(encodeBitDepthChroma),
-                                          (videoProfileIdc != (uint32_t)-1) ? videoProfileIdc :
-                                                  GetDefaultVideoProfileIdc(),
+                                          codecProfile,
                                           tuningMode);
 }
 
