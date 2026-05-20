@@ -246,6 +246,21 @@
       "source_filepath": "video/yuv/352x288_15_i420.yuv"
     },
     {
+      "name": "av1_main_profile_10bit",
+      "codec": "av1",
+      "profile": "main",
+      "extra_args": [
+        "--inputBpp",
+        "10"
+      ],
+      "description": "Test AV1 Main profile 10-bit encoding",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_420_10le.yuv",
+      "source_checksum": "c7d9ec2b39be350011086d52b3f973277cfcbbddf7c925a0ddde4b835229ddee",
+      "source_filepath": "video/yuv/352x288_15_i420_10le.yuv"
+    },
+    {
       "name": "av1_ip_gop",
       "codec": "av1",
       "profile": "main",
