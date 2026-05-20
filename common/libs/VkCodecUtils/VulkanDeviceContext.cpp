@@ -408,19 +408,6 @@ static constexpr uint32_t g_ignoredValidationMessageIds[] = {
     // driver's pNext chain traversal. Will resolve when VVL headers are updated.
     0x901f59ec,
 
-    // VUID-VkImageViewCreateInfo-image-01762 (MessageID = 0x6516b437)
-    // VVL false positive for video-profile-bound multi-planar images.
-    // The DPB images ARE created with VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT
-    // (VulkanVideoImagePool.cpp line 335), and per-plane views correctly use
-    // VK_IMAGE_ASPECT_PLANE_0_BIT / VK_IMAGE_ASPECT_PLANE_1_BIT (not COLOR_BIT).
-    // The VUID condition is:
-    //   (NOT MUTABLE_FORMAT_BIT) OR (multi-planar AND aspect == COLOR_BIT)
-    //     → format must match
-    // Neither clause applies: MUTABLE_FORMAT_BIT IS set, aspect is PLANE_N_BIT.
-    // VVL 1.4.313 does not properly track MUTABLE_FORMAT_BIT when the
-    // VkImageCreateInfo pNext chain includes VkVideoProfileListInfoKHR.
-    0x6516b437,
-
     // VUID-vkCmdBeginVideoCodingKHR-slotIndex-07239 (MessageID = 0xc36d9e29)
     // Cascading VVL false positive from the VUID-01762 issue above.
     // DPB slots are correctly activated via pSetupReferenceSlot with proper
