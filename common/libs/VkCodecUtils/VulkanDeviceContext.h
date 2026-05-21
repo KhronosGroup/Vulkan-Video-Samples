@@ -22,6 +22,7 @@
 #include <array>
 #include <mutex>
 #include <vulkan_interfaces.h>
+#include "VkVSCommon.h"
 #include "VkCodecUtils/Helpers.h"
 #include <VkCodecUtils/HelpersDispatchTable.h>
 #include "VkShell/VkWsiDisplay.h"
@@ -96,7 +97,7 @@ public:
         if ((size_t)index >= m_videoDecodeQueues.size()) {
             return VK_NULL_HANDLE;
         }
-        return m_videoDecodeQueues[index];
+        return m_videoDecodeQueues[(size_t)index];
     }
     int32_t GetVideoEncodeQueueFamilyIdx() const { return m_videoEncodeQueueFamily; }
     int32_t GetVideoEncodeDefaultQueueIndex() const { return m_videoEncodeDefaultQueueIndex; }
@@ -105,7 +106,7 @@ public:
         if ((size_t)index >= m_videoEncodeQueues.size()) {
             return VK_NULL_HANDLE;
         }
-        return m_videoEncodeQueues[index];
+        return m_videoEncodeQueues[(size_t)index];
     }
     bool    GetVideoDecodeQueryResultStatusSupport() const { return m_videoDecodeQueryResultStatusSupport; }
     bool    GetVideoEncodeQueryResultStatusSupport() const { return m_videoEncodeQueryResultStatusSupport; }
@@ -131,20 +132,20 @@ public:
                 break;
             case DECODE:
                 assert((queueIndex >= 0) && (queueIndex < devCtx->m_videoDecodeNumQueues));
-                m_queue = &devCtx->m_videoDecodeQueues[queueIndex];
-                m_mutex = &devCtx->m_videoDecodeQueueMutexes[queueIndex];
+                m_queue = &devCtx->m_videoDecodeQueues[(size_t)queueIndex];
+                m_mutex = &devCtx->m_videoDecodeQueueMutexes[(size_t)queueIndex];
                 break;
             case ENCODE:
                 assert((queueIndex >= 0) && (queueIndex < devCtx->m_videoEncodeNumQueues));
-                m_queue = &devCtx->m_videoEncodeQueues[queueIndex];
-                m_mutex = &devCtx->m_videoEncodeQueueMutexes[queueIndex];
+                m_queue = &devCtx->m_videoEncodeQueues[(size_t)queueIndex];
+                m_mutex = &devCtx->m_videoEncodeQueueMutexes[(size_t)queueIndex];
                 break;
             case PRESENT:
                 m_queue = &devCtx->m_presentQueue;
                 m_mutex = &devCtx->m_presentQueueMutex;
                 break;
             default:
-                assert(!"Invalid queue type!");
+                VKVS_FAIL("Invalid queue type!");
                 m_queue = nullptr;
                 m_mutex = nullptr;
                 break;
@@ -269,7 +270,7 @@ public:
                              uint64_t object, size_t location,
                              int32_t msg_code, const char *layer_prefix, const char *msg);
 
-    VkResult InitPhysicalDevice(int32_t deviceId, const vk::DeviceUuidUtils& deviceUuid,
+    VkResult InitPhysicalDevice(uint32_t deviceId, const vk::DeviceUuidUtils& deviceUuid,
                                 const VkQueueFlags requestQueueTypes =  (VK_QUEUE_GRAPHICS_BIT |
                                                                    /*  VK_QUEUE_COMPUTE_BIT |  */
                                                                    /* VK_QUEUE_TRANSFER_BIT | */

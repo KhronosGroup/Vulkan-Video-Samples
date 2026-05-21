@@ -27,7 +27,7 @@ VulkanDeviceMemoryImpl::Create(const VulkanDeviceContext* vkDevCtx,
 {
     VkSharedBaseObj<VulkanDeviceMemoryImpl> vkDeviceMemory(new VulkanDeviceMemoryImpl(vkDevCtx));
     if (!vkDeviceMemory) {
-        assert(!"Couldn't allocate host memory!");
+        VKVS_FAIL("Couldn't allocate host memory!");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
@@ -70,7 +70,7 @@ VkResult VulkanDeviceMemoryImpl::CreateDeviceMemory(const VulkanDeviceContext* v
     // Allocate memory for the buffer
     VkResult result = vkDevCtx->AllocateMemory(*vkDevCtx, &allocInfo, nullptr, &deviceMemory);
     if (result != VK_SUCCESS) {
-        assert(!"Couldn't allocate device memory!");
+        VKVS_FAIL("Couldn't allocate device memory!");
         return result;
     }
 
@@ -85,9 +85,9 @@ VkResult VulkanDeviceMemoryImpl::Initialize(const VkMemoryRequirements& memoryRe
 {
     if (m_memoryRequirements.size >= memoryRequirements.size) {
         if (clearMemory) {
-            VkDeviceSize ret = MemsetData(0x00, 0, m_memoryRequirements.size);
+            VkDeviceSize ret = narrow_cast<VkDeviceSize>(MemsetData(0x00, 0, m_memoryRequirements.size));
             if (ret != m_memoryRequirements.size) {
-                assert(!"Couldn't allocate device memory!");
+                VKVS_FAIL("Couldn't allocate device memory!");
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
         }
@@ -103,7 +103,7 @@ VkResult VulkanDeviceMemoryImpl::Initialize(const VkMemoryRequirements& memoryRe
                                          m_deviceMemoryOffset);
 
     if (result != VK_SUCCESS) {
-        assert(!"Couldn't CreateDeviceMemory()!");
+        VKVS_FAIL("Couldn't CreateDeviceMemory()!");
         return result;
     }
 
@@ -181,7 +181,7 @@ VkResult VulkanDeviceMemoryImpl::CopyDataToMemory(const uint8_t* pData,
                                                   VkDeviceSize memoryOffset) const
 {
     if ((pData == nullptr) || (size == 0)) {
-        assert(!"Couldn't CopyDataToMemory()!");
+        VKVS_FAIL("Couldn't CopyDataToMemory()!");
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -198,7 +198,7 @@ VkResult VulkanDeviceMemoryImpl::CopyDataToMemory(const uint8_t* pData,
 
     result = FlushInvalidateMappedMemoryRange(memoryOffset, size);
     if (result != VK_SUCCESS) {
-        assert(!"Couldn't FlushMappedMemoryRange()!");
+        VKVS_FAIL("Couldn't FlushMappedMemoryRange()!");
         return result;
     }
 
@@ -235,7 +235,7 @@ VkDeviceSize VulkanDeviceMemoryImpl::Resize(VkDeviceSize newSize, VkDeviceSize c
                                          newBufferOffset);
 
     if (result != VK_SUCCESS) {
-        assert(!"Couldn't CreateDeviceMemory()!");
+        VKVS_FAIL("Couldn't CreateDeviceMemory()!");
         return 0;
     }
 
@@ -247,7 +247,7 @@ VkDeviceSize VulkanDeviceMemoryImpl::Resize(VkDeviceSize newSize, VkDeviceSize c
         if ((result != VK_SUCCESS) || (newBufferDataPtr == nullptr)) {
             m_vkDevCtx->UnmapMemory(*m_vkDevCtx, newDeviceMemory);
             m_vkDevCtx->FreeMemory(*m_vkDevCtx, newDeviceMemory, nullptr);
-            assert(!"Couldn't MapMemory()!");
+            VKVS_FAIL("Couldn't MapMemory()!");
             return 0;
         }
 
@@ -285,7 +285,7 @@ uint8_t* VulkanDeviceMemoryImpl::CheckAccess(VkDeviceSize offset, VkDeviceSize s
             size -= offset;
         } else {
             // invalid offset
-            assert(!"CheckAccess() failed - buffer out of range!");
+            VKVS_FAIL("CheckAccess() failed - buffer out of range!");
             return nullptr;
         }
     }
@@ -295,14 +295,14 @@ uint8_t* VulkanDeviceMemoryImpl::CheckAccess(VkDeviceSize offset, VkDeviceSize s
             VkResult result = m_vkDevCtx->MapMemory(*m_vkDevCtx, m_deviceMemory, m_deviceMemoryOffset,
                                                     m_memoryRequirements.size, 0, (void**)&m_deviceMemoryDataPtr);
             if ((result != VK_SUCCESS) || (m_deviceMemoryDataPtr == nullptr)) {
-                assert(!"Couldn't MapMemory()!");
+                VKVS_FAIL("Couldn't MapMemory()!");
                 return nullptr;
             }
         }
         return m_deviceMemoryDataPtr + offset;
     }
 
-    assert(!"CheckAccess() failed - buffer out of range!");
+    VKVS_FAIL("CheckAccess() failed - buffer out of range!");
     return nullptr;
 }
 
@@ -313,13 +313,13 @@ int64_t VulkanDeviceMemoryImpl::MemsetData(uint32_t value, VkDeviceSize offset, 
     }
     uint8_t* setData = CheckAccess(offset, size);
     if (setData == nullptr) {
-        assert(!"MemsetData() failed - buffer out of range!");
+        VKVS_FAIL("MemsetData() failed - buffer out of range!");
         return -1;
     }
 
     assert(size < std::numeric_limits<size_t>::max());
-    memset(setData, value, (size_t)size);
-    return size;
+    memset(setData, (int)value, (size_t)size);
+    return (int64_t)size;
 }
 
 int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(uint8_t *dstBuffer, VkDeviceSize dstOffset,
@@ -330,12 +330,12 @@ int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(uint8_t *dstBuffer, VkDeviceSiz
     }
     const uint8_t* readData = CheckAccess(srcOffset, size);
     if (readData == nullptr) {
-        assert(!"CopyDataToBuffer() failed - buffer out of range!");
+        VKVS_FAIL("CopyDataToBuffer() failed - buffer out of range!");
         return -1;
     }
     assert(size < std::numeric_limits<size_t>::max());
     memcpy(dstBuffer + dstOffset, readData, (size_t)size);
-    return size;
+    return (int64_t)size;
 }
 
 int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(VkSharedBaseObj<VulkanDeviceMemoryImpl>& dstBuffer, VkDeviceSize dstOffset,
@@ -346,12 +346,12 @@ int64_t VulkanDeviceMemoryImpl::CopyDataToBuffer(VkSharedBaseObj<VulkanDeviceMem
     }
     const uint8_t* readData = CheckAccess(srcOffset, size);
     if (readData == nullptr) {
-        assert(!"CopyDataToBuffer() failed - buffer out of range!");
+        VKVS_FAIL("CopyDataToBuffer() failed - buffer out of range!");
         return -1;
     }
 
     dstBuffer->CopyDataFromBuffer(readData, 0, dstOffset, size);
-    return size;
+    return (int64_t)size;
 }
 
 int64_t  VulkanDeviceMemoryImpl::CopyDataFromBuffer(const uint8_t* sourceBuffer, VkDeviceSize srcOffset,
@@ -359,14 +359,14 @@ int64_t  VulkanDeviceMemoryImpl::CopyDataFromBuffer(const uint8_t* sourceBuffer,
 {
     uint8_t* writeData = CheckAccess(dstOffset, size);
     if (writeData == nullptr) {
-        assert(!"CopyDataFromBuffer() failed - buffer out of range!");
+        VKVS_FAIL("CopyDataFromBuffer() failed - buffer out of range!");
         return -1;
     }
     if ((size != 0) && (sourceBuffer != nullptr)) {
         assert(size < std::numeric_limits<size_t>::max());
         memcpy(writeData, sourceBuffer + srcOffset, (size_t)size);
     }
-    return size;
+    return (int64_t)size;
 }
 
 int64_t VulkanDeviceMemoryImpl::CopyDataFromBuffer(const VkSharedBaseObj<VulkanDeviceMemoryImpl>& sourceMemory,
@@ -377,27 +377,27 @@ int64_t VulkanDeviceMemoryImpl::CopyDataFromBuffer(const VkSharedBaseObj<VulkanD
     }
     uint8_t* writeData = CheckAccess(dstOffset, size);
     if (writeData == nullptr) {
-        assert(!"CopyDataFromBuffer() failed - buffer out of range!");
+        VKVS_FAIL("CopyDataFromBuffer() failed - buffer out of range!");
         return -1;
     }
 
     VkDeviceSize maxSize = 0;
     const uint8_t* srcPtr = sourceMemory->GetReadOnlyDataPtr(srcOffset, maxSize);
     if ((srcPtr == nullptr) || (maxSize < size)) {
-        assert(!"GetReadOnlyDataPtr() failed - buffer out of range!");
+        VKVS_FAIL("GetReadOnlyDataPtr() failed - buffer out of range!");
         return -1;
     }
 
     assert(size < std::numeric_limits<size_t>::max());
     memcpy(writeData, srcPtr, (size_t)size);
-    return size;
+    return (int64_t)size;
 }
 
 uint8_t* VulkanDeviceMemoryImpl::GetDataPtr(VkDeviceSize offset, VkDeviceSize &maxSize)
 {
     uint8_t* readData = CheckAccess(offset, VK_WHOLE_SIZE);
     if (readData == nullptr) {
-        assert(!"GetDataPtr() failed - buffer out of range!");
+        VKVS_FAIL("GetDataPtr() failed - buffer out of range!");
         return nullptr;
     }
     maxSize = m_memoryRequirements.size - offset;
@@ -408,7 +408,7 @@ const uint8_t* VulkanDeviceMemoryImpl::GetReadOnlyDataPtr(VkDeviceSize offset, V
 {
     const uint8_t* readData = CheckAccess(offset, 1);
     if (readData == nullptr) {
-        assert(!"GetReadOnlyDataPtr() failed - buffer out of range!");
+        VKVS_FAIL("GetReadOnlyDataPtr() failed - buffer out of range!");
         return nullptr;
     }
     maxSize = m_memoryRequirements.size - offset;

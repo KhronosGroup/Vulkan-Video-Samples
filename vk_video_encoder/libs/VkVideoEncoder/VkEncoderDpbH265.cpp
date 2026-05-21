@@ -51,7 +51,7 @@ VkEncDpbH265::VkEncDpbH265()
 bool VkEncDpbH265::DpbSequenceStart(int32_t dpbSize, bool useMultipleReferences)
 {
     assert(dpbSize >= 0);
-    m_dpbSize = std::min<int8_t>((int8_t)dpbSize, STD_VIDEO_H265_MAX_DPB_SIZE);
+    m_dpbSize = std::min<uint8_t>((uint8_t)dpbSize, STD_VIDEO_H265_MAX_DPB_SIZE);
 
     for (uint32_t i = 0; i < STD_VIDEO_H265_MAX_DPB_SIZE; i++) {
         m_stDpb[i].state = 0;
@@ -125,13 +125,13 @@ int8_t VkEncDpbH265::DpbPictureStart(uint64_t frameId, const StdVideoEncodeH265P
             break;
     }
     if (m_curDpbIndex >= m_dpbSize) {
-        assert(!"Dpb index out of bounds");
+        VKVS_FAIL("Dpb index out of bounds");
         return false;
     }
 
     DpbEntryH265* pCurDpbEntry = &m_stDpb[m_curDpbIndex];
     pCurDpbEntry->frameId = frameId;
-    pCurDpbEntry->picOrderCntVal = pPicInfo->PicOrderCntVal;
+    pCurDpbEntry->picOrderCntVal = (uint32_t)pPicInfo->PicOrderCntVal;
     pCurDpbEntry->output = !!pPicInfo->flags.pic_output_flag;
     pCurDpbEntry->corrupted = false;
     pCurDpbEntry->temporalId = pPicInfo->TemporalId;
@@ -140,7 +140,7 @@ int8_t VkEncDpbH265::DpbPictureStart(uint64_t frameId, const StdVideoEncodeH265P
     }
 
     for (int32_t i = 0; i < m_dpbSize; i++) {
-        pCurDpbEntry->refPicOrderCnt[i] = m_stDpb[i].picOrderCntVal;
+        pCurDpbEntry->refPicOrderCnt[i] = (int32_t)m_stDpb[i].picOrderCntVal;
         if (m_stDpb[i].marking == 2) {
             pCurDpbEntry->longTermRefPic |= 1 << i;
         } else {
@@ -217,7 +217,7 @@ void VkEncDpbH265::DpbBumping() {
     }
 
     if (dpbIndxWithMinPoc < 0) {
-        assert(!"Invalid Dpb state");
+        VKVS_FAIL("Invalid Dpb state");
         return;
     }
 
@@ -248,7 +248,7 @@ void VkEncDpbH265::FillStdReferenceInfo(uint8_t dpbIndex, StdVideoEncodeH265Refe
 
     pRefInfo->flags.unused_for_reference = (entry->marking == 0);
 
-    pRefInfo->PicOrderCntVal = entry->picOrderCntVal;
+    pRefInfo->PicOrderCntVal = (int32_t)entry->picOrderCntVal;
     pRefInfo->TemporalId = (uint8_t)entry->temporalId;
 
     // TODO: fill in pRefInfo->pic_type
@@ -269,7 +269,7 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
     bool noRaslOutputFlag = false;
     bool isIrapPic = false;
 
-    uint32_t picOrderCntVal = pPicInfo->PicOrderCntVal;
+    uint32_t picOrderCntVal = (uint32_t)pPicInfo->PicOrderCntVal;
 
     isIrapPic = pPicInfo->flags.IrapPicFlag;
     if (isIrapPic) {
@@ -331,18 +331,18 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
 
         for (i = 0; i < pShortTermRefPicSet->num_negative_pics; i++) {
             if ((pShortTermRefPicSet->used_by_curr_pic_s0_flag >> i) & 0x1)
-                pocStCurrBefore[j++] = picOrderCntVal + DeltaPocS0[i];
+                pocStCurrBefore[j++] = (uint32_t)(picOrderCntVal + (uint32_t)DeltaPocS0[i]);
             else
-                pocStFoll[k++] = picOrderCntVal + DeltaPocS0[i];
+                pocStFoll[k++] = (uint32_t)(picOrderCntVal + (uint32_t)DeltaPocS0[i]);
         }
         m_numPocStCurrBefore = j;
 
         j = 0;
         for (i = 0; i < pShortTermRefPicSet->num_positive_pics; i++) {
             if ((pShortTermRefPicSet->used_by_curr_pic_s1_flag >> i) & 0x1)
-                pocStCurrAfter[j++] = picOrderCntVal + DeltaPocS1[i];
+                pocStCurrAfter[j++] = (uint32_t)(picOrderCntVal + (uint32_t)DeltaPocS1[i]);
             else
-                pocStFoll[k++] = picOrderCntVal + DeltaPocS1[i];
+                pocStFoll[k++] = (uint32_t)(picOrderCntVal + (uint32_t)DeltaPocS1[i]);
         }
 
         m_numPocStCurrAfter = j;
@@ -376,18 +376,18 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
         j = 0;
         k = 0;
         for (i = 0; i < (int32_t)numLongTermRefPics; i++) {
-            int32_t pocLt = pocLsbLt[i];
+            int32_t pocLt = (int32_t)pocLsbLt[i];
             if (pLongTermRefPics->delta_poc_msb_present_flag[i]) {
-                uint32_t slice_pic_order_cnt_lsb = picOrderCntVal & (maxPicOrderCntLsb - 1);
+                uint32_t slice_pic_order_cnt_lsb = picOrderCntVal & (uint32_t)(maxPicOrderCntLsb - 1);
 
-                pocLt += picOrderCntVal - deltaPocMSBCycleLt[i] * maxPicOrderCntLsb - slice_pic_order_cnt_lsb;
+                pocLt += (int32_t)(picOrderCntVal - deltaPocMSBCycleLt[i] * (uint32_t)maxPicOrderCntLsb - slice_pic_order_cnt_lsb);
             }
 
             if (usedByCurrPicLt[i]) {
-                pocLtCurr[j] = pocLt;
+                pocLtCurr[j] = (uint32_t)pocLt;
                 currDeltaPocMsbPresentFlag[j++] = pLongTermRefPics->delta_poc_msb_present_flag[i];
             } else {
-                pocLtFoll[k] = pocLt;
+                pocLtFoll[k] = (uint32_t)pocLt;
                 follDeltaPocMsbPresentFlag[k++] = pLongTermRefPics->delta_poc_msb_present_flag[i];
             }
         }
@@ -399,7 +399,7 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
     memset(pRefPicSet, -1, sizeof(RefPicSet));
 
     for (int32_t i = 0; i < m_numPocLtCurr; i++) {
-        uint32_t mask = !currDeltaPocMsbPresentFlag[i] ? (maxPicOrderCntLsb - 1) : ~0;
+        uint32_t mask = !currDeltaPocMsbPresentFlag[i] ? (uint32_t)(maxPicOrderCntLsb - 1) : (uint32_t)~0;
         // if there is a reference picture picX in the Dpb with slice_pic_order_cnt_lsb equal to pocLtCurr[i]
         // if there is a reference picture picX in the Dpb with PicOrderCntVal equal to pocLtCurr[i]
         for (int8_t j = 0; j < m_dpbSize; j++) {
@@ -414,7 +414,7 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
     }
 
     for (int32_t i = 0; i < m_numPocLtFoll; i++) {
-        uint32_t mask = !follDeltaPocMsbPresentFlag[i] ? maxPicOrderCntLsb - 1 : ~0;
+        uint32_t mask = !follDeltaPocMsbPresentFlag[i] ? (uint32_t)(maxPicOrderCntLsb - 1) : (uint32_t)~0;
         // if there is a reference picture picX in the Dpb with slice_pic_order_cnt_lsb equal to PocLtFoll[i]
         // if there is a reference picture picX in the Dpb with PicOrderCntVal to PocLtFoll[i]
         for (int8_t j = 0; j < m_dpbSize; j++) {
@@ -429,7 +429,7 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
         if (pRefPicSet->ltCurr[i] != -1) {
             // encoder driver should have already done the reference picture marking process
             if (m_stDpb[pRefPicSet->ltCurr[i]].marking != 2) {
-                assert(!"Forcing reference picture marking to be used as long term");
+                VKVS_FAIL("Forcing reference picture marking to be used as long term");
                 m_stDpb[pRefPicSet->ltCurr[i]].marking = 2;
             }
         }
@@ -439,7 +439,7 @@ void VkEncDpbH265::ApplyReferencePictureSet(const StdVideoEncodeH265PictureInfo 
         if (pRefPicSet->ltFoll[i] != -1) {
             // encoder driver should have already done the reference picture marking process
             if (m_stDpb[pRefPicSet->ltCurr[i]].marking != 2) {
-                assert(!"Forcing reference picture marking to be used as long term");
+                VKVS_FAIL("Forcing reference picture marking to be used as long term");
                 m_stDpb[pRefPicSet->ltCurr[i]].marking = 2;
             }
         }
@@ -574,8 +574,8 @@ void VkEncDpbH265::SetupReferencePictureListLx(StdVideoH265PictureType picType,
 
         assert(pRefLists->num_ref_idx_l0_active_minus1 < STD_VIDEO_H265_MAX_NUM_LIST_REF);
         for (rIdx = 0; rIdx <= pRefLists->num_ref_idx_l0_active_minus1; rIdx++) {
-            pRefLists->RefPicList0[rIdx] = pRefLists->flags.ref_pic_list_modification_flag_l0 ? RefPicListTemp0[pRefLists->list_entry_l0[rIdx]] : RefPicListTemp0[rIdx];
-            m_longTermFlags |= pRefLists->flags.ref_pic_list_modification_flag_l0 ? (isLongTerm[pRefLists->list_entry_l0[rIdx]] << rIdx) : (isLongTerm[rIdx] << rIdx);
+            pRefLists->RefPicList0[rIdx] = pRefLists->flags.ref_pic_list_modification_flag_l0 ? (uint8_t)RefPicListTemp0[pRefLists->list_entry_l0[rIdx]] : (uint8_t)RefPicListTemp0[rIdx];
+            m_longTermFlags |= pRefLists->flags.ref_pic_list_modification_flag_l0 ? (uint32_t)(isLongTerm[pRefLists->list_entry_l0[rIdx]] << rIdx) : (uint32_t)(isLongTerm[rIdx] << rIdx);
         }
     }
 
@@ -604,8 +604,8 @@ void VkEncDpbH265::SetupReferencePictureListLx(StdVideoH265PictureType picType,
 
         assert(pRefLists->num_ref_idx_l1_active_minus1 < STD_VIDEO_H265_MAX_NUM_LIST_REF);
         for (rIdx = 0; rIdx <= pRefLists->num_ref_idx_l1_active_minus1; rIdx++) {
-            pRefLists->RefPicList1[rIdx] = pRefLists->flags.ref_pic_list_modification_flag_l1 ? RefPicListTemp1[pRefLists->list_entry_l1[rIdx]] : RefPicListTemp1[rIdx];
-            m_longTermFlags |= pRefLists->flags.ref_pic_list_modification_flag_l1 ? (isLongTerm[16 + pRefLists->list_entry_l1[rIdx]] << (16 + rIdx)) : (isLongTerm[16 + rIdx] << (16 + rIdx));
+            pRefLists->RefPicList1[rIdx] = pRefLists->flags.ref_pic_list_modification_flag_l1 ? (uint8_t)RefPicListTemp1[pRefLists->list_entry_l1[rIdx]] : (uint8_t)RefPicListTemp1[rIdx];
+            m_longTermFlags |= pRefLists->flags.ref_pic_list_modification_flag_l1 ? (uint32_t)(isLongTerm[16 + pRefLists->list_entry_l1[rIdx]] << (16 + rIdx)) : (uint32_t)(isLongTerm[16 + rIdx] << (16 + rIdx));
         }
     }
 }
@@ -636,7 +636,7 @@ void VkEncDpbH265::InitializeShortTermRPSPFrame(int32_t numPocLtCurr,
     int32_t curTemporalId = pPicInfo->TemporalId;
     bool    tsaPicture = false;
 
-    uint32_t curPOC = pPicInfo->PicOrderCntVal;
+    uint32_t curPOC = (uint32_t)pPicInfo->PicOrderCntVal;
 
     bool isIrapPic = pPicInfo->flags.IrapPicFlag;
 
@@ -751,7 +751,7 @@ void VkEncDpbH265::InitializeShortTermRPSPFrame(int32_t numPocLtCurr,
         assert((numPocStCurrBefore + numPocStCurrAfter + numPocLtCurr) == 0);
     } else {
         if ((numPocStCurrBefore + numPocStCurrAfter + numPocLtCurr) == 0) {
-            assert(!"Invalid configuration - no reference pictures selected for inter picture");
+            VKVS_FAIL("Invalid configuration - no reference pictures selected for inter picture");
             return;
         }
     }
@@ -759,7 +759,7 @@ void VkEncDpbH265::InitializeShortTermRPSPFrame(int32_t numPocLtCurr,
         tmpSTRPS.flags.inter_ref_pic_set_prediction_flag         = 0;
         tmpSTRPS.num_negative_pics                               = (uint8_t)numNegativeRefPics;
         tmpSTRPS.num_positive_pics                               = (uint8_t)numPositiveRefPics;
-        int32_t prevDelta = 0;
+        uint32_t prevDelta = 0;
         for (int32_t numStRefL0 = 0; numStRefL0 < tmpSTRPS.num_negative_pics; numStRefL0++) {
             tmpSTRPS.delta_poc_s0_minus1[numStRefL0] = (uint8_t)(prevDelta - deltaPocS0[numStRefL0] - 1);
             tmpSTRPS.used_by_curr_pic_s0_flag |= (uint16_t)((usedByCurrPicS0[numStRefL0] & 1) << numStRefL0);

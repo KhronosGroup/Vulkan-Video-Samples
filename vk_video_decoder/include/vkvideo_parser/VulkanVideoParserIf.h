@@ -22,7 +22,7 @@
 #include "vkvideo_parser/StdVideoPictureParametersSet.h"
 #include "VkCodecUtils/VulkanBitstreamBuffer.h"
 
-static const uint32_t NV_VULKAN_VIDEO_PARSER_API_VERSION = VK_MAKE_VIDEO_STD_VERSION(0, 9, 9);
+static const uint32_t NV_VULKAN_VIDEO_PARSER_API_VERSION = VK_MAKE_VIDEO_STD_VERSION(0, 9, 10);
 
 typedef uint32_t FrameRate;  // Packed 18-bit numerator & 14-bit denominator
 
@@ -224,8 +224,8 @@ typedef struct VkParserHevcPictureData {
     uint8_t seq_parameter_set_id;        // SPS ID
     uint8_t vps_video_parameter_set_id;  // VPS ID
 
-    uint8_t IrapPicFlag;
-    uint8_t IdrPicFlag;
+    uint32_t IrapPicFlag :1;
+    uint32_t IdrPicFlag :1;
     uint8_t short_term_ref_pic_set_sps_flag;
 
     // RefPicSets
@@ -335,7 +335,7 @@ typedef struct VkParserVp9PictureData {
 
     // references
     uint8_t  ref_frame_idx[STD_VIDEO_VP9_REFS_PER_FRAME];
-    uint8_t  pic_idx[STD_VIDEO_VP9_NUM_REF_FRAMES];
+    int8_t  pic_idx[STD_VIDEO_VP9_NUM_REF_FRAMES];
     VkPicIf* pLastRef;
     VkPicIf* pGoldenRef;
     VkPicIf* pAltRef;
@@ -419,7 +419,7 @@ typedef struct VkParserSequenceInfo {
     VkVideoCodecOperationFlagBitsKHR eCodec;  // Compression Standard
     bool isSVC;                               // h.264 SVC
     FrameRate frameRate;                      // Frame Rate stored in the bitstream
-    int32_t bProgSeq;                         // Progressive Sequence
+    bool    bProgSeq;                         // Progressive Sequence
     int32_t nDisplayWidth;                    // Displayed Horizontal Size
     int32_t nDisplayHeight;                   // Displayed Vertical Size
     int32_t nCodedWidth;                      // Coded Picture Width
@@ -432,7 +432,7 @@ typedef struct VkParserSequenceInfo {
     uint8_t uVideoFullRange;                  // 0=16-235, 1=0-255
     int32_t lBitrate;                         // Video bitrate (bps)
     int32_t lDARWidth,
-        lDARHeight;                                  // Display Aspect Ratio = lDARWidth : lDARHeight
+            lDARHeight;                                  // Display Aspect Ratio = lDARWidth : lDARHeight
     int32_t lVideoFormat;                            // Video Format (VideoFormatXXX)
     int32_t lColorPrimaries;                         // Colour Primaries (ColorPrimariesXXX)
     int32_t lTransferCharacteristics;                // Transfer Characteristics

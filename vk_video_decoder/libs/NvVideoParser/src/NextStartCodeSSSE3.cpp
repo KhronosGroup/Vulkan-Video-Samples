@@ -19,7 +19,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::SSSE3>(const uint8_t *pdata
     {
         const __m128i v1 = _mm_set1_epi8(1);
         __m128i vdata = _mm_loadu_si128((const __m128i*)pdatain);
-        __m128i vBfr = _mm_set1_epi16(((m_BitBfr << 8) & 0xFF00) | ((m_BitBfr >> 8) & 0xFF));
+        __m128i vBfr = _mm_set1_epi16((int16_t)(((m_BitBfr << 8) & 0xFF00) | ((m_BitBfr >> 8) & 0xFF)));
         __m128i vdata_prev1 = _mm_alignr_epi8(vdata, vBfr, 15);
         __m128i vdata_prev2 = _mm_alignr_epi8(vdata, vBfr, 14);
         for ( ; i < datasize32 - 32; i += 32)
@@ -33,20 +33,20 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::SSSE3>(const uint8_t *pdata
                 // hotspot end
                 if (resmask)
                 {
-                    const int offset = count_trailing_zeros((uint64_t) (resmask & 0xFFFFFFFF));
+                    const int offset = count_trailing_zeros((uint64_t) ((unsigned)resmask & 0xFFFFFFFFu));
                     found_start_code = true;
                     m_BitBfr =  1;
-                    return offset + i + c + 1;
+                    return (size_t)(offset + c + 1) + i;
                 }
                 // hotspot begin
-                __m128i vdata_next = _mm_loadu_si128((const __m128i*)&pdatain[i + c + 16]);
+                __m128i vdata_next = _mm_loadu_si128((const __m128i*)&pdatain[i + (size_t)(c + 16)]);
                 vdata_prev1 = _mm_alignr_epi8(vdata_next, vdata, 15);
                 vdata_prev2 = _mm_alignr_epi8(vdata_next, vdata, 14);
                 vdata = vdata_next;
                 // hotspot end
             }
         } // main processing loop end
-        m_BitBfr = (pdatain[i-2] << 8) | pdatain[i-1];
+        m_BitBfr = (uint32_t)((pdatain[i-2] << 8) | pdatain[i-1]);
     }
     // process a tail (rest):
     uint32_t bfr = m_BitBfr;

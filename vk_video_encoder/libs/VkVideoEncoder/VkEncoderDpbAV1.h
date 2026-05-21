@@ -199,11 +199,11 @@ public:
     }
     int32_t GetFrameId(int32_t dpbIdx) {
         assert((dpbIdx >= 0) && (dpbIdx < m_maxDpbSize));
-        return m_DPB[dpbIdx].frameId;
+        return (int32_t)m_DPB[dpbIdx].frameId;
     }
     int32_t GetPicOrderCntVal(int32_t dpbIdx) {
         assert((dpbIdx >= 0) && (dpbIdx < m_maxDpbSize));
-        return m_DPB[dpbIdx].picOrderCntVal;
+        return (int32_t)m_DPB[dpbIdx].picOrderCntVal;
     }
     int32_t GetNumRefsInGroup(int32_t groupId) {
         assert(groupId < 2);
@@ -244,7 +244,7 @@ private:
 
     int32_t GetRefCount(int32_t dpbId) {
         assert(dpbId < m_maxDpbSize);
-        return m_DPB[dpbId].refCount;
+        return (int32_t)m_DPB[dpbId].refCount;
     }
 
 private:

@@ -62,7 +62,7 @@ public:
 
     int32_t Release()
     {
-        uint32_t ret;
+        int32_t ret;
         ret = --m_refCount;
         // Destroy the device if refcount reaches zero
         if (ret == 0) {
@@ -165,7 +165,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
                                             m_encoderConfig->verbose);
     if (result != VK_SUCCESS) {
 
-        assert(!"Can't initialize the Vulkan physical device!");
+        VKVS_FAIL("Can't initialize the Vulkan physical device!");
         return result;
     }
 
@@ -188,13 +188,13 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
                                           );
     if (result != VK_SUCCESS) {
 
-        assert(!"Failed to create Vulkan device!");
+        VKVS_FAIL("Failed to create Vulkan device!");
         return result;
     }
 
     result = VkVideoEncoder::CreateVideoEncoder(&m_vkDevCtxt, m_encoderConfig, m_encoder);
     if (result != VK_SUCCESS) {
-        assert(!"Can't initialize the Vulkan physical device!");
+        VKVS_FAIL("Can't initialize the Vulkan physical device!");
         return result;
     }
 
@@ -222,7 +222,7 @@ VkResult VulkanVideoEncoderImpl::EncodeNextFrame(int64_t& frameNumEncoded)
         return result;
     }
 
-    frameNumEncoded = encodeFrameInfo->frameInputOrderNum;
+    frameNumEncoded = (int64_t)encodeFrameInfo->frameInputOrderNum;
 
     if (m_encoderConfig->verboseFrameStruct) {
         std::cout << "End processing current input frame index: " << m_lastFrameIndex << std::endl;
@@ -249,7 +249,7 @@ VkResult CreateVulkanVideoEncoder(VkVideoCodecOperationFlagBitsKHR videoCodecOpe
         break;
 
     default:
-        assert(!"Unsupported codec type!!!\n");
+        VKVS_FAIL("Unsupported codec type!!!\n");
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 

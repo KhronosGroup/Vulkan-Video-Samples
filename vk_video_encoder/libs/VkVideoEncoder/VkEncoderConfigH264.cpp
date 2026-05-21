@@ -16,14 +16,15 @@
 
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkVideoEncoderH264.h"
+#include "VkVSCommon.h"
 
 int EncoderConfigH264::DoParseArguments(int argc, const char* argv[])
 {
     std::vector<std::string> args(argv, argv + argc);
 
-    for (int32_t i = 0; i < argc; i++) {
+    for (size_t i = 0; i < args.size(); i++) {
         if (args[i] == "--slices") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &sliceCount) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &sliceCount) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -32,7 +33,7 @@ int EncoderConfigH264::DoParseArguments(int argc, const char* argv[])
                 return -1;
             }
         } else if (args[i] == "--profile") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -77,13 +78,13 @@ StdVideoH264LevelIdc EncoderConfigH264::DetermineLevel(uint8_t dpbSize,
         return levelLimits[idx].level;
     }
 
-    assert(!"Invalid h264_level");
+    VKVS_FAIL("Invalid h264_level");
     return STD_VIDEO_H264_LEVEL_IDC_INVALID;
 }
 
 void EncoderConfigH264::SetAspectRatio(StdVideoH264SequenceParameterSetVui *vui,
-                                       int32_t width, int32_t height,
-                                       int32_t darWidth, int32_t darHeight) {
+                                       uint32_t width, uint32_t height,
+                                       uint32_t darWidth, uint32_t darHeight) {
 
     static const struct {
         int32_t width;
@@ -106,7 +107,7 @@ void EncoderConfigH264::SetAspectRatio(StdVideoH264SequenceParameterSetVui *vui,
     // convert DAR to SAR
     uint32_t w = height * darWidth;
     uint32_t h = width  * darHeight;
-    int32_t d = Gcd(w, h);
+    uint32_t d = Gcd(w, h);
     w /= d;
     h /= d;
 
@@ -159,8 +160,8 @@ EncoderConfigH264::InitVuiParameters(StdVideoH264SequenceParameterSetVui *vui,
     if ((frameRateNumerator > 0) && (frameRateDenominator > 0)) {
         double frameRate = (double)frameRateNumerator / frameRateDenominator;
 
-        const int ticks_1000 = (int)(frameRate * 1000.0 + 0.5);
-        const int ticks_1001 = (int)(frameRate * 1001.0 + 0.5);
+        const uint32_t ticks_1000 = (uint32_t)(frameRate * 1000.0 + 0.5);
+        const uint32_t ticks_1001 = (uint32_t)(frameRate * 1001.0 + 0.5);
 
         if ((ticks_1001 % 500) == 0) {
             vui->time_scale = ticks_1001 * 2;
@@ -432,7 +433,7 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
                                                                                  h264QualityLevelProperties);
     if (result != VK_SUCCESS) {
         std::cout << "*** Could not get Video Encode QualityLevel Properties :" << result << " ***" << std::endl;
-        assert(!"Could not get Video Encode QualityLevel Properties");
+        VKVS_FAIL("Could not get Video Encode QualityLevel Properties");
         return result;
     }
 
@@ -461,37 +462,37 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
             std::cerr << "FIXME: the preferred GOP frame count supported by this device is 0. Using the maximum GOP frame count value." << std::endl;
             gopStructure.SetGopFrameCount(UINT8_MAX);
         } else {
-            gopStructure.SetGopFrameCount(h264QualityLevelProperties.preferredGopFrameCount);
+            gopStructure.SetGopFrameCount((uint8_t)h264QualityLevelProperties.preferredGopFrameCount);
         }
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(h264QualityLevelProperties.preferredIdrPeriod);
     }
     if (gopStructure.GetConsecutiveBFrameCount() == CONSECUTIVE_B_FRAME_COUNT_MAX_VALUE) {
-        gopStructure.SetConsecutiveBFrameCount(h264QualityLevelProperties.preferredConsecutiveBFrameCount);
+        gopStructure.SetConsecutiveBFrameCount((uint8_t)h264QualityLevelProperties.preferredConsecutiveBFrameCount);
     }
     if (constQp.qpIntra == 0) {
-        constQp.qpIntra = h264QualityLevelProperties.preferredConstantQp.qpI;
+        constQp.qpIntra = (uint32_t)h264QualityLevelProperties.preferredConstantQp.qpI;
     }
     if (constQp.qpInterP == 0) {
-        constQp.qpInterP = h264QualityLevelProperties.preferredConstantQp.qpP;
+        constQp.qpInterP = (uint32_t)h264QualityLevelProperties.preferredConstantQp.qpP;
     }
     if (constQp.qpInterB == 0) {
-        constQp.qpInterB = h264QualityLevelProperties.preferredConstantQp.qpB;
+        constQp.qpInterB = (uint32_t)h264QualityLevelProperties.preferredConstantQp.qpB;
     }
     if (rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR) {
         minQp = h264QualityLevelProperties.preferredConstantQp;
         maxQp = h264QualityLevelProperties.preferredConstantQp;
     }
-    numRefL0 = h264QualityLevelProperties.preferredMaxL0ReferenceCount;
-    numRefL1 = h264QualityLevelProperties.preferredMaxL1ReferenceCount;
+    numRefL0 = (uint8_t)h264QualityLevelProperties.preferredMaxL0ReferenceCount;
+    numRefL1 = (uint8_t)h264QualityLevelProperties.preferredMaxL1ReferenceCount;
     numRefFrames = numRefL0 + numRefL1;
     entropyCodingMode = h264QualityLevelProperties.preferredStdEntropyCodingModeFlag == VK_TRUE ? ENTROPY_CODING_MODE_CABAC : ENTROPY_CODING_MODE_CAVLC;
 
     return VK_SUCCESS;
 }
 
-int8_t EncoderConfigH264::InitDpbCount()
+uint8_t EncoderConfigH264::InitDpbCount()
 {
     dpbCount = 0; // TODO: What is the need for this?
 

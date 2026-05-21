@@ -35,14 +35,14 @@ public:
                            VkDeviceSize initializeBufferMemorySize = 0, const void* pInitializeBufferMemory = nullptr,
                            uint32_t queueFamilyCount = 0, uint32_t* queueFamilyIndexes = nullptr);
 
-    virtual int32_t AddRef()
+    virtual int32_t AddRef() override
     {
         return ++m_refCount;
     }
 
-    virtual int32_t Release()
+    virtual int32_t Release() override
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the buffer if ref-count reaches zero
         if (ret == 0) {
             // std::cout << "Delete bitstream buffer " << this << " with size " << GetMaxSize() << std::endl;
@@ -51,7 +51,7 @@ public:
         return ret;
     }
 
-    virtual int32_t GetRefCount()
+    virtual int32_t GetRefCount() override
     {
         assert(m_refCount > 0);
         return m_refCount;

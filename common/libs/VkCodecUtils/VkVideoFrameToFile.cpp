@@ -28,7 +28,7 @@
 // Rotate right for 16-bit unsigned integers.
 // Used to normalize MSB-aligned high bit-depth samples (10-bit, 12-bit) to LSB-aligned.
 inline uint16_t roru16(uint16_t x, uint16_t n) {
-    return n == 0 ? x : (x >> n) | (x << (-n & 15));
+    return n == 0 ? x : (uint16_t)((x >> n) | (x << (-n & 15)));
 }
 
 template<typename T>
@@ -44,10 +44,10 @@ static void CopyPlaneData(const uint8_t* pSrc, uint8_t* pDst,
 
     for (int32_t y = 0; y < height; y++) {
         if (srcPixelStride == 1 && bitShift == 0) {
-            memcpy(dst, src, width * sizeof(T));
+            memcpy(dst, src, (size_t)width * sizeof(T));
         } else {
             for (int32_t x = 0; x < width; x++) {
-                T sample = src[x * srcPixelStride];
+                T sample = src[(size_t)x * srcPixelStride];
                 if (bitShift > 0 && sizeof(T) == sizeof(uint16_t)) {
                     sample = static_cast<T>(roru16(static_cast<uint16_t>(sample), static_cast<uint16_t>(bitShift)));
                 }
@@ -120,7 +120,7 @@ public:
     }
 
     virtual int32_t Release() override {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         if (ret == 0) {
             delete this;
         }
@@ -155,7 +155,7 @@ public:
                         pFrame->frameCompleteFence,
                         pFrame->queryPool,
                         pFrame->startQueryId,
-                        pFrame->pictureIndex, false, "frameCompleteFence");
+                        (uint32_t)pFrame->pictureIndex, false, "frameCompleteFence");
 
         VkFormat format = imageResource->GetImageCreateInfo().format;
         const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(format);
@@ -186,7 +186,7 @@ public:
         }
 
         if (m_outputy4m) {
-            return WriteFrameToFileY4M(0, usedBufferSize, pFrame->displayWidth, pFrame->displayHeight, mpInfo, bytesWritten);
+            return WriteFrameToFileY4M(0, usedBufferSize, (size_t)pFrame->displayWidth, (size_t)pFrame->displayHeight, mpInfo, bytesWritten);
         } else {
             return WriteDataToFile(0, usedBufferSize, bytesWritten);
         }
@@ -404,11 +404,11 @@ public:
         // Calculate plane layouts for output buffer
         VkSubresourceLayout yuvPlaneLayouts[3] = {};
         yuvPlaneLayouts[0].offset = 0;
-        yuvPlaneLayouts[0].rowPitch = frameWidth * bytesPerPixel;
-        yuvPlaneLayouts[1].offset = yuvPlaneLayouts[0].rowPitch * frameHeight;
-        yuvPlaneLayouts[1].rowPitch = secondaryPlaneWidth * bytesPerPixel;
-        yuvPlaneLayouts[2].offset = yuvPlaneLayouts[1].offset + (yuvPlaneLayouts[1].rowPitch * secondaryPlaneHeight);
-        yuvPlaneLayouts[2].rowPitch = secondaryPlaneWidth * bytesPerPixel;
+        yuvPlaneLayouts[0].rowPitch = (uint32_t)frameWidth * bytesPerPixel;
+        yuvPlaneLayouts[1].offset = yuvPlaneLayouts[0].rowPitch * (VkDeviceSize)frameHeight;
+        yuvPlaneLayouts[1].rowPitch = (uint32_t)secondaryPlaneWidth * bytesPerPixel;
+        yuvPlaneLayouts[2].offset = yuvPlaneLayouts[1].offset + (yuvPlaneLayouts[1].rowPitch * (VkDeviceSize)secondaryPlaneHeight);
+        yuvPlaneLayouts[2].rowPitch = (uint32_t)secondaryPlaneWidth * bytesPerPixel;
 
         // Copy the luma plane
         const uint32_t numCompatiblePlanes = 1;
@@ -438,9 +438,9 @@ public:
             for (int32_t height = 0; height < secondaryPlaneHeight; height++) {
                 const uint8_t* pSrc;
                 if (srcPlane != plane) {
-                    pSrc = readImagePtr + layouts[srcPlane].offset + ((plane - 1) * bytesPerPixel) + (layouts[srcPlane].rowPitch * height);
+                    pSrc = readImagePtr + layouts[srcPlane].offset + ((plane - 1) * bytesPerPixel) + (layouts[srcPlane].rowPitch * (VkDeviceSize)height);
                 } else {
-                    pSrc = readImagePtr + layouts[srcPlane].offset + (layouts[srcPlane].rowPitch * height);
+                    pSrc = readImagePtr + layouts[srcPlane].offset + (layouts[srcPlane].rowPitch * (VkDeviceSize)height);
                 }
 
                 if (is8Bit) {
@@ -459,10 +459,10 @@ public:
         }
 
         // Calculate total buffer size
-        outputBufferSize = static_cast<size_t>(yuvPlaneLayouts[0].rowPitch * imageHeight);
+        outputBufferSize = static_cast<size_t>(yuvPlaneLayouts[0].rowPitch * (VkDeviceSize)imageHeight);
         if (mpInfo->planesLayout.numberOfExtraPlanes >= 1) {
-            outputBufferSize += static_cast<size_t>(yuvPlaneLayouts[1].rowPitch * secondaryPlaneHeight);
-            outputBufferSize += static_cast<size_t>(yuvPlaneLayouts[2].rowPitch * secondaryPlaneHeight);
+            outputBufferSize += static_cast<size_t>(yuvPlaneLayouts[1].rowPitch * (VkDeviceSize)secondaryPlaneHeight);
+            outputBufferSize += static_cast<size_t>(yuvPlaneLayouts[2].rowPitch * (VkDeviceSize)secondaryPlaneHeight);
         }
 
         return outputBufferSize;

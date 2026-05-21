@@ -126,7 +126,7 @@ public:
 
     int32_t Release()
     {
-        uint32_t ret;
+        int32_t ret;
         ret = --m_refCount;
         // Destroy the device if refcount reaches zero
         if (ret == 0) {
@@ -176,9 +176,9 @@ protected:
 		if ((m_nalu.end_offset - m_nalu.get_offset) < 0)
 			return 0;
 		assert((m_nalu.end_offset - m_nalu.get_offset) < std::numeric_limits<int32_t>::max());
-                               return (int32_t)(m_nalu.end_offset - m_nalu.get_offset) * 8 + (32 - m_nalu.get_bfroffs); }
+                               return (int32_t)(m_nalu.end_offset - m_nalu.get_offset) * 8 + (32 - (int32_t)m_nalu.get_bfroffs); }
     int32_t consumed_bits() { assert((m_nalu.get_offset - m_nalu.start_offset - m_nalu.get_emulcnt) < std::numeric_limits<int32_t>::max());
-                          return (int32_t)(m_nalu.get_offset - m_nalu.start_offset - m_nalu.get_emulcnt) * 8 - (32 - m_nalu.get_bfroffs); }
+                          return (int32_t)(m_nalu.get_offset - m_nalu.start_offset - m_nalu.get_emulcnt) * 8 - (32 - (int32_t)m_nalu.get_bfroffs); }
     uint32_t next_bits(uint32_t n) { return (m_nalu.get_bfr << m_nalu.get_bfroffs) >> (32 - n); } // NOTE: n must be in the [1..25] range
     void skip_bits(uint32_t n);  // advance bitstream position
     uint32_t u(uint32_t n);   // return next n bits, advance bitstream position

@@ -39,7 +39,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;
@@ -98,7 +98,7 @@ public:
     std::vector<VkMemoryPropertyFlags>    m_memFlags;
 
     std::vector<FrameDataType>            m_frameData;
-    int                                   m_frameDataIndex;
+    uint32_t                              m_frameDataIndex;
 
     VkExtent2D                            m_extent;
     VkViewport                            m_viewport;

@@ -54,7 +54,7 @@ VkResult VkVideoEncoderH264::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& en
     // Initialize DPB
     m_dpb264 = VkEncDpbH264::CreateInstance();
     assert(m_dpb264);
-    m_dpb264->DpbSequenceStart(m_maxDpbPicturesCount);
+    m_dpb264->DpbSequenceStart((int32_t)m_maxDpbPicturesCount);
 
     m_encoderConfig->GetRateControlParameters(&m_rateControlInfo, m_rateControlLayersInfo, &m_h264.m_rateControlInfoH264, m_h264.m_rateControlLayersInfoH264);
 
@@ -102,7 +102,7 @@ VkResult VkVideoEncoderH264::InitRateControl(VkCommandBuffer cmdBuf, uint32_t qp
     encodeH264FrameSize.frameISize = 0;
 
     VkVideoEncodeH264QpKHR encodeH264Qp;
-    encodeH264Qp.qpI = qp;
+    encodeH264Qp.qpI = (int32_t)qp;
 
     VkVideoEncodeH264RateControlLayerInfoKHR encodeH264RateControlLayerInfo = {VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_RATE_CONTROL_LAYER_INFO_KHR};
     encodeH264RateControlLayerInfo.useMinQp = VK_TRUE;
@@ -138,7 +138,7 @@ void VkVideoEncoderH264::POCBasedRefPicManagement(StdVideoEncodeH264RefPicMarkin
     picNumX = m_dpb264->GetPicNumXWithMinPOC(0, 0, 0);
 
     // TODO: Check if this needs to be changed to m_dpb264->GetCurrentPicNum()
-    currPicNum = m_dpb264->GetCurrentDpbEntry()->frame_num % maxPicNum;
+    currPicNum = (int)(m_dpb264->GetCurrentDpbEntry()->frame_num % (uint32_t)maxPicNum);
 
     if (currPicNum > 0 && (picNumX >= 0)) {
         m_mmco[m_refPicMarkingOpCount].memory_management_control_operation = STD_VIDEO_H264_MEM_MGMT_CONTROL_OP_UNMARK_SHORT_TERM;
@@ -157,7 +157,7 @@ void VkVideoEncoderH264::FrameNumBasedRefPicManagement(StdVideoEncodeH264RefPicM
     picNumX = m_dpb264->GetPicNumXWithMinFrameNumWrap(0, 0, 0);
 
     // TODO: Check if this needs to be changed to m_dpb264->GetCurrentPicNum()
-    currPicNum = m_dpb264->GetCurrentDpbEntry()->frame_num % maxPicNum;
+    currPicNum = (int)(m_dpb264->GetCurrentDpbEntry()->frame_num % (uint32_t)maxPicNum);
 
     if (currPicNum > 0 && (picNumX >= 0)) {
         m_mmco[m_refPicMarkingOpCount].memory_management_control_operation = STD_VIDEO_H264_MEM_MGMT_CONTROL_OP_UNMARK_SHORT_TERM;
@@ -184,7 +184,7 @@ VkResult VkVideoEncoderH264::SetupRefPicReorderingCommands(const PicInfoH264 *pP
     m_dpb264->GetRefPicList(pPicInfo, &refLists, &m_h264.m_spsInfo, &m_h264.m_ppsInfo, slh, nullptr, true);
 
     int maxPicNum = 1 << (m_h264.m_spsInfo.log2_max_frame_num_minus4 + 4);
-    int picNumLXPred = m_dpb264->GetCurrentDpbEntry()->frame_num % maxPicNum;
+    int picNumLXPred = (int)(m_dpb264->GetCurrentDpbEntry()->frame_num % (uint32_t)maxPicNum);
     int numSTR = 0, numLTR = 0;
     m_dpb264->GetNumRefFramesInDPB(0, &numSTR, &numLTR);
 
@@ -223,7 +223,7 @@ VkResult VkVideoEncoderH264::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
     VkVideoEncodeFrameInfoH264* pFrameInfo = GetEncodeFrameInfoH264(encodeFrameInfo);
 
     if (m_encoderConfig->verboseFrameStruct) {
-        DumpStateInfo("process DPB", 3, encodeFrameInfo, frameIdx, ofTotalFrames);
+        DumpStateInfo("process DPB", 3, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
     }
 
     // TODO: Optimize this below very complex and inefficient DPB management code.
@@ -399,8 +399,8 @@ VkResult VkVideoEncoderH264::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
 
         for (uint32_t i = 0; i < refLists.refPicListCount[listNum]; i++) {
 
-            int8_t slotIndex = refLists.refPicList[listNum][i];
-            bool refPicAvailable = m_dpb264->GetRefPicture(slotIndex, pFrameInfo->dpbImageResources[numReferenceSlots]);
+            uint8_t slotIndex = refLists.refPicList[listNum][i];
+            bool refPicAvailable = m_dpb264->GetRefPicture((int8_t)slotIndex, pFrameInfo->dpbImageResources[numReferenceSlots]);
             assert(refPicAvailable);
             if (!refPicAvailable) {
                 return VK_ERROR_INITIALIZATION_FAILED;
@@ -414,14 +414,14 @@ VkResult VkVideoEncoderH264::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
             if (isIntraRefreshFrame) {
                 pFrameInfo->referenceIntraRefreshInfo[numReferenceSlots].sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_INTRA_REFRESH_INFO_KHR;
                 pFrameInfo->referenceIntraRefreshInfo[numReferenceSlots].dirtyIntraRefreshRegions =
-                    m_dpb264->GetDirtyIntraRefreshRegions(slotIndex);
+                    m_dpb264->GetDirtyIntraRefreshRegions((int32_t)slotIndex);
 
                 pFrameInfo->stdDpbSlotInfo[numReferenceSlots].pNext = &pFrameInfo->referenceIntraRefreshInfo[numReferenceSlots];
             }
 
             pFrameInfo->referenceSlotsInfo[numReferenceSlots].sType = VK_STRUCTURE_TYPE_VIDEO_REFERENCE_SLOT_INFO_KHR;
             pFrameInfo->referenceSlotsInfo[numReferenceSlots].pNext = &pFrameInfo->stdDpbSlotInfo[numReferenceSlots];
-            pFrameInfo->referenceSlotsInfo[numReferenceSlots].slotIndex = slotIndex;
+            pFrameInfo->referenceSlotsInfo[numReferenceSlots].slotIndex = (int32_t)slotIndex;
             pFrameInfo->referenceSlotsInfo[numReferenceSlots].pPictureResource =
                         pFrameInfo->dpbImageResources[numReferenceSlots]->GetPictureResourceInfo();
 
@@ -538,7 +538,7 @@ VkResult VkVideoEncoderH264::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
     }
     const bool isReference = m_encoderConfig->gopStructure.IsFrameReference(encodeFrameInfo->gopPosition);
 
-    encodeFrameInfo->picOrderCntVal = 2 * encodeFrameInfo->gopPosition.inputOrder;
+    encodeFrameInfo->picOrderCntVal = (int32_t)(2 * encodeFrameInfo->gopPosition.inputOrder);
 
     if (m_encoderConfig->verboseFrameStruct) {
         DumpStateInfo("input", 1, encodeFrameInfo);
@@ -591,7 +591,7 @@ VkResult VkVideoEncoderH264::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
             stdPictureType = STD_VIDEO_H264_PICTURE_TYPE_B;
             break;
         default:
-            assert(!"Invalid value");
+            VKVS_FAIL("Invalid value");
             break;
     }
 
@@ -653,16 +653,16 @@ VkResult VkVideoEncoderH264::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
         switch (encodeFrameInfo->gopPosition.pictureType) {
             case VkVideoGopStructure::FRAME_TYPE_IDR:
             case VkVideoGopStructure::FRAME_TYPE_I:
-                constantQp = encodeFrameInfo->constQp.qpIntra;
+                constantQp = (int32_t)encodeFrameInfo->constQp.qpIntra;
                 break;
             case VkVideoGopStructure::FRAME_TYPE_P:
-                constantQp = encodeFrameInfo->constQp.qpInterP;
+                constantQp = (int32_t)encodeFrameInfo->constQp.qpInterP;
                 break;
             case VkVideoGopStructure::FRAME_TYPE_B:
-                constantQp = encodeFrameInfo->constQp.qpInterB;
+                constantQp = (int32_t)encodeFrameInfo->constQp.qpInterB;
                 break;
             default:
-                assert(!"Invalid picture type");
+                VKVS_FAIL("Invalid picture type");
                 break;
         }
 

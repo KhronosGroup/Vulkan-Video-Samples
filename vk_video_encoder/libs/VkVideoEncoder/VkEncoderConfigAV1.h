@@ -105,7 +105,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
             return VK_SUCCESS;
         }
 
-        assert(!"Invalid pic_width_in_sbs and pic_height_in_sbs");
+        VKVS_FAIL("Invalid pic_width_in_sbs and pic_height_in_sbs");
         return VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR;
     }
 
@@ -113,7 +113,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
 
     virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_AV1_PROFILE_MAIN; }
 
-    virtual int8_t InitDpbCount() override;
+    virtual uint8_t InitDpbCount() override;
 
     virtual bool InitRateControl() override;
 
@@ -158,7 +158,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
         }
 
         double minCRBase = lTier ? levelLimits[lLevel].highCR : levelLimits[lLevel].mainCR;
-        double speedAdj = decodeRate / levelLimits[lLevel].maxDisplayRate;
+        double speedAdj = decodeRate / (double)levelLimits[lLevel].maxDisplayRate;
 
         return std::max(minCRBase * speedAdj, 0.8);
     }

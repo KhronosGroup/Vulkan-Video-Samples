@@ -244,7 +244,7 @@ public:
                                                          const VkWriteDescriptorSet* pDescriptorWrites) const {
 
         if (!(bufferIdx < m_maxNumFrames)) {
-            assert(!"bufferIdx is out of range!");
+            VKVS_FAIL("bufferIdx is out of range!");
             return VkDeviceOrHostAddressConstKHR();
         }
 
@@ -281,7 +281,7 @@ public:
                 descriptorSize = m_descriptorBufferProperties.storageImageDescriptorSize;
                 break;
             default:
-                assert(!"Unknown descriptor type");
+                VKVS_FAIL("Unknown descriptor type");
                 break;
             }
 

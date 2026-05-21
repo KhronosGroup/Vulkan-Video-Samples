@@ -21,6 +21,8 @@ extern "C" {
 
 // Include stdlib.h for standard exit codes
 #include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 
 // Include sysexits.h for extended exit codes (POSIX systems)
 // On Windows, define the exit codes manually as sysexits.h is not available
@@ -37,11 +39,33 @@ extern "C" {
 // This is used when video codec features are not supported by hardware/driver
 #define VVS_EXIT_UNSUPPORTED  EX_UNAVAILABLE
 
+#ifdef NDEBUG
+#define VKVS_DEBUG_TRAP() ((void)0)
+#else
+#define VKVS_DEBUG_TRAP() abort()
+#endif
+
+#define VKVS_ASSERT(cond, fmt, ...) \
+    do { \
+        if (!(cond)) { \
+            fprintf(stderr, "ERROR [%s:%d]: assertion failed: " #cond " | " fmt "\n", \
+                    __FILE__, __LINE__, ##__VA_ARGS__); \
+            VKVS_DEBUG_TRAP(); \
+        } \
+    } while(0)
+
+#define VKVS_FAIL(msg) \
+    do { \
+        VKVS_ASSERT(false, msg); \
+    } while (0)
+
 #ifdef __cplusplus
 } // extern "C"
 
 // Macro to check Vulkan features and return error if not supported
-// Note: This macro contains a return statement - use with care
+// Note: This macro contains a return statement - use with care.
+// Uses VK_ERROR_FEATURE_NOT_PRESENT, so requires vulkan.h to be already
+// included at the call site.
 #define CHECK_VULKAN_FEATURE(feature, name, optional) \
     do { \
         if (!(feature)) { \
@@ -56,6 +80,28 @@ extern "C" {
 #ifndef VKVS_CASE_STR
 #define VKVS_CASE_STR(x) case x: return VKVS_STRINGIFY(x)
 #endif
+
+#include <limits>
+#include <type_traits>
+#include <cstdint>
+
+// Explicit checked narrowing/sign-changing integer cast. Asserts in debug
+// builds that value is non-negative and fits in U; in release it is a plain
+// static_cast. Source is fixed at int64_t to force explicit widening at the
+// call site.
+template<typename U>
+inline U narrow_cast(int64_t value) {
+    static_assert(std::is_integral<U>::value && std::is_unsigned<U>::value,
+                  "narrow_cast target must be an unsigned integral type");
+    assert(value >= 0);
+    assert(static_cast<uint64_t>(value) <=
+           static_cast<uint64_t>(std::numeric_limits<U>::max()));
+    return static_cast<U>(value);
+}
+
+// The helpers below depend on Vulkan types and constants. Pull in the
+// vulkan headers so VkVSCommon.h is self-contained.
+#include "vulkan_interfaces.h"
 
 // Helper function to check if a VkResult indicates video profile/feature not supported
 // Returns true for video-specific KHR errors (profile, format, codec, std version)

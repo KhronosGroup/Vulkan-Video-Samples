@@ -110,7 +110,7 @@ public:
         int32_t availableNodeIndx = GetAvailableNodeIndx();
         if (availableNodeIndx >= 0) {
             assert((uint32_t)availableNodeIndx < m_maxNodes);
-            availableNodeFromPool = m_pool[availableNodeIndx];
+            availableNodeFromPool = m_pool[(size_t)availableNodeIndx];
         }
         return availableNodeIndx;
     }
@@ -128,9 +128,9 @@ public:
         if (freeNodeSlotIndx >= 0) {
             assert((uint32_t)freeNodeSlotIndx < m_maxNodes);
             if (setUnavailable) {
-                m_poolNodesInUseMask[freeNodeSlotIndx] = true;
+                m_poolNodesInUseMask[(size_t)freeNodeSlotIndx] = true;
             }
-            m_pool[freeNodeSlotIndx] = newNodeToPool;
+            m_pool[(size_t)freeNodeSlotIndx] = newNodeToPool;
         }
         return freeNodeSlotIndx;
     }
@@ -155,7 +155,7 @@ private:
                 break;
             }
         }
-        return (i == m_maxNodes) ? -1 : i;
+        return (i == m_maxNodes) ? -1 : (int32_t)i;
     }
 
     int32_t GetFreeNodeSlotIndx(bool allocate = true) {
@@ -170,7 +170,7 @@ private:
                 if (allocate) {
                     m_poolNodeSlotsInUseMask[i] = true;
                 }
-                return i;
+                return (int32_t)i;
             }
         }
         return -1;

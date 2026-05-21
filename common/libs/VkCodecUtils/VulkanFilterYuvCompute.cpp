@@ -63,7 +63,7 @@ VkResult VulkanFilterYuvCompute::Init(const VkSamplerYcbcrConversionCreateInfo* 
 {
     VkResult result = Configure( m_vkDevCtx,
                                  m_maxNumFrames, // numPoolNodes
-                                 m_vkDevCtx->GetComputeQueueFamilyIdx(), // queueFamilyIndex
+                                 (uint32_t)m_vkDevCtx->GetComputeQueueFamilyIdx(), // queueFamilyIndex
                                  false,    // createQueryPool - not needed for the compute filter
                                  nullptr,  // pVideoProfile   - not needed for the compute filter
                                  true,     // createSemaphores
@@ -75,7 +75,7 @@ VkResult VulkanFilterYuvCompute::Init(const VkSamplerYcbcrConversionCreateInfo* 
                                                                pSamplerCreateInfo,
                                                                pYcbcrConversionCreateInfo);
          if (result != VK_SUCCESS) {
-             assert(!"ERROR: samplerYcbcrConversion!");
+             VKVS_FAIL("ERROR: samplerYcbcrConversion!");
              return result;
          }
     }
@@ -84,7 +84,7 @@ VkResult VulkanFilterYuvCompute::Init(const VkSamplerYcbcrConversionCreateInfo* 
 
     result = InitDescriptorSetLayout(m_maxNumFrames);
     if (result != VK_SUCCESS) {
-        assert(!"ERROR: InitDescriptorSetLayout!");
+        VKVS_FAIL("ERROR: InitDescriptorSetLayout!");
         return result;
     }
 
@@ -101,10 +101,10 @@ VkResult VulkanFilterYuvCompute::Init(const VkSamplerYcbcrConversionCreateInfo* 
          computeShaderSize = InitYCBCR2RGBA(computeShader);
          break;
      case RGBA2YCBCR:
-         assert(!"TODO RGBA2YCBCR");
+         VKVS_FAIL("TODO RGBA2YCBCR");
          break;
      default:
-         assert(!"Invalid filter type");
+         VKVS_FAIL("Invalid filter type");
          break;
     }
 
@@ -440,7 +440,7 @@ static void GenCalculateChromaPosition(std::stringstream& shaderStr,
                                      int indent = 8,
                                      bool generateIfBlock = false)
 {
-    std::string indentStr(indent, ' ');
+    std::string indentStr((size_t)indent, ' ');
 
     // For 4:4:4, no subsampling needed
     if (chromaHorzRatio <= 1 && chromaVertRatio <= 1) {
@@ -1362,7 +1362,7 @@ static void GenYCbCrNormalizationFuncs(std::stringstream& shaderStr,
     // ===========================================================================
 
     // Use double precision for calculations to maintain precision
-    double maxValue = (1ULL << bitDepth) - 1.0;  // Max value for the given bit depth
+    double maxValue = (double)(1ULL << bitDepth) - 1.0;  // Max value for the given bit depth
 
     // Limited range values for different bit depths
     double yBlack, yWhite, cZero, cScale;
@@ -1590,7 +1590,7 @@ static void GenYCbCrDeNormalizationFuncs(std::stringstream& shaderStr,
     // ===========================================================================
 
     // Use double precision for calculations to maintain precision
-    double maxValue = (1ULL << bitDepth) - 1.0;  // Max value for the given bit depth
+    double maxValue = (double)(1ULL << bitDepth) - 1.0;  // Max value for the given bit depth
 
     // Limited range values for different bit depths
     double yBlack, yWhite, cZero, cScale;
@@ -2298,7 +2298,7 @@ uint32_t VulkanFilterYuvCompute::UpdateBufferDescriptorSets(
     uint32_t bufferIndex = 0;
     while(validImageAspects) {
 
-        if (validImageAspects & (VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect) ) {
+        if (validImageAspects & (VkImageAspectFlags)(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect) ) {
 
             uint32_t planeNum = GetPlaneIndex((VkImageAspectFlagBits)(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect));
             uint32_t dstBinding = baseBinding;
@@ -2318,7 +2318,7 @@ uint32_t VulkanFilterYuvCompute::UpdateBufferDescriptorSets(
             bufferDescriptors[descrIndex].range =  vkBufferSubresourceLayout[planeNum].arrayPitch;
             writeDescriptorSets[descrIndex].pBufferInfo = &bufferDescriptors[descrIndex];
             descrIndex++;
-            validImageAspects &= ~(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect);
+            validImageAspects &= ~(VkImageAspectFlags)(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect);
             bufferIndex = std::min(numVkBuffers - 1, bufferIndex + 1);
         }
 
@@ -2346,7 +2346,7 @@ uint32_t VulkanFilterYuvCompute::UpdateImageDescriptorSets(
     [[maybe_unused]] const uint32_t numPlanes = imageView->GetNumberOfPlanes();
     while(validImageAspects) {
 
-        if (validImageAspects & (VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect) ) {
+        if (validImageAspects & (VkImageAspectFlags)(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect) ) {
 
             VkSampler ccSampler = (curImageAspect == 0) ? convSampler : VK_NULL_HANDLE;
             uint32_t planeNum = GetPlaneIndex((VkImageAspectFlagBits)(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect));
@@ -2372,7 +2372,7 @@ uint32_t VulkanFilterYuvCompute::UpdateImageDescriptorSets(
             imageDescriptors[descrIndex].imageLayout = imageLayout;
             writeDescriptorSets[descrIndex].pImageInfo = &imageDescriptors[descrIndex]; // Y (0) plane
             descrIndex++;
-            validImageAspects &= ~(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect);
+            validImageAspects &= ~(VkImageAspectFlags)(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect);
         }
 
         curImageAspect++;
@@ -2487,7 +2487,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         uint32_t height;
 
         ivec2() : width(0), height(0) {}
-        ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
+        ivec2(int32_t width_, int32_t height_) : width((uint32_t)width_), height((uint32_t)height_) {}
     };
 
     struct ImagePushConstants {
@@ -2506,8 +2506,8 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
     ImagePushConstants pushConstants = {
             inImageResourceInfo->baseArrayLayer, // Set the source layer index
             outImageResourceInfo->baseArrayLayer, // Set the destination layer index
-            ivec2(inImageResourceInfo->codedExtent.width, inImageResourceInfo->codedExtent.height),
-            ivec2(outImageResourceInfo->codedExtent.width, outImageResourceInfo->codedExtent.height),
+            ivec2((int32_t)inImageResourceInfo->codedExtent.width, (int32_t)inImageResourceInfo->codedExtent.height),
+            ivec2((int32_t)outImageResourceInfo->codedExtent.width, (int32_t)outImageResourceInfo->codedExtent.height),
             0,  // yOffset - not used for image input
             0,  // cbOffset - not used for image input
             0,  // crOffset - not used for image input
@@ -2638,7 +2638,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         uint32_t height;
 
         ivec2() : width(0), height(0) {}
-        ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
+        ivec2(int32_t width_, int32_t height_) : width((uint32_t)width_), height((uint32_t)height_) {}
     };
 
     struct BufferToImagePushConstants {
@@ -2676,8 +2676,8 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
     BufferToImagePushConstants pushConstants = {
             pBufferImageCopy->imageSubresource.baseArrayLayer,
             outImageResourceInfo->baseArrayLayer,
-            ivec2(width, height),
-            ivec2(outputExtent.width, outputExtent.height),
+            ivec2((int32_t)width, (int32_t)height),
+            ivec2((int32_t)outputExtent.width, (int32_t)outputExtent.height),
             static_cast<uint32_t>(yOffset),
             static_cast<uint32_t>(cbOffset),
             static_cast<uint32_t>(crOffset),
@@ -2805,7 +2805,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         uint32_t height;
 
         ivec2() : width(0), height(0) {}
-        ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
+        ivec2(int32_t width_, int32_t height_) : width((uint32_t)width_), height((uint32_t)height_) {}
     };
 
     struct ImageToBufferPushConstants {
@@ -2847,8 +2847,8 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
     ImageToBufferPushConstants pushConstants = {
             inImageResourceInfo->baseArrayLayer,
             0, // Destination layer (buffer has no layers)
-            ivec2(inputExtent.width, inputExtent.height),
-            ivec2(width, height),
+            ivec2((int32_t)inputExtent.width, (int32_t)inputExtent.height),
+            ivec2((int32_t)width, (int32_t)height),
             static_cast<uint32_t>(yOffset),
             static_cast<uint32_t>(cbOffset),
             static_cast<uint32_t>(crOffset),
@@ -2978,7 +2978,7 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
         uint32_t height;
 
         ivec2() : width(0), height(0) {}
-        ivec2(int32_t width_, int32_t height_) : width(width_), height(height_) {}
+        ivec2(int32_t width_, int32_t height_) : width((uint32_t)width_), height((uint32_t)height_) {}
     };
 
     struct BufferToBufferPushConstants {
@@ -3010,8 +3010,8 @@ VkResult VulkanFilterYuvCompute::RecordCommandBuffer(VkCommandBuffer cmdBuf,
     BufferToBufferPushConstants pushConstants = {
             0, // Source layer (buffer has no layers)
             0, // Destination layer (buffer has no layers)
-            ivec2(inBufferExtent.width, inBufferExtent.height),
-            ivec2(outBufferExtent.width, outBufferExtent.height),
+            ivec2((int32_t)inBufferExtent.width, (int32_t)inBufferExtent.height),
+            ivec2((int32_t)outBufferExtent.width, (int32_t)outBufferExtent.height),
             static_cast<uint32_t>(yOffset),
             static_cast<uint32_t>(cbOffset),
             static_cast<uint32_t>(crOffset),

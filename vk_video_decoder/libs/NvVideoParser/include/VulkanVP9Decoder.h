@@ -35,7 +35,7 @@
 
 #define VP9_CHECK_FRAME_MARKER {    \
   if (u(2) != VP9_FRAME_MARKER) {   \
-    assert(!"Invalid frame marker");\
+    VKVS_FAIL("Invalid frame marker");\
     return false;                   \
   }                                 \
 }

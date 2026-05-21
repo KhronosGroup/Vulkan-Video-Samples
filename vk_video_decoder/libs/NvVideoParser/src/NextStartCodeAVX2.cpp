@@ -19,7 +19,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::AVX2>(const uint8_t *pdatai
     {
         const __m256i v1 = _mm256_set1_epi8(1);
         __m256i vdata = _mm256_loadu_si256((const __m256i*)pdatain);
-        __m256i vBfr = _mm256_set1_epi16(((m_BitBfr << 8) & 0xFF00) | ((m_BitBfr >> 8) & 0xFF));
+        __m256i vBfr = _mm256_set1_epi16((int16_t)(((m_BitBfr << 8) & 0xFF00) | ((m_BitBfr >> 8) & 0xFF)));
         __m256i vdata_alignr16b_init = _mm256_permute2f128_si256(vBfr, vdata, 1 | (2<<4));
         __m256i vdata_prev1 = _mm256_alignr_epi8(vdata, vdata_alignr16b_init, 15);
         __m256i vdata_prev2 = _mm256_alignr_epi8(vdata, vdata_alignr16b_init, 14);
@@ -34,13 +34,13 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::AVX2>(const uint8_t *pdatai
                 // hotspot end
                 if (resmask)
                 {
-                    const int offset = count_trailing_zeros((uint64_t) (resmask & 0xFFFFFFFF));
+                    const int offset = count_trailing_zeros((uint64_t) ((unsigned)resmask & 0xFFFFFFFFu));
                     found_start_code = true;
                     m_BitBfr =  1;
-                    return offset + i + c + 1;
+                    return (size_t)(offset + c + 1) + i;
                 }
                 // hotspot begin
-                __m256i vdata_next = _mm256_loadu_si256((const __m256i*)&pdatain[i + c + 32]); // 7-8 clocks
+                __m256i vdata_next = _mm256_loadu_si256((const __m256i*)&pdatain[i + (size_t)(c + 32)]); // 7-8 clocks
                 __m256i vdata_alignr16b_next = _mm256_permute2f128_si256(vdata, vdata_next, 1 | (2<<4));
                 vdata_prev1 = _mm256_alignr_epi8(vdata_next, vdata_alignr16b_next, 15);
                 vdata_prev2 = _mm256_alignr_epi8(vdata_next, vdata_alignr16b_next, 14);
@@ -48,7 +48,7 @@ size_t VulkanVideoDecoder::next_start_code<SIMD_ISA::AVX2>(const uint8_t *pdatai
                 // hotspot end
             }
         } // main processing loop end
-        m_BitBfr = (pdatain[i-2] << 8) | pdatain[i-1];
+        m_BitBfr = (uint32_t)((pdatain[i-2] << 8) | pdatain[i-1]);
     }
     // process a tail (rest):
     uint32_t bfr = m_BitBfr;

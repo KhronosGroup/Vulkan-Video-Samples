@@ -176,7 +176,7 @@ private:
 
         uint8_t *avioc_buffer = NULL;
         int avioc_buffer_size = 8 * 1024 * 1024;
-        avioc_buffer = (uint8_t *)av_malloc(avioc_buffer_size);
+        avioc_buffer = (uint8_t *)av_malloc((size_t)avioc_buffer_size);
         if (!avioc_buffer) {
             std::cerr << "FFmpeg error: " << __FILE__ << " " << __LINE__;
             return NULL;
@@ -338,7 +338,7 @@ public:
             return VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR;
             break;
         default:
-            assert(!"Unknown Luma Bit Depth!");
+            VKVS_FAIL("Unknown Luma Bit Depth!");
         }
         return VK_VIDEO_COMPONENT_BIT_DEPTH_INVALID_KHR;
     }
@@ -356,7 +356,7 @@ public:
             return VK_VIDEO_COMPONENT_BIT_DEPTH_12_BIT_KHR;
             break;
         default:
-            assert(!"Unknown Chroma Bit Depth!");
+            VKVS_FAIL("Unknown Chroma Bit Depth!");
         }
         return VK_VIDEO_COMPONENT_BIT_DEPTH_INVALID_KHR;
     }
@@ -387,7 +387,7 @@ public:
         default:
             break;
         }
-        // assert(!"Unknown CHROMA_SUBSAMPLING!");
+        // VKVS_FAIL("Unknown CHROMA_SUBSAMPLING!");
         std::cerr << "\nUnknown CHROMA_SUBSAMPLING from format: " << format << std::endl;
         return VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR;
     }
@@ -529,7 +529,7 @@ public:
         std::cout << "BitDepth: " << codedLumaBitDepth << std::endl;
         std::cout << "Profile: "  << profile << std::endl;
         std::cout << "Level: "    << level << std::endl;
-        std::cout << "Aspect Ration: "    << (float)sample_aspect_ratio.num / sample_aspect_ratio.den << std::endl;
+        std::cout << "Aspect Ration: "    << (float)sample_aspect_ratio.num / (float)sample_aspect_ratio.den << std::endl;
 
         static const char* FieldOrder[] = {
             "UNKNOWN",

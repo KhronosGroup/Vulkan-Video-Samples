@@ -149,7 +149,7 @@ void Shell::CreateBackBuffers(int bufferCount) {
     // images may allows us to replace CPU wait on present_fence by GPU wait
     // on acquire_semaphore.
     // FIXME: Mesa drivers needs bufferCount + 2 when other drivers require only bufferCount + 1.
-    m_ctx.backBuffers.resize(bufferCount + 2);
+    m_ctx.backBuffers.resize((size_t)(bufferCount + 2));
     for (auto &backBuffer : m_ctx.backBuffers) {
         AssertSuccess(backBuffer.Create(m_ctx.devCtx));
     }
@@ -185,7 +185,7 @@ void Shell::CreateSwapchain() {
     VkBool32 supported;
     AssertSuccess(
         m_ctx.devCtx->GetPhysicalDeviceSurfaceSupportKHR(m_ctx.devCtx->getPhysicalDevice(),
-                                                             m_ctx.devCtx->GetPresentQueueFamilyIdx(),
+                                                             (uint32_t)m_ctx.devCtx->GetPresentQueueFamilyIdx(),
                                                              m_ctx.surface, &supported));
     // this should be guaranteed by the platform-specific PhysDeviceCanPresent() call
     assert(supported);
@@ -206,14 +206,14 @@ void Shell::CreateSwapchain() {
     m_ctx.extent.width = (uint32_t)-1;
     m_ctx.extent.height = (uint32_t)-1;
 
-    uint32_t image_count = m_settings.m_backBufferCount;
+    uint32_t image_count = (uint32_t)m_settings.m_backBufferCount;
     if (image_count < caps.minImageCount) {
         image_count = caps.minImageCount;
     }
     if ((caps.maxImageCount > 0) && (image_count > caps.maxImageCount)) {
         image_count = caps.maxImageCount;
     }
-    CreateBackBuffers(image_count);
+    CreateBackBuffers((int)image_count);
 }
 
 void Shell::DestroySwapchain() {
@@ -251,7 +251,7 @@ void Shell::ResizeSwapchain(uint32_t width_hint, uint32_t height_hint) {
 
     if (m_ctx.extent.width == extent.width && m_ctx.extent.height == extent.height) return;
 
-    uint32_t image_count = m_settings.m_backBufferCount;
+    uint32_t image_count = (uint32_t)m_settings.m_backBufferCount;
     if (image_count < caps.minImageCount) {
         image_count = caps.minImageCount;
     }
@@ -289,9 +289,9 @@ void Shell::ResizeSwapchain(uint32_t width_hint, uint32_t height_hint) {
     swapchain_info.imageArrayLayers = 1;
     swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    std::vector<uint32_t> queueFamilies(1, m_ctx.devCtx->GetGfxQueueFamilyIdx());
+    std::vector<uint32_t> queueFamilies(1, (uint32_t)m_ctx.devCtx->GetGfxQueueFamilyIdx());
     if (m_ctx.devCtx->GetGfxQueueFamilyIdx() != m_ctx.devCtx->GetPresentQueueFamilyIdx()) {
-        queueFamilies.push_back(m_ctx.devCtx->GetPresentQueueFamilyIdx());
+        queueFamilies.push_back((uint32_t)m_ctx.devCtx->GetPresentQueueFamilyIdx());
 
         swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchain_info.queueFamilyIndexCount = (uint32_t)queueFamilies.size();
@@ -381,7 +381,7 @@ void Shell::AcquireBackBuffer(bool) {
 
         // std::this_thread::sleep_for (std::chrono::milliseconds(16));
 
-        m_ctx.currentBackBuffer = imageIndex;
+        m_ctx.currentBackBuffer = (int32_t)imageIndex;
         m_ctx.acquireBuffers.pop();
         // Now return to the queue the old frame.
         AcquireBuffer* oldAcquireBuffer = backBuffer.SetAcquireBuffer(imageIndex, acquireBuf);
@@ -392,7 +392,7 @@ void Shell::AcquireBackBuffer(bool) {
 
     } else {
         // If the queue is empty - the is nothing that can be done here.
-        assert(!"Swapchain queue is empty!");
+        VKVS_FAIL("Swapchain queue is empty!");
         m_ctx.currentBackBuffer = -1;
     }
 }
@@ -405,7 +405,7 @@ void Shell::PresentBackBuffer(bool trainFrame) {
     if (backBuffer != nullptr) {
         contintueLoop = m_frameProcessor->OnFrame(trainFrame ?
                                                       -(int32_t)backBuffer->GetImageIndex() :
-                                                      backBuffer->GetImageIndex(),
+                                                      (int32_t)backBuffer->GetImageIndex(),
                                                   1, // waitSemaphoreCount
                                                   &backBuffer->GetAcquireSemaphore(),
                                                   1, // signalSemaphoreCount

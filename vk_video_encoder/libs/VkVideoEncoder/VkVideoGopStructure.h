@@ -254,7 +254,7 @@ public:
         if (gopPos.pictureType == FRAME_TYPE_B) {
             gopPos.encodeOrder = gopState.positionInInputOrder + 1U;
             gopPos.bFramePos = (int8_t)((gopState.positionInInputOrder % (consecutiveBFrameCount + 1U)) - 1);
-            gopPos.numBFrames = consecutiveBFrameCount;
+            gopPos.numBFrames = (int8_t)consecutiveBFrameCount;
         } else {
 
             if (gopState.positionInInputOrder > consecutiveBFrameCount) {

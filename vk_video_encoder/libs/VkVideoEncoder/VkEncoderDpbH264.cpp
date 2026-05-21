@@ -400,7 +400,7 @@ void VkEncDpbH264::FillFrameNumGaps(const PicInfoH264 *pPicInfo, const StdVideoH
         PicInfoH264 picSave = *pPicInfo;
 
         // (7-10)
-        uint32_t unusedShortTermFrameNum = (m_PrevRefFrameNum + 1) % maxFrameNum;
+        uint32_t unusedShortTermFrameNum = (m_PrevRefFrameNum + 1) % (uint32_t)maxFrameNum;
         while (unusedShortTermFrameNum != picSave.frame_num) {
             VK_DPB_DBG_PRINT(("gaps_in_frame_num: %d ", unusedShortTermFrameNum));
 
@@ -454,7 +454,7 @@ void VkEncDpbH264::FillFrameNumGaps(const PicInfoH264 *pPicInfo, const StdVideoH
 
             // 7.4.3
             m_PrevRefFrameNum = pPicInfo->frame_num;  // TODO: only if previous picture was a reference picture?
-            unusedShortTermFrameNum = (unusedShortTermFrameNum + 1) % maxFrameNum;
+            unusedShortTermFrameNum = (unusedShortTermFrameNum + 1) % (uint32_t)maxFrameNum;
         }
     }
 
@@ -657,7 +657,7 @@ void VkEncDpbH264::AdaptiveMemoryManagement(const PicInfoH264 *pPicInfo, const S
 {
     const StdVideoEncodeH264RefPicMarkingEntry *mmco = ref->pRefPicMarkingOperations;
 
-    int32_t currPicNum = (!pPicInfo->field_pic_flag) ? pPicInfo->frame_num : 2 * pPicInfo->frame_num + 1;
+    int32_t currPicNum = (!pPicInfo->field_pic_flag) ? (int32_t)pPicInfo->frame_num : (int32_t)(2 * pPicInfo->frame_num + 1);
     int32_t picNumX = 0;
     for (uint32_t k = 0; ((k < maxMemMgmntCtrlOpsCommands) && (mmco[k].memory_management_control_operation != STD_VIDEO_H264_MEM_MGMT_CONTROL_OP_END)); k++) {
         switch (mmco[k].memory_management_control_operation) {
@@ -803,7 +803,7 @@ void VkEncDpbH264::AdaptiveMemoryManagement(const PicInfoH264 *pPicInfo, const S
         case STD_VIDEO_H264_MEM_MGMT_CONTROL_OP_END:
         case STD_VIDEO_H264_MEM_MGMT_CONTROL_OP_INVALID:
         default:
-            assert(!"Invalid case");
+            VKVS_FAIL("Invalid case");
             break;
         }
     }
@@ -889,9 +889,9 @@ void VkEncDpbH264::CalculatePOCType2(const PicInfoH264 *pPicInfo, const StdVideo
     if (pPicInfo->flags.IdrPicFlag) {
         tempPicOrderCnt = 0;
     } else if (!pPicInfo->flags.is_reference) {
-        tempPicOrderCnt = 2 * (frameNumOffset + pPicInfo->frame_num) - 1;
+        tempPicOrderCnt = (int32_t)(2 * ((uint32_t)frameNumOffset + pPicInfo->frame_num) - 1);
     } else {
-        tempPicOrderCnt = 2 * (frameNumOffset + pPicInfo->frame_num);
+        tempPicOrderCnt = (int32_t)(2 * ((uint32_t)frameNumOffset + pPicInfo->frame_num));
     }
 
     DpbEntryH264 *pCurDPBEntry = &m_DPB[m_currDpbIdx];
@@ -919,9 +919,9 @@ void VkEncDpbH264::CalculatePicNum(const PicInfoH264 *pPicInfo, const StdVideoH2
     for (int32_t i = 0; i < MAX_DPB_SLOTS; i++) {
         // (8-28)
         if (m_DPB[i].picInfo.frame_num > ((uint32_t)pPicInfo->frame_num))
-            m_DPB[i].frameNumWrap = m_DPB[i].picInfo.frame_num - maxFrameNum;
+            m_DPB[i].frameNumWrap = (int32_t)(m_DPB[i].picInfo.frame_num - (uint32_t)maxFrameNum);
         else
-            m_DPB[i].frameNumWrap = m_DPB[i].picInfo.frame_num;
+            m_DPB[i].frameNumWrap = (int32_t)m_DPB[i].picInfo.frame_num;
 
         if (!pPicInfo->field_pic_flag) {
             // frame
@@ -1009,7 +1009,7 @@ void VkEncDpbH264::GetRefPicList(const PicInfoH264 *pPicInfo,
                                  const StdVideoH264PictureParameterSet *pps, const StdVideoEncodeH264SliceHeader *slh,
                                  const StdVideoEncodeH264ReferenceListsInfo *ref, bool bSkipCorruptFrames)
 {
-    int32_t num_list[2] = {0, 0};
+    uint32_t num_list[2] = {0, 0};
     RefPicListEntry stRefPicList[2][MAX_DPB_SLOTS + 1];  // one additional entry is used in sorting
 
     m_max_num_list[0] = 0;
@@ -1348,10 +1348,10 @@ void VkEncDpbH264::RefPicListReorderingLX(const PicInfoH264 *pPicInfo,
 
     if (!pPicInfo->field_pic_flag) {
         MaxPicNum = MaxFrameNum;
-        CurrPicNum = pPicInfo->frame_num;
+        CurrPicNum = (int32_t)pPicInfo->frame_num;
     } else {
         MaxPicNum = 2 * MaxFrameNum;
-        CurrPicNum = 2 * pPicInfo->frame_num + 1;
+        CurrPicNum = (int32_t)(2 * pPicInfo->frame_num + 1);
     }
 
     picNumLXPred = CurrPicNum;
@@ -1392,7 +1392,7 @@ void VkEncDpbH264::RefPicListReorderingLX(const PicInfoH264 *pPicInfo,
             break;
         case STD_VIDEO_H264_MODIFICATION_OF_PIC_NUMS_IDC_INVALID:
         default:
-            assert(!"Invalid case");
+            VKVS_FAIL("Invalid case");
             break;
         }
         refIdxLX++;

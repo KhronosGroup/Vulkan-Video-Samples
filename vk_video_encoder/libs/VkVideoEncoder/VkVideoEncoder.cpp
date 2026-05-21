@@ -40,7 +40,7 @@ static size_t getFormatTexelSize(VkFormat format)
     case VK_FORMAT_R32_SINT:
         return 4;
     default:
-        assert(!"unknown format");
+        VKVS_FAIL("unknown format");
         return 0;
     }
 }
@@ -200,7 +200,7 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
                         (int)dstSubresourceLayout[0].rowPitch,
                         writeImagePtr + dstSubresourceLayout[1].offset,
                         (int)dstSubresourceLayout[1].rowPitch,
-                        width, height);
+                        (int)width, (int)height);
             } else {
                 yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I420ToNV12(
                         pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,
@@ -213,7 +213,7 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
                         (int)dstSubresourceLayout[0].rowPitch,
                         writeImagePtr + dstSubresourceLayout[1].offset,
                         (int)dstSubresourceLayout[1].rowPitch,
-                        width, height);
+                        (int)width, (int)height);
             }
         } else if (m_encoderConfig->input.bpp == 10 || m_encoderConfig->input.bpp == 12) {
             int shiftBits = 0;
@@ -235,7 +235,7 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
                         (int)dstSubresourceLayout[0].rowPitch,
                         (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
                         (int)dstSubresourceLayout[1].rowPitch,
-                        width, height, shiftBits);
+                        (int)width, (int)height, shiftBits);
             } else {
                 yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I420ToNV12(
                         (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset),
@@ -248,10 +248,10 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
                         (int)dstSubresourceLayout[0].rowPitch,
                         (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
                         (int)dstSubresourceLayout[1].rowPitch,
-                        width, height, shiftBits);
+                        (int)width, (int)height, shiftBits);
             }
         } else {
-            assert(!"Requested bit-depth is not supported!");
+            VKVS_FAIL("Requested bit-depth is not supported!");
             return VK_ERROR_INITIALIZATION_FAILED;
         }
 
@@ -572,7 +572,7 @@ void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
 
         if (false && (bitDepth > 8)) {
 
-            const int shiftBits = 16 - bitDepth;
+            const int shiftBits = 16 - (int)bitDepth;
 
             // Copy each line, incrementing pointers by stride amounts
             for (uint32_t y = 0; y < planeHeight; y++) {
@@ -582,7 +582,7 @@ void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
                 uint16_t* dstRow16 = (uint16_t*)dstRow;
 
                 for (uint32_t i = 0; i < planeWidth; i++) {
-                    *dstRow16++ = (*srcRow16++ << shiftBits);
+                    *dstRow16++ = (uint16_t)(*srcRow16++ << shiftBits);
                 }
 
                 // Advance to the next line using pointer arithmetic
@@ -670,8 +670,8 @@ VkResult VkVideoEncoder::SubmitStagedInputFrame(VkSharedBaseObj<VkVideoEncodeFra
 
             // One can also look at the linear input instead
             // displayEncoderInputFrame.imageView = currentEncodeFrameData->m_linearInputImage;
-            displayEncoderInputFrame.displayWidth  = m_encoderConfig->encodeWidth;
-            displayEncoderInputFrame.displayHeight = m_encoderConfig->encodeHeight;
+            displayEncoderInputFrame.displayWidth  = (int32_t)m_encoderConfig->encodeWidth;
+            displayEncoderInputFrame.displayHeight = (int32_t)m_encoderConfig->encodeHeight;
 
             m_displayQueue.EnqueueFrame(&displayEncoderInputFrame);
         }
@@ -685,7 +685,7 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
 {
 
     if (m_encoderConfig->verboseFrameStruct) {
-        DumpStateInfo("assemble bitstream", 6, encodeFrameInfo, frameIdx, ofTotalFrames);
+        DumpStateInfo("assemble bitstream", 6, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
     }
 
     assert(encodeFrameInfo->outputBitstreamBuffer != nullptr);
@@ -773,7 +773,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 {
     VkResult result;
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
-                                                       m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                                       (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                        encoderConfig->codec)) {
         std::cout << "*** The video codec " << VkVideoCoreProfile::CodecToName(encoderConfig->codec) << " is not supported! ***" << std::endl;
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
@@ -1093,7 +1093,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     if (!m_videoSession ||
             !m_videoSession->IsCompatible( m_vkDevCtx,
                                            sessionCreateFlags,
-                                           m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                           (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                            &encoderConfig->videoCoreProfile,
                                            m_imageInFormat,
                                            m_maxCodedExtent,
@@ -1103,7 +1103,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
         result = VulkanVideoSession::Create( m_vkDevCtx,
                                              sessionCreateFlags,
-                                             m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                             (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                              &encoderConfig->videoCoreProfile,
                                              m_imageInFormat,
                                              m_maxCodedExtent,
@@ -1163,7 +1163,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                   ( VK_IMAGE_USAGE_SAMPLED_BIT |
                                                     VK_IMAGE_USAGE_STORAGE_BIT |
                                                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT),
-                                                m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                                (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                   ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
                                                     VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
@@ -1193,7 +1193,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                           m_imageInFormat,
                                           imageExtent,
                                           inImageUsage,
-                                          m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                          (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                           encoderConfig->videoCoreProfile.GetProfile(), // pVideoProfile
                                           false,   // useImageArray
@@ -1267,7 +1267,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                         m_imageQpMapFormat,
                                                         linearQpMapImageExtent,
                                                         VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-                                                        m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                                        (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                         ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
                                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
                                                           VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
@@ -1303,7 +1303,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                               m_imageQpMapFormat,
                                               qpMapExtent,
                                               qpMapImageUsage,
-                                              m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                              (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                               (m_qpMapTiling != VK_IMAGE_TILING_LINEAR) ?
                                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT :
                                                     ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
@@ -1332,7 +1332,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                        m_imageDpbFormat,
                                        imageExtent,
                                        dpbImageUsage,
-                                       m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                                       (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                                        encoderConfig->videoCoreProfile.GetProfile(), // pVideoProfile
                                        encoderConfig->useDpbArray,                   // useImageArray
@@ -1349,7 +1349,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
         uint32_t allocateNumBuffers = std::min<uint32_t>(
                 m_bitstreamBuffersQueue.GetMaxNodes(),
-                (encoderConfig->numBitstreamBuffersToPreallocate - availableBuffers));
+                (uint32_t)(encoderConfig->numBitstreamBuffersToPreallocate - availableBuffers));
 
         allocateNumBuffers = std::min<uint32_t>(allocateNumBuffers,
                 m_bitstreamBuffersQueue.GetFreeNodesNumber());
@@ -1360,7 +1360,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             VkDeviceSize allocSize = std::max<VkDeviceSize>(m_streamBufferSize, m_minStreamBufferSize);
 
             result = VulkanBitstreamBufferImpl::Create(m_vkDevCtx,
-                    m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                    (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                     VK_BUFFER_USAGE_VIDEO_ENCODE_DST_BIT_KHR,
                     allocSize,
                     encoderConfig->videoCapabilities.minBitstreamBufferOffsetAlignment,
@@ -1415,7 +1415,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         };
 
         result = VulkanFilterYuvCompute::Create(m_vkDevCtx,
-                                                m_vkDevCtx->GetComputeQueueFamilyIdx(),
+                                                (uint32_t)m_vkDevCtx->GetComputeQueueFamilyIdx(),
                                                 0, // queueIndex
                                                 encoderConfig->filterType,
                                                 encoderConfig->numInputImages,
@@ -1444,8 +1444,8 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         result = m_inputCommandBufferPool->Configure( m_vkDevCtx,
                                                       encoderConfig->numInputImages, // numPoolNodes
                                                       ((m_vkDevCtx->GetVideoEncodeQueueFlag() & VK_QUEUE_TRANSFER_BIT) != 0) ?
-                                                          m_vkDevCtx->GetVideoEncodeQueueFamilyIdx() :
-                                                          m_vkDevCtx->GetTransferQueueFamilyIdx(), // queueFamilyIndex
+                                                          (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx() :
+                                                          (uint32_t)m_vkDevCtx->GetTransferQueueFamilyIdx(), // queueFamilyIndex
                                                       false,    // createQueryPool - not needed for the input transfer
                                                       nullptr,  // pVideoProfile   - not needed for the input transfer
                                                       true,     // createSemaphores
@@ -1473,7 +1473,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     result = m_encodeCommandBufferPool->Configure( m_vkDevCtx,
                                                    encoderConfig->numInputImages, // numPoolNodes
-                                                   m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(), // queueFamilyIndex
+                                                   (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(), // queueFamilyIndex
                                                    true,      // createQueryPool - not needed for the input transfer
                                                    &encodeFeedbackCreateInfo, // VideoEncodeFeedback + VideoProfile
                                                    true,     // createSemaphores
@@ -1516,7 +1516,7 @@ VkDeviceSize VkVideoEncoder::GetBitstreamBuffer(VkSharedBaseObj<VulkanBitstreamB
     }
     if (!(availablePoolNode >= 0)) {
         VkResult result = VulkanBitstreamBufferImpl::Create(m_vkDevCtx,
-                m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
+                (uint32_t)m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                 VK_BUFFER_USAGE_VIDEO_ENCODE_DST_BIT_KHR,
                 newSize,
                 m_encoderConfig->videoCapabilities.minBitstreamBufferOffsetAlignment,
@@ -1612,7 +1612,7 @@ VkImageLayout VkVideoEncoder::TransitionImageLayout(VkCommandBuffer cmdBuf,
 #ifdef __cpp_exceptions
         throw std::invalid_argument("unsupported layout transition!");
 #else
-        assert(!"unsupported layout transition!");
+        VKVS_FAIL("unsupported layout transition!");
         return VK_IMAGE_LAYOUT_UNDEFINED;
 #endif
     }
@@ -1875,7 +1875,7 @@ VkResult VkVideoEncoder::RecordVideoCodingCmd(VkSharedBaseObj<VkVideoEncodeFrame
 {
 
     if (m_encoderConfig->verboseFrameStruct) {
-        DumpStateInfo("cmdBuf recording", 4, encodeFrameInfo, frameIdx, ofTotalFrames);
+        DumpStateInfo("cmdBuf recording", 4, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
     }
 
     // Get a encodeCmdBuffer pool to record the video commands
@@ -1990,7 +1990,7 @@ VkResult VkVideoEncoder::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeFram
 {
 
     if (m_encoderConfig->verboseFrameStruct) {
-        DumpStateInfo("queue submit", 5, encodeFrameInfo, frameIdx, ofTotalFrames);
+        DumpStateInfo("queue submit", 5, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
     }
 
     assert(encodeFrameInfo);
@@ -2138,7 +2138,7 @@ VkResult VkVideoEncoder::PushOrderedFrames()
             if (success) {
                 m_lastDeferredFrame = nullptr;
             } else {
-                assert(!"Queue returned not ready");
+                VKVS_FAIL("Queue returned not ready");
                 result = VK_NOT_READY;
             }
 
