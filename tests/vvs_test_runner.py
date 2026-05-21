@@ -561,7 +561,7 @@ def _print_sample_section(
     """
     print(f"\n{header}")
     print("-" * 70)
-    samples = load_samples_from_json(json_file)
+    samples = load_samples_from_json(json_file, test_type)
     if not samples:
         print(f"No {test_type} samples found")
         return 0, 0
@@ -594,7 +594,9 @@ def _print_sample_section(
 def list_all_samples(
         skip_list_path: str = "skipped_samples.json",
         test_type_filter: Optional[TestType] = None,
-        codec_filter: Optional[str] = None) -> None:
+        codec_filter: Optional[str] = None,
+        decode_test_suite: Optional[str] = None,
+        encode_test_suite: Optional[str] = None) -> None:
     """List available test samples from encoder and/or decoder
 
     Args:
@@ -602,6 +604,10 @@ def list_all_samples(
         test_type_filter: Optional filter to show only encoder
             or decoder
         codec_filter: Optional codec name to filter samples
+        decode_test_suite: Optional path to a decode test suite JSON
+            (overrides the default decode_samples.json)
+        encode_test_suite: Optional path to an encode test suite JSON
+            (overrides the default encode_samples.json)
     """
     print("=" * 70)
     print("AVAILABLE TEST SAMPLES")
@@ -614,12 +620,12 @@ def list_all_samples(
 
     if test_type_filter is None or test_type_filter == TestType.DECODER:
         decoder_count, skipped_decode = _print_sample_section(
-            "📹 DECODER SAMPLES:", "decode_samples.json",
+            "📹 DECODER SAMPLES:", decode_test_suite or "decode_samples.json",
             "decode", "decode_", skip_rules, codec_filter)
 
     if test_type_filter is None or test_type_filter == TestType.ENCODER:
         encoder_count, skipped_encode = _print_sample_section(
-            "✏️  ENCODER SAMPLES:", "encode_samples.json",
+            "✏️  ENCODER SAMPLES:", encode_test_suite or "encode_samples.json",
             "encode", "encode_", skip_rules, codec_filter)
 
     print("=" * 70)
@@ -896,7 +902,9 @@ def main() -> int:
         elif args.decoder_only and not args.encoder_only:
             test_type_filter = TestType.DECODER
         list_all_samples(skip_list_path, test_type_filter,
-                         args.codec)
+                         args.codec,
+                         decode_test_suite=args.decode_test_suite,
+                         encode_test_suite=args.encode_test_suite)
         return 0
 
     # Handle --download-only option
