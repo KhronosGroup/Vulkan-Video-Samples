@@ -178,8 +178,8 @@
       "width": 352,
       "height": 288,
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_420_10le.yuv",
-      "source_checksum": "cd04579c7115e33d01a874f4167a99ba73e165eb5086b5ffa66a8b018e13efb0",
-      "source_filepath": "video/yuv/352x288_15_i420_10le.yuv"
+      "source_checksum": "c7d9ec2b39be350011086d52b3f973277cfcbbddf7c925a0ddde4b835229ddee",
+      "source_filepath": "video/yuv/352x288_i420_10le.yuv"
     },
     {
       "name": "h265_ip_gop",
