@@ -19,6 +19,7 @@ limitations under the License.
 
 import fnmatch
 import json
+import os
 import shutil
 import subprocess
 import time
@@ -61,6 +62,14 @@ WIN_ASSERT_ABORT_SIGNED = -1073741819  # Assert/abort (signed int32)
 WIN_COMMON_CRASH_CODES = (-1, 1, 3, 22)    # Common crash return codes
 
 
+def _has_validation_messages(output: str) -> bool:
+    """Return True if the output contains Vulkan validation layer messages."""
+    if not output:
+        return False
+    return ("VUID-" in output) or ("Validation Error" in output) or \
+           ("Validation Warning" in output)
+
+
 # pylint: disable=too-many-public-methods,too-many-instance-attributes
 class VulkanVideoTestFrameworkBase:
     """Base class for Vulkan Video test frameworks providing common
@@ -71,6 +80,7 @@ class VulkanVideoTestFrameworkBase:
         self.work_dir = options.get('work_dir')
         self.device_id = options.get('device_id')
         self.verbose = options.get('verbose', False)
+        self.validate = options.get('validate', False)
 
         ignore_skip_list = options.get('ignore_skip_list', False)
         only_skipped = options.get('only_skipped', False)
@@ -557,6 +567,10 @@ class VulkanVideoTestFrameworkBase:
                 )
             if cwd is not None:
                 subprocess_kwargs['cwd'] = str(cwd)
+            if self.validate:
+                env = os.environ.copy()
+                env['VK_INSTANCE_LAYERS'] = 'VK_LAYER_KHRONOS_validation'
+                subprocess_kwargs['env'] = env
 
             result = subprocess.run(cmd, check=False, **subprocess_kwargs)
             self._detect_driver_from_output(result.stdout, result.stderr)
@@ -879,6 +893,11 @@ class VulkanVideoTestFrameworkBase:
 
         if result.status in (VideoTestStatus.CRASH, VideoTestStatus.ERROR):
             print(f"   Command: {result.command_line}")
+            print_command_output(result)
+        elif self.validate and (
+                _has_validation_messages(result.stdout) or
+                _has_validation_messages(result.stderr)):
+            print("   ⚠️  Vulkan validation layer reported messages:")
             print_command_output(result)
         elif self.verbose and (result.stdout or result.stderr):
             print_command_output(result)
