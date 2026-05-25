@@ -197,6 +197,27 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
     VkSamplerYcbcrConversionInfo ycbcrInfo = {};
     ycbcrInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO;
 
+    // A combined view over a multi-planar format cannot be used as a STORAGE
+    // image (the format lacks the STORAGE_IMAGE feature); storage access goes
+    // through the per-plane views below. Strip STORAGE_BIT from the combined
+    // view's usage to avoid VUID-VkImageViewCreateInfo-usage-02275.
+    //
+    // NOTE: This is a minimal local fix. The nvpro upstream solves this (and
+    // the related 06415/08333) in commit c76f219 ("Fix VL: create YCbCr
+    // conversion at decoder setup for combined views"), which also strips
+    // SAMPLED_BIT and skips the combined view when usage collapses to zero.
+    // That commit is hard to cherry-pick here: it is a delta on top of the
+    // restructured multi-overload Create() introduced by the 10.8k-line
+    // commit 4845b69 ("Add VulkanFilterYuvCompute RGBA2YCBCR filter ..."),
+    // which this tree does not have. Supersede this with c76f219 once that
+    // restructure is ported.
+    VkImageViewUsageCreateInfo combinedViewUsage = { VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO };
+    if (mpInfo) {
+        combinedViewUsage.usage = imageResource->GetImageCreateInfo().usage &
+                                  ~VK_IMAGE_USAGE_STORAGE_BIT;
+        viewInfo.pNext = &combinedViewUsage;
+    }
+
     // Owned locally until handed off to VkImageResourceView at the end.
     // The conversion handle must outlive the image view that references it in pNext.
     std::unique_ptr<VulkanSamplerYcbcrConversion> samplerYcbcrConversion;
@@ -223,6 +244,8 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
         }
 
         ycbcrInfo.conversion = samplerYcbcrConversion->GetSamplerYcbcrConversion();
+        // Chain after the usage-restriction struct so both reach the driver.
+        ycbcrInfo.pNext = viewInfo.pNext;
         viewInfo.pNext = &ycbcrInfo;
     }
 
