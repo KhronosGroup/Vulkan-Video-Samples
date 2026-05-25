@@ -259,6 +259,11 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
         uint32_t numPlanes = 0;
         // Create separate image views for Y and CbCr planes
         viewInfo.pNext = NULL;
+        // The per-plane views are bound as compute storage images by the YCbCr
+        // filter, whose shaders declare image2DArray and store with a layer
+        // index. Use a 2D_ARRAY view (valid even for a single layer) so the
+        // view type matches the shader, avoiding VUID-vkCmdDispatch-viewType-07752.
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
         viewInfo.format = mpInfo->vkPlaneFormat[numPlanes];  // For the Y plane
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
         result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
