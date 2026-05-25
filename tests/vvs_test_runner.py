@@ -145,6 +145,7 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             'extended': options.get('extended', False),
             'codec_filter': options.get('codec_filter'),
             'test_pattern': options.get('test_pattern'),
+            'validate': options.get('validate', False),
         }
 
         if encoder_path and Path(encoder_path).exists():
@@ -675,6 +676,10 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--verbose", "-v", action="store_true",
         help="Show command lines being executed")
     parser.add_argument(
+        "--validate", action="store_true",
+        help="Enable the Vulkan validation layer for each test by exporting "
+             "VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation")
+    parser.add_argument(
         "--keep-files", action="store_true",
         help="Keep output artifacts after testing")
     parser.add_argument(
@@ -830,6 +835,7 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
         work_dir=args.work_dir,
         device_id=device_id,
         verbose=args.verbose,
+        validate=args.validate,
         keep_files=args.keep_files,
         no_auto_download=args.no_auto_download,
         skip_list=args.skip_list,
