@@ -256,9 +256,9 @@
       "description": "Test AV1 Main profile 10-bit encoding",
       "width": 352,
       "height": 288,
-      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_420_10le.yuv",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/FT_352x288_420_10le.yuv",
       "source_checksum": "c7d9ec2b39be350011086d52b3f973277cfcbbddf7c925a0ddde4b835229ddee",
-      "source_filepath": "video/yuv/352x288_15_i420_10le.yuv"
+      "source_filepath": "video/yuv/352x288_i420_10le.yuv"
     },
     {
       "name": "av1_ip_gop",
@@ -297,7 +297,7 @@
       "description": "Test H.264 encoding rejects resolution above hardware maximum",
       "width": 7680,
       "height": 4320,
-      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/7680x4320_420_8le.yuv",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/FT_7680x4320_420_8le.yuv",
       "source_checksum": "8d12097d0ad9d8eb89a626b394df6c84213efe3f6c29823d345a564a1e8ec762",
       "source_filepath": "video/yuv/7680x4320_420_8le.yuv"
     },
@@ -322,7 +322,7 @@
       "description": "Test H.265 encoding rejects resolution above hardware maximum",
       "width": 7680,
       "height": 4320,
-      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/7680x4320_420_8le.yuv",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/FT_7680x4320_420_8le.yuv",
       "source_checksum": "8d12097d0ad9d8eb89a626b394df6c84213efe3f6c29823d345a564a1e8ec762",
       "source_filepath": "video/yuv/7680x4320_420_8le.yuv"
     },
@@ -347,7 +347,7 @@
       "description": "Test AV1 encoding rejects resolution above hardware maximum",
       "width": 7680,
       "height": 4320,
-      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/7680x4320_420_8le.yuv",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/FT_7680x4320_420_8le.yuv",
       "source_checksum": "8d12097d0ad9d8eb89a626b394df6c84213efe3f6c29823d345a564a1e8ec762",
       "source_filepath": "video/yuv/7680x4320_420_8le.yuv"
     },
