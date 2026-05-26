@@ -285,6 +285,16 @@ VkResult VulkanVideoImagePool::Configure(const VulkanDeviceContext*   vkDevCtx,
     m_imageCreateInfo.pQueueFamilyIndices = &m_queueFamilyIndex;
     m_imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     m_imageCreateInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+    // The image usage includes SAMPLED/STORAGE for the compute filter, which the
+    // driver may not report as supported for a multi-planar format (directly via
+    // vkGetPhysicalDeviceImageFormatProperties2, VUID-...-02251, or via the video
+    // format properties when a profile is chained, VUID-...-pNext-06811).
+    // EXTENDED_USAGE lets the image be created with that broader usage as long as
+    // each view restricts itself to a supported subset via
+    // VkImageViewUsageCreateInfo (which the per-plane and combined views do).
+    if (imageUsage & (VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)) {
+        m_imageCreateInfo.flags |= VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
+    }
 
     if (useImageArray) {
         // Create an image that has the same number of layers as the DPB images required.
