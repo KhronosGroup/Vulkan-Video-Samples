@@ -255,10 +255,30 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
     }
     numViews++;
 
-    if (mpInfo) {
+    // Per-plane single-component formats (R8, R8G8, ...) do not support the
+    // video decode/encode format features, so a per-plane view must not carry
+    // the parent image's video usage bits. Strip them via
+    // VkImageViewUsageCreateInfo to avoid VUID-VkImageViewCreateInfo-image-08333
+    // (decode) and -08336 / -08337 (encode). Same fix and bit mask as nvpro
+    // commit 3bb3f94 ("Fix VL: strip video usage bits from per-plane image
+    // views"); the zero-usage guard below is folded into nvpro's later c76f219.
+    VkImageViewUsageCreateInfo planeViewUsage = { VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO };
+    planeViewUsage.usage = imageResource->GetImageCreateInfo().usage &
+                           ~(VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR |
+                             VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR |
+                             VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR |
+                             VK_IMAGE_USAGE_VIDEO_ENCODE_DST_BIT_KHR |
+                             VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR |
+                             VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR);
+
+    // A video-only image (e.g. the encode DPB) has nothing but video usage
+    // bits, so stripping them leaves zero. VkImageViewUsageCreateInfo.usage
+    // must be non-zero, and such an image has no use for per-plane compute
+    // views anyway, so skip them entirely in that case.
+    if (mpInfo && (planeViewUsage.usage != 0)) {
         uint32_t numPlanes = 0;
         // Create separate image views for Y and CbCr planes
-        viewInfo.pNext = NULL;
+        viewInfo.pNext = &planeViewUsage;
         // The per-plane views are bound as compute storage images by the YCbCr
         // filter, whose shaders declare image2DArray and store with a layer
         // index. Use a 2D_ARRAY view (valid even for a single layer) so the
