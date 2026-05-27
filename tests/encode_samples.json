@@ -177,7 +177,7 @@
       "description": "Test H.265 Main10 profile encoding",
       "width": 352,
       "height": 288,
-      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_420_10le.yuv",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/FT_352x288_420_10le.yuv",
       "source_checksum": "c7d9ec2b39be350011086d52b3f973277cfcbbddf7c925a0ddde4b835229ddee",
       "source_filepath": "video/yuv/352x288_i420_10le.yuv"
     },
