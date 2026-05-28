@@ -828,7 +828,13 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                                                                                   VK_FALSE
                                                                                 };
 
-        VkPhysicalDeviceFeatures2 deviceFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &intraRefreshFeatures};
+        VkPhysicalDeviceVideoEncodeQuantizationMapFeaturesKHR quantizationMapFeatures {
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_ENCODE_QUANTIZATION_MAP_FEATURES_KHR,
+                &intraRefreshFeatures,
+                VK_FALSE
+        };
+
+        VkPhysicalDeviceFeatures2 deviceFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &quantizationMapFeatures};
         GetPhysicalDeviceFeatures2(m_physDevice, &deviceFeatures);
 
         CHECK_VULKAN_FEATURE(timelineSemaphoreFeatures.timelineSemaphore, "timelineSemaphore", false);

@@ -529,6 +529,17 @@ public:
         return (intraRefreshFeatures.videoEncodeIntraRefresh == VK_TRUE);
     }
 
+    static bool IsVideoEncodeQpMapSupported(const VulkanDeviceContext* vkDevCtx)
+    {
+        VkPhysicalDeviceVideoEncodeQuantizationMapFeaturesKHR quantizationMapFeatures{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_ENCODE_QUANTIZATION_MAP_FEATURES_KHR,
+                                                                                      nullptr,
+                                                                                      false};
+        VkPhysicalDeviceFeatures2 deviceFeatures{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &quantizationMapFeatures};
+        vkDevCtx->GetPhysicalDeviceFeatures2(vkDevCtx->getPhysicalDevice(),
+                                             &deviceFeatures);
+        return (quantizationMapFeatures.videoEncodeQuantizationMap == VK_TRUE);
+    }
+
 };
 
 #endif /* _VULKANVIDEOCAPABILITIES_H_ */
