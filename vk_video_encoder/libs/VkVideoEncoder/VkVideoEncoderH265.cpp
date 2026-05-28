@@ -76,35 +76,19 @@ VkResult VkVideoEncoderH265::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& en
                                                    &m_sps.subLayerHrdParametersNal));
 
 
-    VkVideoEncodeH265SessionParametersAddInfoKHR encodeH265SessionParametersAddInfo = {
-        VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_SESSION_PARAMETERS_ADD_INFO_KHR};
+    // create VPS, SPS and PPS set
+    VideoSessionParametersInfoH265 videoSessionParametersInfo(*m_videoSession,
+                                                              &m_vps.vpsInfo,
+                                                              &m_sps.sps,
+                                                              &m_pps,
+                                                              m_encoderConfig->qualityLevel,
+                                                              m_encoderConfig->enableQpMap,
+                                                              m_qpMapTexelSize);
 
-    encodeH265SessionParametersAddInfo.stdVPSCount = 1;
-    encodeH265SessionParametersAddInfo.pStdVPSs = &m_vps.vpsInfo;
-    encodeH265SessionParametersAddInfo.stdSPSCount = 1;
-    encodeH265SessionParametersAddInfo.pStdSPSs = &m_sps.sps;
-    encodeH265SessionParametersAddInfo.stdPPSCount = 1;
-    encodeH265SessionParametersAddInfo.pStdPPSs = &m_pps;
-
-    VkVideoEncodeQualityLevelInfoKHR qualityLevelInfo;
-    qualityLevelInfo.sType = VK_STRUCTURE_TYPE_VIDEO_ENCODE_QUALITY_LEVEL_INFO_KHR;
-    qualityLevelInfo.pNext = nullptr;
-    qualityLevelInfo.qualityLevel = encoderConfig->qualityLevel;
-
-    VkVideoEncodeH265SessionParametersCreateInfoKHR encodeH265SessionParametersCreateInfo = {
-        VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_SESSION_PARAMETERS_CREATE_INFO_KHR,
-        &qualityLevelInfo, 1 /* maxStdVPSCount */, 1 /* maxSpsStdCount */, 1 /* maxPpsStdCount */,
-        &encodeH265SessionParametersAddInfo
-    };
-
-    VkVideoSessionParametersCreateInfoKHR encodeSessionParametersCreateInfo = {
-        VK_STRUCTURE_TYPE_VIDEO_SESSION_PARAMETERS_CREATE_INFO_KHR, &encodeH265SessionParametersCreateInfo};
-    encodeSessionParametersCreateInfo.videoSession = *m_videoSession;
-    encodeSessionParametersCreateInfo.flags = 0;
-
+    VkVideoSessionParametersCreateInfoKHR* encodeSessionParametersCreateInfo = videoSessionParametersInfo.getVideoSessionParametersInfo();
     VkVideoSessionParametersKHR sessionParameters;
     result = m_vkDevCtx->CreateVideoSessionParametersKHR(*m_vkDevCtx,
-                                                         &encodeSessionParametersCreateInfo,
+                                                         encodeSessionParametersCreateInfo,
                                                          nullptr,
                                                          &sessionParameters);
     if(result != VK_SUCCESS) {
