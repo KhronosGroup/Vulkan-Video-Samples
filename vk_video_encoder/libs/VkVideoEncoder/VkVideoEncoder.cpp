@@ -844,6 +844,12 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     }
 
     if (m_encoderConfig->enableQpMap) {
+        if (!VulkanVideoCapabilities::IsVideoEncodeQpMapSupported(m_vkDevCtx)) {
+            std::cout << "QP map was requested, but the driver does not expose "
+                      << VK_KHR_VIDEO_ENCODE_QUANTIZATION_MAP_EXTENSION_NAME
+                      << "!" << std::endl;
+            return VK_ERROR_FEATURE_NOT_PRESENT;
+        }
         if ((m_encoderConfig->qpMapMode == EncoderConfig::DELTA_QP_MAP) &&
             ((m_encoderConfig->videoEncodeCapabilities.flags & VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR) == 0)) {
                 std::cout << "Delta QP Map was requested, but the implementation does not support it!" << std::endl;
