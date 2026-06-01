@@ -2299,8 +2299,8 @@ VkResult VkVideoEncoder::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeFram
         waitSemaphoreInfos[waitSemaphoreCount].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].semaphore = encodeFrameInfo->inputCmdBuffer->GetSemaphore();
         waitSemaphoreInfos[waitSemaphoreCount].value = 0; // Binary semaphore
-        // Use transfer bit since these semaphores come from transfer operations
-        waitSemaphoreInfos[waitSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR;
+        // Wait at the encode stage for the input transfer to complete
+        waitSemaphoreInfos[waitSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].deviceIndex = 0;
         waitSemaphoreCount++;
     }
@@ -2308,8 +2308,8 @@ VkResult VkVideoEncoder::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeFram
         waitSemaphoreInfos[waitSemaphoreCount].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].semaphore = encodeFrameInfo->qpMapCmdBuffer->GetSemaphore();
         waitSemaphoreInfos[waitSemaphoreCount].value = 0; // Binary semaphore
-        // Use transfer bit since these semaphores come from transfer operations
-        waitSemaphoreInfos[waitSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR;
+        // Wait at the encode stage for the qp map transfer to complete
+        waitSemaphoreInfos[waitSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].deviceIndex = 0;
         waitSemaphoreCount++;
     }
