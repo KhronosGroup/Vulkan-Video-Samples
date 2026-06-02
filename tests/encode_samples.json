@@ -403,7 +403,41 @@
         "--intraRefreshCycleDuration",
         "30"
       ],
-      "description": "Test H.264 encoding rejects intra-refresh when not supported by the implementation",
+      "description": "Test H.264 encoding with intra-refresh and picpartition mode",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h265_intrarefresh",
+      "codec": "h265",
+      "profile": "main",
+      "extra_args": [
+        "--intraRefreshMode",
+        "picpartition",
+        "--intraRefreshCycleDuration",
+        "30"
+      ],
+      "description": "Test H.265 encoding with intra-refresh and picpartition mode",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "av1_intrarefresh",
+      "codec": "av1",
+      "profile": "main",
+      "extra_args": [
+        "--intraRefreshMode",
+        "picpartition",
+        "--intraRefreshCycleDuration",
+        "30"
+      ],
+      "description": "Test AV1 encoding with intra-refresh and picpartition mode",
       "width": 352,
       "height": 288,
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
