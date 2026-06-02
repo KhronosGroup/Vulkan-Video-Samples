@@ -51,6 +51,15 @@ VkResult VkVideoEncoderH264::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& en
         return result;
     }
 
+    if (m_encoderConfig->enableIntraRefresh &&
+        m_encoderConfig->intraRefreshMode == EncoderConfig::REFRESH_PER_PARTITION &&
+        m_encoderConfig->intraRefreshCycleDuration > m_encoderConfig->h264EncodeCapabilities.maxSliceCount) {
+        std::cout << "Per-partition intra-refresh requires " << m_encoderConfig->intraRefreshCycleDuration
+                  << " slices but the implementation supports at most "
+                  << m_encoderConfig->h264EncodeCapabilities.maxSliceCount << std::endl;
+        return VK_ERROR_FEATURE_NOT_PRESENT;
+    }
+
     // Initialize DPB
     m_dpb264 = VkEncDpbH264::CreateInstance();
     assert(m_dpb264);
@@ -324,6 +333,17 @@ VkResult VkVideoEncoderH264::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
             (pFrameInfo->stdReferenceListsInfo.num_ref_idx_l0_active_minus1 != m_h264.m_ppsInfo.num_ref_idx_l0_default_active_minus1);
     }
 
+    // For PER_PICTURE_PARTITION intra-refresh, the spec requires
+    // naluSliceEntryCount == intraRefreshCycleDuration on the refreshing frame
+    // (VUID-vkCmdEncodeVideoKHR-pEncodeInfo-10846). The cycle duration was
+    // already clamped against driver caps and picture geometry in InitEncoder.
+    const bool isIntraRefreshFrame = m_encoderConfig->gopStructure.IsIntraRefreshFrame(encodeFrameInfo->gopPosition);
+    pFrameInfo->pictureInfo.naluSliceEntryCount =
+            (m_encoderConfig->enableIntraRefresh && isIntraRefreshFrame &&
+             (m_encoderConfig->intraRefreshMode == EncoderConfig::REFRESH_PER_PARTITION))
+                    ? m_encoderConfig->intraRefreshCycleDuration
+                    : m_encoderConfig->sliceCount;
+
     // Populate all Std slice header entries. For now, they are all identical.
     for (uint32_t i = 1; i < pFrameInfo->pictureInfo.naluSliceEntryCount; i++) {
         pFrameInfo->stdSliceHeader[i] = pFrameInfo->stdSliceHeader[0];
@@ -367,7 +387,6 @@ VkResult VkVideoEncoderH264::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
     }
     pFrameInfo->numDpbImageResources = numReferenceSlots;
 
-    const bool isIntraRefreshFrame = m_encoderConfig->gopStructure.IsIntraRefreshFrame(encodeFrameInfo->gopPosition);
     if (m_encoderConfig->enableIntraRefresh && isIntraRefreshFrame) {
         // The number of dirty intra-refresh regions in the current picture
         uint32_t dirtyIntraRefreshRegions = m_encoderConfig->intraRefreshCycleDuration - encodeFrameInfo->gopPosition.intraRefreshIndex - 1;
@@ -563,7 +582,6 @@ VkResult VkVideoEncoderH264::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
     pFrameInfo->videoSession = m_videoSession;
     pFrameInfo->videoSessionParameters = m_videoSessionParameters;
 
-    pFrameInfo->pictureInfo.naluSliceEntryCount = m_encoderConfig->sliceCount;
 
     pFrameInfo->stdPictureInfo.seq_parameter_set_id = m_h264.m_spsInfo.seq_parameter_set_id;
     pFrameInfo->stdPictureInfo.pic_parameter_set_id = m_h264.m_ppsInfo.pic_parameter_set_id;

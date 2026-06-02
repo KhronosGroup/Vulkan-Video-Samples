@@ -904,6 +904,42 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                       << ") supported by the implementation" << std::endl;
             return VK_ERROR_FEATURE_NOT_PRESENT;
         }
+
+        // For PER_PICTURE_PARTITION mode the picture must be partitioned along
+        // the slice/CTU-row axis. Clamp the cycle duration to the number of
+        // available rectangular partitions, matching CTS (vktVideoEncodeTests.cpp:
+        // PER_PICTURE_PARTITION_BIT_KHR + !nonRectangularIntraRefreshRegions).
+        if (m_encoderConfig->intraRefreshMode == EncoderConfig::REFRESH_PER_PARTITION &&
+            !m_encoderConfig->intraRefreshCapabilities.nonRectangularIntraRefreshRegions) {
+            uint32_t partitionRowHeight = 0;
+            switch (m_encoderConfig->codec) {
+                case VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR:
+                    partitionRowHeight = H264MbSizeAlignment;
+                    break;
+                case VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR:
+                    partitionRowHeight = H265MaxCtbSize;
+                    break;
+                default:
+                    partitionRowHeight = 0;
+                    break;
+            }
+            if (partitionRowHeight > 0) {
+                const uint32_t maxPicturePartitions =
+                        (m_encoderConfig->encodeHeight + partitionRowHeight - 1) / partitionRowHeight;
+                if (m_encoderConfig->intraRefreshCycleDuration > maxPicturePartitions) {
+                    if (m_encoderConfig->verbose) {
+                        std::cout << "Clamping intra-refresh cycle duration from "
+                                  << m_encoderConfig->intraRefreshCycleDuration << " to "
+                                  << maxPicturePartitions
+                                  << " (rectangular partitions for "
+                                  << m_encoderConfig->encodeWidth << "x"
+                                  << m_encoderConfig->encodeHeight << ")" << std::endl;
+                    }
+                    m_encoderConfig->intraRefreshCycleDuration = maxPicturePartitions;
+                    m_encoderConfig->gopStructure.SetIntraRefreshCycleDuration(maxPicturePartitions);
+                }
+            }
+        }
     }
 
     // Reconfigure the gopStructure structure because the device may not support
