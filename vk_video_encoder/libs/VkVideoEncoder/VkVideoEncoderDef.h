@@ -26,6 +26,7 @@
 #endif
 
 static const uint32_t H264MbSizeAlignment = 16;
+static const uint32_t H265MaxCtbSize = 64;
 
 template<typename sizeType>
 sizeType AlignSize(sizeType size, sizeType alignment) {
