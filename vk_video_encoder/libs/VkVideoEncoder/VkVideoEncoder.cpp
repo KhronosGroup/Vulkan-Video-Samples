@@ -16,6 +16,7 @@
 
 #include <cinttypes>
 #include <functional>
+#include <iomanip>
 #include <vector>
 #include "VkVideoEncoder/VkVideoEncoder.h"
 #include "VkVideoCore/VulkanVideoCapabilities.h"
@@ -794,28 +795,23 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         const VkVideoCapabilitiesKHR& vidCaps = encoderConfig->videoCapabilities;
         const VkVideoEncodeCapabilitiesKHR& encCaps = encoderConfig->videoEncodeCapabilities;
 
-        printf("\n");
-        printf("+-------------------------------------------+\n");
-        printf("|         Encoder Capabilities              |\n");
-        printf("+---------------------------+---------------+\n");
-        printf("| flags                     | %13u |\n", encCaps.flags);
-        printf("| minCodedExtent            | %5u x %-5u |\n",
-               vidCaps.minCodedExtent.width, vidCaps.minCodedExtent.height);
-        printf("| maxCodedExtent            | %5u x %-5u |\n",
-               vidCaps.maxCodedExtent.width, vidCaps.maxCodedExtent.height);
-        printf("| pictureAccessGranularity  | %5u x %-5u |\n",
-               vidCaps.pictureAccessGranularity.width, vidCaps.pictureAccessGranularity.height);
-        printf("| encodeInputPictureGran.   | %5u x %-5u |\n",
-               encCaps.encodeInputPictureGranularity.width, encCaps.encodeInputPictureGranularity.height);
-        printf("| maxDpbSlots               | %13u |\n", vidCaps.maxDpbSlots);
-        printf("| maxActiveRefPictures      | %13u |\n", vidCaps.maxActiveReferencePictures);
-        printf("| maxQualityLevels          | %13u |\n", encCaps.maxQualityLevels);
-        printf("| maxRateControlLayers      | %13u |\n", encCaps.maxRateControlLayers);
-        printf("| maxBitrate                | %13" PRIu64 " |\n", encCaps.maxBitrate);
-        printf("| rateControlModes          | %13u |\n", encCaps.rateControlModes);
-        printf("| minBitstreamBufferOffset  | %13" PRIu64 " |\n", vidCaps.minBitstreamBufferOffsetAlignment);
-        printf("| minBitstreamBufferSize    | %13" PRIu64 " |\n", vidCaps.minBitstreamBufferSizeAlignment);
-        printf("+---------------------------+---------------+\n");
+        const std::string sep(80, '=');
+        std::cout << sep << std::endl;
+        std::cout << "                            Encoder Capabilities" << std::endl;
+        std::cout << sep << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "flags" << ": 0x" << std::hex << encCaps.flags << std::dec << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "minCodedExtent" << ": " << vidCaps.minCodedExtent.width << " x " << vidCaps.minCodedExtent.height << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxCodedExtent" << ": " << vidCaps.maxCodedExtent.width << " x " << vidCaps.maxCodedExtent.height << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "pictureAccessGranularity" << ": " << vidCaps.pictureAccessGranularity.width << " x " << vidCaps.pictureAccessGranularity.height << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "encodeInputPictureGranularity" << ": " << encCaps.encodeInputPictureGranularity.width << " x " << encCaps.encodeInputPictureGranularity.height << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxDpbSlots" << ": " << vidCaps.maxDpbSlots << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxActiveReferencePictures" << ": " << vidCaps.maxActiveReferencePictures << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxQualityLevels" << ": " << encCaps.maxQualityLevels << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxRateControlLayers" << ": " << encCaps.maxRateControlLayers << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxBitrate" << ": " << encCaps.maxBitrate << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "rateControlModes" << ": 0x" << std::hex << encCaps.rateControlModes << std::dec << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "minBitstreamBufferOffsetAlignment" << ": " << vidCaps.minBitstreamBufferOffsetAlignment << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "minBitstreamBufferSizeAlignment" << ": " << vidCaps.minBitstreamBufferSizeAlignment << std::endl;
     }
 
     if (encoderConfig->qualityLevel >= encoderConfig->videoEncodeCapabilities.maxQualityLevels) {

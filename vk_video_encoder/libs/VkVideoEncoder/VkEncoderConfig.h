@@ -776,7 +776,6 @@ public:
     uint32_t validateVerbose : 1;
     uint32_t verbose : 1;
     uint32_t verboseFrameStruct : 1;
-    uint32_t verboseMsg : 1;
     uint32_t enableFramePresent : 1;
     uint32_t enableFrameDirectModePresent : 1;
     uint32_t enableHwLoadBalancing : 1;
@@ -877,7 +876,6 @@ public:
     , validateVerbose(false)
     , verbose(false)
     , verboseFrameStruct(false)
-    , verboseMsg(false)
     , enableFramePresent(false)
     , enableFrameDirectModePresent(false)
     , enableHwLoadBalancing(false)
