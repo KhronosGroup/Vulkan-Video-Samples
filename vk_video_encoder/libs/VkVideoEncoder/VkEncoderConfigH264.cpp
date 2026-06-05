@@ -14,6 +14,7 @@
 * limitations under the License.
 */
 
+#include <iomanip>
 #include "VkVideoEncoder/VkEncoderConfigH264.h"
 #include "VkVideoEncoder/VkVideoEncoderH264.h"
 
@@ -414,16 +415,24 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
         return result;
     }
 
-    if (verboseMsg) {
-        std::cout << "\t\t\t" << VkVideoCoreProfile::CodecToName(codec) << "encode capabilities: " << std::endl;
-        std::cout << "\t\t\t" << "minBitstreamBufferOffsetAlignment: " << videoCapabilities.minBitstreamBufferOffsetAlignment << std::endl;
-        std::cout << "\t\t\t" << "minBitstreamBufferSizeAlignment: " << videoCapabilities.minBitstreamBufferSizeAlignment << std::endl;
-        std::cout << "\t\t\t" << "pictureAccessGranularity: " << videoCapabilities.pictureAccessGranularity.width << " x " << videoCapabilities.pictureAccessGranularity.height << std::endl;
-        std::cout << "\t\t\t" << "minExtent: " << videoCapabilities.minCodedExtent.width << " x " << videoCapabilities.minCodedExtent.height << std::endl;
-        std::cout << "\t\t\t" << "maxExtent: " << videoCapabilities.maxCodedExtent.width  << " x " << videoCapabilities.maxCodedExtent.height << std::endl;
-        std::cout << "\t\t\t" << "maxDpbSlots: " << videoCapabilities.maxDpbSlots << std::endl;
-        std::cout << "\t\t\t" << "maxActiveReferencePictures: " << videoCapabilities.maxActiveReferencePictures << std::endl;
-        std::cout << "\t\t\t" << "maxBPictureL0ReferenceCount: " << h264EncodeCapabilities.maxBPictureL0ReferenceCount << std::endl;
+    if (verbose) {
+        const std::string sep(80, '=');
+        std::cout << sep << std::endl;
+        std::cout << "                          H.264 Encoder Capabilities" << std::endl;
+        std::cout << sep << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "flags" << ": 0x" << std::hex << h264EncodeCapabilities.flags << std::dec << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxLevelIdc" << ": " << h264EncodeCapabilities.maxLevelIdc << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxSliceCount" << ": " << h264EncodeCapabilities.maxSliceCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxPPictureL0ReferenceCount" << ": " << h264EncodeCapabilities.maxPPictureL0ReferenceCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxBPictureL0ReferenceCount" << ": " << h264EncodeCapabilities.maxBPictureL0ReferenceCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxL1ReferenceCount" << ": " << h264EncodeCapabilities.maxL1ReferenceCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxTemporalLayerCount" << ": " << h264EncodeCapabilities.maxTemporalLayerCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "expectDyadicTemporalLayerPattern" << ": " << h264EncodeCapabilities.expectDyadicTemporalLayerPattern << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "minQp" << ": " << h264EncodeCapabilities.minQp << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "maxQp" << ": " << h264EncodeCapabilities.maxQp << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "prefersGopRemainingFrames" << ": " << h264EncodeCapabilities.prefersGopRemainingFrames << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "requiresGopRemainingFrames" << ": " << h264EncodeCapabilities.requiresGopRemainingFrames << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "stdSyntaxFlags" << ": 0x" << std::hex << h264EncodeCapabilities.stdSyntaxFlags << std::dec << std::endl;
     }
 
     result = VulkanVideoCapabilities::GetPhysicalDeviceVideoEncodeQualityLevelProperties<VkVideoEncodeH264QualityLevelPropertiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUALITY_LEVEL_PROPERTIES_KHR>
@@ -436,21 +445,24 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
         return result;
     }
 
-    if (verboseMsg) {
-        std::cout << "\t\t" << VkVideoCoreProfile::CodecToName(codec) << "encode quality level properties: " << std::endl;
-        std::cout << "\t\t\t" << "preferredRateControlMode : " << qualityLevelProperties.preferredRateControlMode << std::endl;
-        std::cout << "\t\t\t" << "preferredRateControlLayerCount : " << qualityLevelProperties.preferredRateControlLayerCount << std::endl;
-        std::cout << "\t\t\t" << "preferredRateControlFlags : " << h264QualityLevelProperties.preferredRateControlFlags << std::endl;
-        std::cout << "\t\t\t" << "preferredGopFrameCount : " << h264QualityLevelProperties.preferredGopFrameCount << std::endl;
-        std::cout << "\t\t\t" << "preferredIdrPeriod : " << h264QualityLevelProperties.preferredIdrPeriod << std::endl;
-        std::cout << "\t\t\t" << "preferredConsecutiveBFrameCount : " << h264QualityLevelProperties.preferredConsecutiveBFrameCount << std::endl;
-        std::cout << "\t\t\t" << "preferredTemporalLayerCount : " << h264QualityLevelProperties.preferredTemporalLayerCount << std::endl;
-        std::cout << "\t\t\t" << "preferredConstantQp.qpI : " << h264QualityLevelProperties.preferredConstantQp.qpI << std::endl;
-        std::cout << "\t\t\t" << "preferredConstantQp.qpP : " << h264QualityLevelProperties.preferredConstantQp.qpP << std::endl;
-        std::cout << "\t\t\t" << "preferredConstantQp.qpB : " << h264QualityLevelProperties.preferredConstantQp.qpB << std::endl;
-        std::cout << "\t\t\t" << "preferredMaxL0ReferenceCount : " << h264QualityLevelProperties.preferredMaxL0ReferenceCount << std::endl;
-        std::cout << "\t\t\t" << "preferredMaxL1ReferenceCount : " << h264QualityLevelProperties.preferredMaxL1ReferenceCount << std::endl;
-        std::cout << "\t\t\t" << "preferredStdEntropyCodingModeFlag : " << h264QualityLevelProperties.preferredStdEntropyCodingModeFlag << std::endl;
+    if (verbose) {
+        const std::string sep(80, '=');
+        std::cout << sep << std::endl;
+        std::cout << "                    H.264 Encoder Quality Level Properties" << std::endl;
+        std::cout << sep << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredRateControlMode" << ": " << qualityLevelProperties.preferredRateControlMode << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredRateControlLayerCount" << ": " << qualityLevelProperties.preferredRateControlLayerCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredRateControlFlags" << ": " << h264QualityLevelProperties.preferredRateControlFlags << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredGopFrameCount" << ": " << h264QualityLevelProperties.preferredGopFrameCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredIdrPeriod" << ": " << h264QualityLevelProperties.preferredIdrPeriod << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredConsecutiveBFrameCount" << ": " << h264QualityLevelProperties.preferredConsecutiveBFrameCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredTemporalLayerCount" << ": " << h264QualityLevelProperties.preferredTemporalLayerCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredConstantQp.qpI" << ": " << h264QualityLevelProperties.preferredConstantQp.qpI << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredConstantQp.qpP" << ": " << h264QualityLevelProperties.preferredConstantQp.qpP << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredConstantQp.qpB" << ": " << h264QualityLevelProperties.preferredConstantQp.qpB << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredMaxL0ReferenceCount" << ": " << h264QualityLevelProperties.preferredMaxL0ReferenceCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredMaxL1ReferenceCount" << ": " << h264QualityLevelProperties.preferredMaxL1ReferenceCount << std::endl;
+        std::cout << "  " << std::left << std::setw(48) << "preferredStdEntropyCodingModeFlag" << ": " << h264QualityLevelProperties.preferredStdEntropyCodingModeFlag << std::endl;
     }
 
     if (rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_FLAG_BITS_MAX_ENUM_KHR) {
