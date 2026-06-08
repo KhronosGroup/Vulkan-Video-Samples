@@ -128,33 +128,3 @@ def print_final_summary(counts: tuple, test_type: str = "") -> bool:
     else:
         print(f"\n❌ {failed} {label}TEST(S) FAILED!")
     return False
-
-
-def print_command_output(result: TestResult, max_lines: int = 0) -> None:
-    """Print stdout/stderr to aid debugging.
-
-    Args:
-        result: TestResult object
-        max_lines: Maximum lines to show (0 = unlimited)
-    """
-    print("   === Command Output ===")
-    if result.stdout:
-        print("   STDOUT:")
-        lines = result.stdout.splitlines()
-        if 0 < max_lines < len(lines):
-            for line in lines[:max_lines]:
-                print(f"     {line}")
-            print(f"     ... ({len(lines) - max_lines} more lines)")
-        else:
-            for line in lines:
-                print(f"     {line}")
-    if result.stderr:
-        print("   STDERR:")
-        lines = result.stderr.splitlines()
-        if 0 < max_lines < len(lines):
-            for line in lines[:max_lines]:
-                print(f"     {line}")
-            print(f"     ... ({len(lines) - max_lines} more lines)")
-        else:
-            for line in lines:
-                print(f"     {line}")
