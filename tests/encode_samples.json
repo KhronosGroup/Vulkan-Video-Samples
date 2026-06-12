@@ -178,7 +178,7 @@
       "width": 352,
       "height": 288,
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/FT_352x288_420_10le.yuv",
-      "source_checksum": "c7d9ec2b39be350011086d52b3f973277cfcbbddf7c925a0ddde4b835229ddee",
+      "source_checksum": "cdf694b21ebf4dd9d1d3e2321dd4a85f0a4a9cf238146f23db1cdeceaf59af0c",
       "source_filepath": "video/yuv/352x288_i420_10le.yuv"
     },
     {
@@ -257,7 +257,7 @@
       "width": 352,
       "height": 288,
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/FT_352x288_420_10le.yuv",
-      "source_checksum": "c7d9ec2b39be350011086d52b3f973277cfcbbddf7c925a0ddde4b835229ddee",
+      "source_checksum": "cdf694b21ebf4dd9d1d3e2321dd4a85f0a4a9cf238146f23db1cdeceaf59af0c",
       "source_filepath": "video/yuv/352x288_i420_10le.yuv"
     },
     {
