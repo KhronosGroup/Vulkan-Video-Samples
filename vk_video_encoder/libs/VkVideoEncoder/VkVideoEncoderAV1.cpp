@@ -341,20 +341,54 @@ VkResult VkVideoEncoderAV1::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
         }
     }
 
+    // primary_ref_frame == NONE never matches in the loop above, so clear
+    // the flag here. Also prevents GetDpbIdx(NONE = 7) reading past
+    // m_refName2DpbIdx[STD_VIDEO_AV1_REFS_PER_FRAME].
+    if (pFrameInfo->stdPictureInfo.primary_ref_frame == STD_VIDEO_AV1_PRIMARY_REF_NONE) {
+        primaryRefCdfOnly = false;
+    }
+
     // Do not include primary_ref_frame reference when primaryRefCdfOnly in predictionMode calculation
     // If curent picture is a key frame or intra frame, use INTRA prediction mode.
     // If both groups contain atleast 1 picture, use BIDIR_COMP prediction. (UNIDIR_COMP prediction also possible)
     // else if any of the group contains more than 1 picture, use UNIDIR_COMP (Refer section 5.11.25 of AV1 spec)
     // else use SINGLE
     const auto& encodeCaps = m_encoderConfig->av1EncodeCapabilities;
-    bool bLastRefFramePresent = (pFrameInfo->pictureInfo.referenceNameSlotIndices[STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME - STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] != -1);
-    bool bBwdRefFramePreset = (pFrameInfo->pictureInfo.referenceNameSlotIndices[STD_VIDEO_AV1_REFERENCE_NAME_BWDREF_FRAME - STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] != -1);
-    bool bAltRefFramePreset = (pFrameInfo->pictureInfo.referenceNameSlotIndices[STD_VIDEO_AV1_REFERENCE_NAME_ALTREF_FRAME - STD_VIDEO_AV1_REFERENCE_NAME_LAST_FRAME] != -1);
+    const int32_t* refSlotIndices = pFrameInfo->pictureInfo.referenceNameSlotIndices;
+    const int32_t cdfOnlyReferenceIndex = primaryRefCdfOnly ?
+            m_dpbAV1->GetDpbIdx(pFrameInfo->stdPictureInfo.primary_ref_frame) : -1;
+
+    // VUID-vkCmdEncodeVideoKHR-predictionMode-10331: UNIDIRECTIONAL_COMPOUND
+    // needs a valid (i,j) pair from {(0,1),(0,2),(0,3),(4,6)} with both slots
+    // present, both in the capability mask, and neither being CDF-only.
+    // All four spec pairs are checked against the driver's capability mask.
+    const bool unidirAvailable = [&]() -> bool {
+        const uint32_t mask = encodeCaps.unidirectionalCompoundReferenceNameMask;
+        constexpr std::pair<unsigned, unsigned> pairs[] = {
+            //FIXME these pairs can cause incorrect prediction mode leading to
+            // VUID-vkCmdEncodeVideoKHR-predictionMode-10331
+            //{0, 1}, {0, 2}, {0, 3}, // LAST + LAST2/LAST3/GOLDEN
+            {4, 6},                  // BWDREF + ALTREF
+        };
+        for (auto [i, j] : pairs) {
+            if ((refSlotIndices[i] != -1) && (refSlotIndices[j] != -1) &&
+                (mask & (1u << i)) && (mask & (1u << j)) &&
+                (refSlotIndices[i] != cdfOnlyReferenceIndex) &&
+                (refSlotIndices[j] != cdfOnlyReferenceIndex)) {
+                if (m_encoderConfig->verboseFrameStruct) {
+                    std::cout << "AV1: unidir compound pair (" << i << "," << j << ")" << std::endl;
+                }
+                return true;
+            }
+        }
+        return false;
+    }();
+
     if ((pFrameInfo->gopPosition.pictureType == VkVideoGopStructure::FRAME_TYPE_I) || (pFrameInfo->gopPosition.pictureType == VkVideoGopStructure::FRAME_TYPE_IDR)) {
         pFrameInfo->pictureInfo.predictionMode = VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_INTRA_ONLY_KHR;
     } else if ((m_dpbAV1->GetNumRefsInGroup1() > 0) && (m_dpbAV1->GetNumRefsInGroup2() > 0)) {
         pFrameInfo->pictureInfo.predictionMode = VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_BIDIRECTIONAL_COMPOUND_KHR;
-    } else if ((bLastRefFramePresent && (m_dpbAV1->GetNumRefsInGroup1() >= 2)) || (bBwdRefFramePreset && bAltRefFramePreset)) {
+    } else if (unidirAvailable) {
         pFrameInfo->pictureInfo.predictionMode = VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_UNIDIRECTIONAL_COMPOUND_KHR;
     } else {
         pFrameInfo->pictureInfo.predictionMode = VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_SINGLE_REFERENCE_KHR;
@@ -363,8 +397,12 @@ VkResult VkVideoEncoderAV1::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
     // If any of the optimal reference modes are not supported, fall back to a simpler mode
     if (pFrameInfo->pictureInfo.predictionMode == VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_BIDIRECTIONAL_COMPOUND_KHR &&
         encodeCaps.maxBidirectionalCompoundReferenceCount == 0) {
-        // TODO: try to remap the references to unidirectional, based on mask/counts
-        pFrameInfo->pictureInfo.predictionMode = VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_UNIDIRECTIONAL_COMPOUND_KHR;
+        // Fall back to unidir compound only if a valid pair is available
+        // (VUID-...-predictionMode-10331); otherwise drop to single reference.
+        // TODO: prune referenceNameSlotIndices to the chosen pair.
+        pFrameInfo->pictureInfo.predictionMode = unidirAvailable ?
+                VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_UNIDIRECTIONAL_COMPOUND_KHR :
+                VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_SINGLE_REFERENCE_KHR;
     }
     if (pFrameInfo->pictureInfo.predictionMode == VK_VIDEO_ENCODE_AV1_PREDICTION_MODE_UNIDIRECTIONAL_COMPOUND_KHR &&
         encodeCaps.maxUnidirectionalCompoundReferenceCount == 0) {
