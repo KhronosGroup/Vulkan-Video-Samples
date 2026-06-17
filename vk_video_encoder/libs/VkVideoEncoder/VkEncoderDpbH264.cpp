@@ -148,7 +148,10 @@ int32_t VkEncDpbH264::DpbSequenceStart(int32_t userDpbSize)
 
     DpbDeinit();
 
-    m_max_dpb_size = userDpbSize;
+    // m_max_dpb_size counts reference slots and is compared against MAX_DPB_SLOTS
+    // in IsDpbFull(); it must never exceed the array bound, regardless of what
+    // the requested/driver-reported DPB size is.
+    m_max_dpb_size = std::min(userDpbSize, (int32_t)MAX_DPB_SLOTS);
 
     for (i = 0; i < MAX_DPB_SLOTS + 1; i++) {
         m_DPB[i] = DpbEntryH264();
