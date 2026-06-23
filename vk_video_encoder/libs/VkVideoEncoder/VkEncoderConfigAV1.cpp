@@ -17,14 +17,14 @@
 #include <iomanip>
 #include "VkVideoEncoder/VkEncoderConfigAV1.h"
 
-#define READ_PARAM(i, param, type) {                            \
-    int32_t data = 0;                                           \
-    if ((++i >= argc) || (sscanf(argv[i], "%d", &data) != 1)) { \
-        fprintf(stderr, "invalid parameter");                   \
-        return -1;                                              \
-    } else {                                                    \
-        param = (type)data;                                     \
-    }                                                           \
+#define READ_PARAM(i, param, type) {                                       \
+    int32_t data = 0;                                                      \
+    if ((++i >= args.size()) || (sscanf(args[i].c_str(), "%d", &data) != 1)) { \
+        fprintf(stderr, "invalid parameter");                              \
+        return -1;                                                         \
+    } else {                                                               \
+        param = (type)data;                                                \
+    }                                                                      \
 }
 
 int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
@@ -32,24 +32,24 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
     // No validation of command line options.  So, all options must be valid and
     // values with in the limits of vulkan and av1 specification
     std::vector<std::string> args(argv, argv + argc);
-    for (int32_t i = 0; i < argc; i++) {
+    for (size_t i = 0; i < args.size(); i++) {
 
         if (args[i] == "--tiles") {
             enableTiles = true;
 
-            if (((i + 1) < argc) && (args[i + 1] == "--params")) {
+            if (((i + 1) < args.size()) && (args[i + 1] == "--params")) {
                 ++i;
                 customTileConfig = true;
                 READ_PARAM(i, tileConfig.flags.uniform_tile_spacing_flag, bool);
                 READ_PARAM(i, tileConfig.TileCols, uint8_t);
                 if (!tileConfig.flags.uniform_tile_spacing_flag) {
-                    for (int32_t j = 0; j < tileConfig.TileCols; j++) {
+                    for (uint8_t j = 0; j < tileConfig.TileCols; j++) {
                         READ_PARAM(i, tileWidthInSbsMinus1[j], uint16_t);
                     }
                 }
                 READ_PARAM(i, tileConfig.TileRows, uint8_t);
                 if (!tileConfig.flags.uniform_tile_spacing_flag) {
-                    for (int32_t j = 0; j < tileConfig.TileRows; j++) {
+                    for (uint8_t j = 0; j < tileConfig.TileRows; j++) {
                         READ_PARAM(i, tileHeightInSbsMinus1[j], uint16_t);
                     }
                 }
@@ -58,7 +58,7 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
         } else if (args[i] == "--quant"){
             enableQuant = true;
 
-            if (((i + 1) < argc) && (args[i + 1] == "--params")) {
+            if (((i + 1) < args.size()) && (args[i + 1] == "--params")) {
                 ++i;
                 customQuantConfig = true;
                 // parase quant params
@@ -81,7 +81,7 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
         } else if (args[i] == "--lf"){
             enableLf = true;
 
-            if (((i + 1) < argc) && (args[i + 1] == "--params")) {
+            if (((i + 1) < args.size()) && (args[i + 1] == "--params")) {
                 ++i;
                 customLfConfig = true;
                 // parase LF params
@@ -110,13 +110,13 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
         } else if (args[i] == "--cdef"){
             enableCdef = true;
 
-            if (((i + 1) < argc) && (args[i + 1] == "--params")) {
+            if (((i + 1) < args.size()) && (args[i + 1] == "--params")) {
                 ++i;
                 customCdefConfig = true;
                 // parse CDEF params
                 READ_PARAM(i, cdefConfig.cdef_damping_minus_3, uint8_t);
                 READ_PARAM(i, cdefConfig.cdef_bits, uint8_t);
-                for (int8_t j = 0; j < (1 << cdefConfig.cdef_bits); j++) {
+                for (uint8_t j = 0; j < (1 << cdefConfig.cdef_bits); j++) {
                     READ_PARAM(i, cdefConfig.cdef_y_pri_strength[j], uint8_t);
                     READ_PARAM(i, cdefConfig.cdef_y_sec_strength[j], uint8_t);
                     READ_PARAM(i, cdefConfig.cdef_uv_pri_strength[j], uint8_t);
@@ -128,7 +128,7 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
 
             // [ --params <type[0]> <...> <size[0]> <...> ]
             // Eg: --lr --params 2 2 2   1 1 1
-            if (((i + 1) < argc) && (args[i + 1] == "--params")) {
+            if (((i + 1) < args.size()) && (args[i + 1] == "--params")) {
                 ++i;
                 customLrConfig = true;
                 // parse LR params
@@ -140,8 +140,8 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
                 }
             }
         } else if (args[i] == "--profile"){
-            if (++i >= argc) {
-                fprintf(stderr, "invalid parameter for %s\n", args[i-1].c_str());
+            if (++i >= args.size()) {
+                fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
             std::string prfl = args[i];
@@ -182,7 +182,7 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
     seqHdr->flags.enable_cdef = enableCdef ? 1 : 0;
     seqHdr->flags.enable_restoration = enableLr ? 1 : 0;
 
-    opInfo->seq_level_idx = level;
+    opInfo->seq_level_idx = (uint8_t)level;
     opInfo->seq_tier = tier;
 
     return true;
@@ -237,7 +237,7 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
                                                                                  av1QualityLevelProperties);
     if (result != VK_SUCCESS) {
         std::cout << "*** Could not get Video Encode QualityLevel Properties :" << result << " ***" << std::endl;
-        assert(!"Could not get Video Encode QualityLevel Properties");
+        VKVS_FAIL("Could not get Video Encode QualityLevel Properties");
         return result;
     }
 
@@ -275,14 +275,14 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
             std::cerr << "FIXME: the preferred GOP frame count supported by this device is 0. Using the maximum GOP frame count value." << std::endl;
             gopStructure.SetGopFrameCount(UINT8_MAX);
         } else {
-            gopStructure.SetGopFrameCount(av1QualityLevelProperties.preferredGopFrameCount);
+            gopStructure.SetGopFrameCount((uint8_t)av1QualityLevelProperties.preferredGopFrameCount);
         }
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(av1QualityLevelProperties.preferredKeyFramePeriod);
     }
     if (gopStructure.GetConsecutiveBFrameCount() == CONSECUTIVE_B_FRAME_COUNT_MAX_VALUE) {
-        gopStructure.SetConsecutiveBFrameCount(av1QualityLevelProperties.preferredConsecutiveBipredictiveFrameCount);
+        gopStructure.SetConsecutiveBFrameCount((uint8_t)av1QualityLevelProperties.preferredConsecutiveBipredictiveFrameCount);
     }
     if (constQp.qpIntra == 0) {
         constQp.qpIntra = av1QualityLevelProperties.preferredConstantQIndex.intraQIndex;
@@ -297,7 +297,7 @@ VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkD
     return VK_SUCCESS;
 }
 
-int8_t EncoderConfigAV1::InitDpbCount()
+uint8_t EncoderConfigAV1::InitDpbCount()
 {
     dpbCount = STD_VIDEO_AV1_NUM_REF_FRAMES + 1; // BUFFER_POOL_MAX_SIZE = Number of frames in buffer pool = 10
     return dpbCount;

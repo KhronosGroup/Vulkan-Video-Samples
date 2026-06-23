@@ -45,7 +45,7 @@ public:
     uint64_t frameCompleteDoneSemValue; // The semaphore is signaled by the decoder or the decoder's filter when this semaphore value has been reached.
     uint64_t frameConsumerDoneSemValue; // The semaphore is signaled by the consumer (graphics, compute or display) when this semaphore value has been reached.
     VkQueryPool queryPool;                  // queryPool handle used for the video queries.
-    int32_t startQueryId;                   // query Id used for the this frame.
+    uint32_t startQueryId;                  // query Id used for the this frame.
     uint32_t numQueries;                    // usually one query per frame
     // If multiple queues are available, submittedVideoQueueIndex is the queue index that the video frame was submitted to.
     // if only one queue is available, submittedVideoQueueIndex will always have a value of "0".

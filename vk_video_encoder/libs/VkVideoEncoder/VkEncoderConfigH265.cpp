@@ -44,7 +44,7 @@ static void SetupAspectRatio(StdVideoH265SequenceParameterSetVui *vui, uint32_t 
     int32_t indexFound = -1;
     for (uint32_t i = 0; i < 16; i++) {
         if ((stSampleAspectRatioTable[i][0] == w) && (stSampleAspectRatioTable[i][1] == h)) {
-            indexFound = i;
+            indexFound = (int32_t)i;
             break;
         }
     }
@@ -73,9 +73,9 @@ int EncoderConfigH265::DoParseArguments(int argc, const char* argv[])
 {
     std::vector<std::string> args(argv, argv + argc);
 
-    for (int32_t i = 0; i < argc; i++) {
+    for (size_t i = 0; i < args.size(); i++) {
         if (args[i] == "--slices") {
-            if (++i >= argc || sscanf(args[i].c_str(), "%u", &sliceCount) != 1) {
+            if (++i >= args.size() || sscanf(args[i].c_str(), "%u", &sliceCount) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -84,7 +84,7 @@ int EncoderConfigH265::DoParseArguments(int argc, const char* argv[])
                 return -1;
             }
         } else if (args[i] == "--profile") {
-            if (++i >= argc) {
+            if (++i >= args.size()) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
@@ -195,31 +195,31 @@ VkResult EncoderConfigH265::InitDeviceCapabilities(const VulkanDeviceContext* vk
             std::cerr << "FIXME: the preferred GOP frame count supported by this device is 0. Using the maximum GOP frame count value." << std::endl;
             gopStructure.SetGopFrameCount(UINT8_MAX);
         } else {
-            gopStructure.SetGopFrameCount(h265QualityLevelProperties.preferredGopFrameCount);
+            gopStructure.SetGopFrameCount((uint8_t)h265QualityLevelProperties.preferredGopFrameCount);
         }
     }
     if (gopStructure.GetIdrPeriod() == ZERO_GOP_IDR_PERIOD) {
         gopStructure.SetIdrPeriod(h265QualityLevelProperties.preferredIdrPeriod);
     }
     if (gopStructure.GetConsecutiveBFrameCount() == CONSECUTIVE_B_FRAME_COUNT_MAX_VALUE) {
-        gopStructure.SetConsecutiveBFrameCount(h265QualityLevelProperties.preferredConsecutiveBFrameCount);
+        gopStructure.SetConsecutiveBFrameCount((uint8_t)h265QualityLevelProperties.preferredConsecutiveBFrameCount);
     }
     if (constQp.qpIntra == 0) {
-        constQp.qpIntra = h265QualityLevelProperties.preferredConstantQp.qpI;
+        constQp.qpIntra = (uint32_t)h265QualityLevelProperties.preferredConstantQp.qpI;
     }
     if (constQp.qpInterP == 0) {
-        constQp.qpInterP = h265QualityLevelProperties.preferredConstantQp.qpP;
+        constQp.qpInterP = (uint32_t)h265QualityLevelProperties.preferredConstantQp.qpP;
     }
     if (constQp.qpInterB == 0) {
-        constQp.qpInterB = h265QualityLevelProperties.preferredConstantQp.qpB;
+        constQp.qpInterB = (uint32_t)h265QualityLevelProperties.preferredConstantQp.qpB;
     }
-    numRefL0 = h265QualityLevelProperties.preferredMaxL0ReferenceCount;
-    numRefL1 = h265QualityLevelProperties.preferredMaxL1ReferenceCount;
+    numRefL0 = (uint8_t)h265QualityLevelProperties.preferredMaxL0ReferenceCount;
+    numRefL1 = (uint8_t)h265QualityLevelProperties.preferredMaxL1ReferenceCount;
 
     return VK_SUCCESS;
 }
 
-int8_t EncoderConfigH265::InitDpbCount()
+uint8_t EncoderConfigH265::InitDpbCount()
 {
     dpbCount = 5;
 
@@ -261,7 +261,7 @@ uint32_t EncoderConfigH265::GetCtbAlignedPicSizeInSamples(uint32_t& picWidthInCt
     return picWidthInCtbsY * picHeightInCtbsY;
 }
 
-int8_t EncoderConfigH265::VerifyDpbSize()
+uint8_t EncoderConfigH265::VerifyDpbSize()
 {
     uint32_t picWidthInCtbsY = 0, picHeightInCtbsY = 0;
     uint32_t picSize = GetCtbAlignedPicSizeInSamples(picWidthInCtbsY, picHeightInCtbsY);
@@ -277,12 +277,12 @@ int8_t EncoderConfigH265::VerifyDpbSize()
     if (levelIdxFound != -1) {
         uint32_t maxDpbSize = GetMaxDpbSize(picSize, levelIdxFound);
         if ((uint32_t)dpbCount > maxDpbSize) {
-            assert(!"DpbSize is greater than the maximum supported value.");
-            return (int8_t)(uint8_t)maxDpbSize;
+            VKVS_FAIL("DpbSize is greater than the maximum supported value.");
+            return (uint8_t)maxDpbSize;
         }
     } else {
-        assert(!"Invalid level idc");
-        return -1;
+        VKVS_FAIL("Invalid level idc");
+        return 0;
     }
 
     return dpbCount;
@@ -425,15 +425,15 @@ EncoderConfigH265::InitVuiParameters(StdVideoH265SequenceParameterSetVui *vuiInf
 bool EncoderConfigH265::IsSuitableLevel(uint32_t levelIdx, bool highTier)
 {
     if (levelIdx >= levelLimitsTblSize) {
-        assert(!"The h.265 level index is invalid");
+        VKVS_FAIL("The h.265 level index is invalid");
         return false;
     }
 
     uint32_t widthCtbAligned = 0, heightCtbAligned = 0;
     uint32_t picSizeInSamples = GetCtbAlignedPicSizeInSamples(widthCtbAligned, heightCtbAligned);
 
-    uint32_t maxCPBSize = highTier ? levelLimits[levelIdx].maxCPBSizeHighTier : levelLimits[levelIdx].maxCPBSizeMainTier;
-    uint32_t maxBitRate = highTier ? levelLimits[levelIdx].maxBitRateHighTier : levelLimits[levelIdx].maxBitRateMainTier;
+    uint32_t maxCPBSize = highTier ? (uint32_t)levelLimits[levelIdx].maxCPBSizeHighTier : (uint32_t)levelLimits[levelIdx].maxCPBSizeMainTier;
+    uint32_t maxBitRate = highTier ? (uint32_t)levelLimits[levelIdx].maxBitRateHighTier : (uint32_t)levelLimits[levelIdx].maxBitRateMainTier;
     uint32_t cpbFactor = GetCpbVclFactor();
 
     if (picSizeInSamples > levelLimits[levelIdx].maxLumaPS) {
@@ -522,7 +522,7 @@ StdVideoH265ProfileTierLevel EncoderConfigH265::GetLevelTier()
     }
 
     if (levelIdx >= levelLimitsTblSize) {
-        assert(!"No suitable level selected");
+        VKVS_FAIL("No suitable level selected");
     }
 
     return profileTierLevel;
@@ -537,14 +537,14 @@ bool EncoderConfigH265::InitRateControl()
     }
     uint32_t level = profileTierLevel.general_level_idc;
     if (level >= levelLimitsTblSize) {
-        assert(!"The h.265 level index is invalid");
+        VKVS_FAIL("The h.265 level index is invalid");
         return false;
     }
     uint32_t cpbVclFactor = GetCpbVclFactor();
 
     // Safe default maximum bitrate
     uint32_t levelBitRate = std::max(averageBitrate, hrdBitrate);
-    levelBitRate = std::max(levelBitRate, std::min(levelLimits[level].maxBitRateMainTier * 800u, 120000000u));
+    levelBitRate = std::max(levelBitRate, std::min((uint32_t)levelLimits[level].maxBitRateMainTier * 800u, 120000000u));
 
     // If no bitrate is specified, use the level limit
     if (averageBitrate == 0) {
@@ -568,7 +568,7 @@ bool EncoderConfigH265::InitRateControl()
 
     // Use the main tier level limit for the max VBV buffer size, and no more than 8 seconds at peak rate
     if (vbvBufferSize == 0) {
-        vbvBufferSize = std::min(levelLimits[level].maxCPBSizeMainTier * cpbVclFactor, 100000000u);
+        vbvBufferSize = std::min((uint32_t)levelLimits[level].maxCPBSizeMainTier * cpbVclFactor, 100000000u);
         if (rateControlMode != VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR) {
             if ((vbvBufferSize >> 3) > hrdBitrate) {
                 vbvBufferSize = hrdBitrate << 3;

@@ -61,7 +61,7 @@ VkResult VkVideoEncoderH265::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& en
     }
 
     // Initialize DPB
-    m_dpb.DpbSequenceStart(m_maxDpbPicturesCount, (m_encoderConfig->numRefL0 > 0) || (m_encoderConfig->numRefL1 > 0));
+    m_dpb.DpbSequenceStart((int32_t)m_maxDpbPicturesCount, (m_encoderConfig->numRefL0 > 0) || (m_encoderConfig->numRefL1 > 0));
 
     if (m_encoderConfig->verbose) {
         std::cout << ", numRefL0: "    << (uint32_t)m_encoderConfig->numRefL0
@@ -117,7 +117,7 @@ VkResult VkVideoEncoderH265::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
     VkVideoEncodeFrameInfoH265* pFrameInfo = GetEncodeFrameInfoH265(encodeFrameInfo);
 
     if (m_encoderConfig->verboseFrameStruct) {
-        DumpStateInfo("process DPB", 3, encodeFrameInfo, frameIdx, ofTotalFrames);
+        DumpStateInfo("process DPB", 3, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
     }
 
     // TODO: Optimize this below very complex and inefficient DPB management code.
@@ -265,7 +265,7 @@ VkResult VkVideoEncoderH265::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
 
             uint8_t dpbIndex = pFrameInfo->stdReferenceListsInfo.RefPicList0[i];
 
-            bool refPicAvailable = m_dpb.GetRefPicture(dpbIndex, pFrameInfo->dpbImageResources[numReferenceSlots]);
+            bool refPicAvailable = m_dpb.GetRefPicture((int8_t)dpbIndex, pFrameInfo->dpbImageResources[numReferenceSlots]);
             assert(refPicAvailable);
 	    if (!refPicAvailable) {
 		return VK_ERROR_INITIALIZATION_FAILED;
@@ -301,7 +301,7 @@ VkResult VkVideoEncoderH265::ProcessDpb(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
 
                 uint8_t dpbIndex = pFrameInfo->stdReferenceListsInfo.RefPicList1[i];
 
-                bool refPicAvailable = m_dpb.GetRefPicture(dpbIndex, pFrameInfo->dpbImageResources[numReferenceSlots]);
+                bool refPicAvailable = m_dpb.GetRefPicture((int8_t)dpbIndex, pFrameInfo->dpbImageResources[numReferenceSlots]);
                 assert(refPicAvailable);
                 if (!refPicAvailable) {
                    return VK_ERROR_INITIALIZATION_FAILED;
@@ -427,7 +427,7 @@ VkResult VkVideoEncoderH265::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
     }
     const bool isReference = m_encoderConfig->gopStructure.IsFrameReference(encodeFrameInfo->gopPosition);
 
-    encodeFrameInfo->picOrderCntVal = encodeFrameInfo->gopPosition.inputOrder;
+    encodeFrameInfo->picOrderCntVal = (int32_t)encodeFrameInfo->gopPosition.inputOrder;
 
     if (m_encoderConfig->verboseFrameStruct) {
         DumpStateInfo("input", 1, encodeFrameInfo);
@@ -504,7 +504,7 @@ VkResult VkVideoEncoderH265::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
             sliceType = STD_VIDEO_H265_SLICE_TYPE_I;
             break;
         default:
-            assert(!"Invalid picture type");
+            VKVS_FAIL("Invalid picture type");
             return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -531,16 +531,16 @@ VkResult VkVideoEncoderH265::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
         switch (encodeFrameInfo->gopPosition.pictureType) {
             case VkVideoGopStructure::FRAME_TYPE_IDR:
             case VkVideoGopStructure::FRAME_TYPE_I:
-                constantQp = encodeFrameInfo->constQp.qpIntra;
+                constantQp = (int32_t)encodeFrameInfo->constQp.qpIntra;
                 break;
             case VkVideoGopStructure::FRAME_TYPE_P:
-                constantQp = encodeFrameInfo->constQp.qpInterP;
+                constantQp = (int32_t)encodeFrameInfo->constQp.qpInterP;
                 break;
             case VkVideoGopStructure::FRAME_TYPE_B:
-                constantQp = encodeFrameInfo->constQp.qpInterB;
+                constantQp = (int32_t)encodeFrameInfo->constQp.qpInterB;
                 break;
             default:
-                assert(!"Invalid picture type");
+                VKVS_FAIL("Invalid picture type");
                 break;
         }
 

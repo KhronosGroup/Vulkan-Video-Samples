@@ -139,7 +139,7 @@ int main(int argc, const char** argv)
             return EXIT_FAILURE;
         }
         assert(displayShell->PhysDeviceCanPresent(vkDevCtxt.getPhysicalDevice(),
-                                                  vkDevCtxt.GetPresentQueueFamilyIdx()));
+                                                  (uint32_t)vkDevCtxt.GetPresentQueueFamilyIdx()));
 
         vkDevCtxt.CreateVulkanDevice(numDecodeQueues,
                                      0, // num encode queues
@@ -265,7 +265,7 @@ int main(int argc, const char** argv)
         DumpDecoderStreamInfo(vulkanVideoDecoder);
 
         VkSharedBaseObj<VkVideoQueue<VulkanDecodedFrame>> videoQueue(vulkanVideoDecoder);
-        DecoderFrameProcessorState frameProcessor(&vkDevCtxt, videoQueue, decoderConfig.decoderQueueSize);
+        DecoderFrameProcessorState frameProcessor(&vkDevCtxt, videoQueue, (int32_t)decoderConfig.decoderQueueSize);
 
         bool continueLoop = true;
         do {

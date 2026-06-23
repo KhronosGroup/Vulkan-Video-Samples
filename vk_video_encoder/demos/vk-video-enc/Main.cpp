@@ -141,8 +141,8 @@ int main(int argc, const char* argv[])
 
     VkSharedBaseObj<VulkanVideoDisplayQueue<VulkanEncoderInputFrame>> videoDispayQueue;
     result = CreateVulkanVideoEncodeDisplayQueue(&vkDevCtxt,
-                                                 encoderConfig->encodeWidth,
-                                                 encoderConfig->encodeHeight,
+                                                 (int32_t)encoderConfig->encodeWidth,
+                                                 (int32_t)encoderConfig->encodeHeight,
                                                  encoderConfig->input.bpp,
                                                  encoderConfig->input.vkFormat,
                                                  videoDispayQueue);
@@ -193,7 +193,7 @@ int main(int argc, const char* argv[])
             return EXIT_FAILURE;
         }
         assert(displayShell->PhysDeviceCanPresent(vkDevCtxt.getPhysicalDevice(),
-                                                   vkDevCtxt.GetPresentQueueFamilyIdx()));
+                                                   (uint32_t)vkDevCtxt.GetPresentQueueFamilyIdx()));
 
         result = vkDevCtxt.CreateVulkanDevice(0, // num decode queues
                                               numEncodeQueues,   // num encode queues

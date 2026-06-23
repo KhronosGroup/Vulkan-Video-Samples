@@ -70,7 +70,7 @@ public:
             throw std::runtime_error(ss.str());
 #else
             fprintf(stderr, "Error: %s\n", ss.str().c_str());
-            assert(!"Vulkan call failed");
+            VKVS_FAIL("Vulkan call failed");
 #endif
 
         }
@@ -95,7 +95,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;
@@ -196,7 +196,7 @@ public:
 
     const BackBuffer* GetCurrentBackBuffer() const {
         if (m_ctx.currentBackBuffer >= 0) {
-            return &m_ctx.backBuffers[m_ctx.currentBackBuffer];
+            return &m_ctx.backBuffers[(size_t)m_ctx.currentBackBuffer];
         }
         return nullptr;
     }

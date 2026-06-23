@@ -498,7 +498,7 @@ public:
             return "encode av1";
         default:;
         }
-        assert(!"Unknown codec");
+        VKVS_FAIL("Unknown codec");
         return "UNKNOWN";
     }
 
@@ -786,7 +786,7 @@ private:
             }
             m_profile.pNext = &m_av1EncodeProfile;
         } else {
-            assert(!"Unknown codec!");
+            VKVS_FAIL("Unknown codec!");
             return false;
         }
 
@@ -839,7 +839,7 @@ private:
                                                     (StdVideoVP9Profile)codecProfileIdc;
             pVideoProfileExt = (VkBaseInStructure*)&decodeVP9ProfilesRequest;
         } else {
-            assert(!"Unknown decode codec!");
+            VKVS_FAIL("Unknown decode codec!");
             return;
         }
 
@@ -880,7 +880,7 @@ private:
                                                        (StdVideoAV1Profile)codecProfileIdc;
             pVideoProfileExt = (VkBaseInStructure*)&encodeAV1ProfilesRequest;
         } else {
-            assert(!"Unknown encode codec!");
+            VKVS_FAIL("Unknown encode codec!");
             return;
         }
 

@@ -78,23 +78,23 @@ public:
 
         const VkCommandBuffer* GetCommandBuffer() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return nullptr;
             }
-            return m_parent->m_commandBuffersSet.GetCommandBuffer(m_parentIndex);
+            return m_parent->m_commandBuffersSet.GetCommandBuffer((uint32_t)m_parentIndex);
         }
 
         VkCommandBuffer BeginCommandBufferRecording(const VkCommandBufferBeginInfo& beginInfo) {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
             if (m_cmdBufState != CmdBufStateReset) {
-                assert(!"Command buffer is not in a reset state!");
+                VKVS_FAIL("Command buffer is not in a reset state!");
                 return VK_NULL_HANDLE;
             }
 
-            const VkCommandBuffer cmdBuf = *m_parent->m_commandBuffersSet.GetCommandBuffer(m_parentIndex);
+            const VkCommandBuffer cmdBuf = *m_parent->m_commandBuffersSet.GetCommandBuffer((uint32_t)m_parentIndex);
             m_vkDevCtx->BeginCommandBuffer(cmdBuf, &beginInfo);
             m_cmdBufState = CmdBufStateRecording;
             return cmdBuf;
@@ -102,32 +102,32 @@ public:
 
         VkResult EndCommandBufferRecording(VkCommandBuffer cmdBuf) {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
             if (m_cmdBufState != CmdBufStateRecording) {
-                assert(!"Command buffer is not in recording state!");
+                VKVS_FAIL("Command buffer is not in recording state!");
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
 
-            assert(cmdBuf == *m_parent->m_commandBuffersSet.GetCommandBuffer(m_parentIndex));
+            assert(cmdBuf == *m_parent->m_commandBuffersSet.GetCommandBuffer((uint32_t)m_parentIndex));
 
             VkResult result = m_vkDevCtx->EndCommandBuffer(cmdBuf);
             if (result == VK_SUCCESS) {
                 m_cmdBufState = CmdBufStateRecorded;
             } else {
-                assert(!"Error in command buffer recording!");
+                VKVS_FAIL("Error in command buffer recording!");
             }
             return result;
         }
 
         bool SetCommandBufferSubmitted() {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return false;
             }
             if (m_cmdBufState != CmdBufStateRecorded) {
-                assert(!"Command Buffer is not in recorded state!");
+                VKVS_FAIL("Command Buffer is not in recorded state!");
                 return false;
             }
             m_cmdBufState = CmdBufStateSubmitted;
@@ -136,10 +136,10 @@ public:
 
         VkFence GetFence() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
-            return m_parent->m_fenceSet.GetFence(m_parentIndex);
+            return m_parent->m_fenceSet.GetFence((uint32_t)m_parentIndex);
         }
 
         VkResult SyncHostOnCmdBuffComplete(bool resetAfterWait = true,
@@ -154,7 +154,7 @@ public:
             VkFence cmdBufferCompleteFence = GetFence();
 
             if ((m_vkDevCtx == nullptr) || (cmdBufferCompleteFence == VK_NULL_HANDLE)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_ERROR_INITIALIZATION_FAILED;
             }
 
@@ -186,28 +186,28 @@ public:
 
         VkSemaphore GetSemaphore() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return VK_NULL_HANDLE;
             }
-            return m_parent->m_semaphoreSet.GetSemaphore(m_parentIndex);
+            return m_parent->m_semaphoreSet.GetSemaphore((size_t)m_parentIndex);
         }
 
         VkQueryPool GetQueryPool(uint32_t& queryIdx) const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 queryIdx = (uint32_t)-1;
                 return VK_NULL_HANDLE;
             }
-            queryIdx = m_parentIndex;
+            queryIdx = (uint32_t)m_parentIndex;
             return m_parent->m_queryPoolSet.GetQueryPool(queryIdx);
         }
 
         uint32_t GetNodePoolIndex() const {
             if ((m_parent == nullptr) || (m_parentIndex < 0)) {
-                assert(!"Invalid PoolNode state!");
+                VKVS_FAIL("Invalid PoolNode state!");
                 return (uint32_t)-1;
             }
-            return m_parentIndex;
+            return (uint32_t)m_parentIndex;
         }
 
         const VulkanDeviceContext* GetDeviceContext() const { return m_vkDevCtx; }
@@ -251,7 +251,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;

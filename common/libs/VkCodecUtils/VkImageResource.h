@@ -68,7 +68,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;
@@ -125,14 +125,14 @@ public:
                            VkSharedBaseObj<VkImageResourceView>& imageResourceView);
 
 
-    virtual int32_t AddRef()
+    virtual int32_t AddRef() override
     {
         return ++m_refCount;
     }
 
-    virtual int32_t Release()
+    virtual int32_t Release() override
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;

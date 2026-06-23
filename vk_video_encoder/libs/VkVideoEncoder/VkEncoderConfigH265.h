@@ -158,10 +158,10 @@ struct EncoderConfigH265 : public EncoderConfig {
     virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_H265_PROFILE_IDC_MAIN; };
 
     // 1. First h.265 determine the number of the Dpb buffers required
-    virtual int8_t InitDpbCount() override;
+    virtual uint8_t InitDpbCount() override;
 
     uint32_t GetMaxDpbSize(uint32_t pictureSizeInSamplesY, int32_t levelIndex);
-    int8_t VerifyDpbSize();
+    uint8_t VerifyDpbSize();
 
     // 2. First h.265 determine the rate control parameters
     virtual bool InitRateControl() override;

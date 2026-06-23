@@ -43,7 +43,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
 
     if (pCustomLoader) {
         handle = dlopen(pCustomLoader, RTLD_LAZY);
-        assert(!"ERROR: Could NOT get the custom Vulkan solib!");
+        VKVS_FAIL("ERROR: Could NOT get the custom Vulkan solib!");
     }
 
     if (handle == nullptr) {
@@ -51,14 +51,14 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
     }
 
     if (handle == nullptr) {
-        assert(!"ERROR: Can't get the Vulkan solib!");
+        VKVS_FAIL("ERROR: Can't get the Vulkan solib!");
         return nullptr;
     }
 
     if (pCustomLoader) {
         symbol = dlsym(handle, "vk_icdGetInstanceProcAddr");
         if (symbol == nullptr) {
-            assert(!"ERROR: Can't get the vk_icdGetInstanceProcAddr symbol!");
+            VKVS_FAIL("ERROR: Can't get the vk_icdGetInstanceProcAddr symbol!");
         }
     }
 
@@ -69,7 +69,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
     if (symbol == nullptr) {
 
         dlclose(handle);
-        assert(!"ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
+        VKVS_FAIL("ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
         return nullptr;
     }
 
@@ -87,7 +87,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
 
     HMODULE libModule = LoadLibrary(filename);
     if (libModule == nullptr) {
-        assert(!"ERROR: Can't get the Vulkan DLL!");
+        VKVS_FAIL("ERROR: Can't get the Vulkan DLL!");
         return nullptr;
     }
 
@@ -96,7 +96,7 @@ PFN_vkGetInstanceProcAddr VulkanDeviceContext::LoadVk(VulkanLibraryHandleType &v
 
         FreeLibrary(libModule);
 
-        assert(!"ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
+        VKVS_FAIL("ERROR: Can't get the vk_icdGetInstanceProcAddr or vkGetInstanceProcAddr symbol!");
 
         return nullptr;
     }
@@ -136,7 +136,7 @@ VkResult VulkanDeviceContext::CheckAllInstanceLayers(bool verbose)
 
     // all listed instance layers are required
     if (verbose) std::cout << "Looking for instance layers:" << std::endl;
-    for (uint32_t i = 0; i < m_reqInstanceLayers.size(); i++) {
+    for (size_t i = 0; i < m_reqInstanceLayers.size(); i++) {
         const char* name = m_reqInstanceLayers[i];
         if (name == nullptr) {
             break;
@@ -190,7 +190,7 @@ VkResult VulkanDeviceContext::CheckAllInstanceExtensions(bool verbose)
 
     // all listed instance extensions are required
     if (verbose) std::cout << "Looking for instance extensions:" << std::endl;
-    for (uint32_t i = 0; i < m_reqInstanceExtensions.size(); i++) {
+    for (size_t i = 0; i < m_reqInstanceExtensions.size(); i++) {
         const char* name = m_reqInstanceExtensions[i];
         if (name == nullptr) {
             break;
@@ -267,7 +267,7 @@ bool VulkanDeviceContext::HasAllDeviceExtensions(VkPhysicalDevice physDevice, co
 
     bool hasAllRequiredExtensions = true;
     // all listed device extensions are required
-    for (uint32_t i = 0; i < m_requestedDeviceExtensions.size(); i++) {
+    for (size_t i = 0; i < m_requestedDeviceExtensions.size(); i++) {
         const char* name = m_requestedDeviceExtensions[i];
         if (name == nullptr) {
             break;
@@ -288,7 +288,7 @@ bool VulkanDeviceContext::HasAllDeviceExtensions(VkPhysicalDevice physDevice, co
     }
 
     // all listed device extensions that are optional
-    for (uint32_t i = 0; i < m_optDeviceExtensions.size(); i++) {
+    for (size_t i = 0; i < m_optDeviceExtensions.size(); i++) {
         const char* name = m_optDeviceExtensions[i];
         if (name == nullptr) {
             break;
@@ -443,7 +443,7 @@ VkResult VulkanDeviceContext::InitDebugReport(bool validate, bool validateVerbos
     return CreateDebugReportCallbackEXT(m_instance, &debug_report_info, nullptr, &m_debugReport);
 }
 
-VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::DeviceUuidUtils& deviceUuid,
+VkResult VulkanDeviceContext::InitPhysicalDevice(uint32_t deviceId, const vk::DeviceUuidUtils& deviceUuid,
                                                  const VkQueueFlags requestQueueTypes,
                                                  const VkWsiDisplay* pWsiDisplay,
                                                  const VkQueueFlags requestVideoDecodeQueueMask,
@@ -484,7 +484,7 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
         // Get the properties
         GetPhysicalDeviceProperties2(physicalDevice, &devProp2);
 
-        if ((deviceId != -1) && (devProp2.properties.deviceID != (uint32_t)deviceId)) {
+        if ((deviceId != UINT32_MAX) && (devProp2.properties.deviceID != deviceId)) {
             continue;
         }
 
@@ -562,8 +562,8 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
             if ((requestQueueTypes & VK_QUEUE_VIDEO_DECODE_BIT_KHR) && (videoDecodeQueueFamily < 0) &&
                         (requestVideoDecodeQueueMask == (queueFamilyFlags & requestVideoDecodeQueueMask)) &&
                             (videoQueue.videoCodecOperations & requestVideoDecodeQueueOperations)) {
-                videoDecodeQueueFamily = i;
-                videoDecodeQueueCount = queue.queueFamilyProperties.queueCount;
+                videoDecodeQueueFamily = (int32_t)i;
+                videoDecodeQueueCount = (int32_t)queue.queueFamilyProperties.queueCount;
 
                 if (dumpQueues) std::cout << "\t Found video decode only queue family " <<  i <<
                         " with " << queue.queueFamilyProperties.queueCount <<
@@ -590,8 +590,8 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
             if ((requestQueueTypes & VK_QUEUE_VIDEO_ENCODE_BIT_KHR) && (videoEncodeQueueFamily < 0) &&
                         (requestVideoEncodeQueueMask == (queueFamilyFlags & requestVideoEncodeQueueMask)) &&
                         (videoQueue.videoCodecOperations & requestVideoEncodeQueueOperations)) {
-                videoEncodeQueueFamily = i;
-                videoEncodeQueueCount = queue.queueFamilyProperties.queueCount;
+                videoEncodeQueueFamily = (int32_t)i;
+                videoEncodeQueueCount = (int32_t)queue.queueFamilyProperties.queueCount;
 
                 if (dumpQueues) std::cout << "\t Found video encode only queue family " <<  i <<
                         " with " << queue.queueFamilyProperties.queueCount <<
@@ -619,17 +619,17 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
             // requires only GRAPHICS for frameProcessor queues
             if ((requestQueueTypes & VK_QUEUE_GRAPHICS_BIT) && (gfxQueueFamily < 0) &&
                     (queueFamilyFlags & VK_QUEUE_GRAPHICS_BIT)) {
-                gfxQueueFamily = i;
+                gfxQueueFamily = (int32_t)i;
                 foundQueueTypes |= queueFamilyFlags;
                 if (dumpQueues) std::cout << "\t Found graphics queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
             } else if ((requestQueueTypes & VK_QUEUE_COMPUTE_BIT) && (computeQueueFamilyOnly < 0) &&
                        ((VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT) == (queueFamilyFlags & (VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT)))) {
-                computeQueueFamilyOnly = i;
+                computeQueueFamilyOnly = (int32_t)i;
                 foundQueueTypes |= queueFamilyFlags;
                 if (dumpQueues) std::cout << "\t Found compute only queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
             } else if ((requestQueueTypes & VK_QUEUE_TRANSFER_BIT) && (transferQueueFamilyOnly < 0) &&
                     (VK_QUEUE_TRANSFER_BIT == (queueFamilyFlags & VK_QUEUE_TRANSFER_BIT))) {
-                transferQueueFamilyOnly = i;
+                transferQueueFamilyOnly = (int32_t)i;
                 foundQueueTypes |= queueFamilyFlags;
                 if (dumpQueues) std::cout << "\t Found transfer only queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
             }
@@ -637,14 +637,14 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
             // requires only COMPUTE for frameProcessor queues
             if ((requestQueueTypes & VK_QUEUE_COMPUTE_BIT) && (computeQueueFamily < 0) &&
                     (queueFamilyFlags & VK_QUEUE_COMPUTE_BIT)) {
-                computeQueueFamily = i;
+                computeQueueFamily = (int32_t)i;
                 foundQueueTypes |= queueFamilyFlags;
                 if (dumpQueues) std::cout << "\t Found compute queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
             }
 
             if ((requestQueueTypes & VK_QUEUE_TRANSFER_BIT) && (transferQueueFamily < 0) &&
                     (queueFamilyFlags & VK_QUEUE_TRANSFER_BIT)) {
-                transferQueueFamily = i;
+                transferQueueFamily = (int32_t)i;
                 foundQueueTypes |= queueFamilyFlags;
                 if (dumpQueues) std::cout << "\t Found transfer queue family " <<  i << " with " << queue.queueFamilyProperties.queueCount << " max num of queues." << std::endl;
             }
@@ -653,7 +653,7 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
             if ((pWsiDisplay != nullptr) &&
                     (presentQueueFamily < 0) && pWsiDisplay->PhysDeviceCanPresent(physicalDevice, i)) {
                 if (dumpQueues) std::cout << "\t Found present queue family " <<  i << "." << std::endl;
-                presentQueueFamily = i;
+                presentQueueFamily = (int32_t)i;
             }
 
             if (((foundQueueTypes & requestQueueTypes) == requestQueueTypes) &&
@@ -761,7 +761,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
 
         const int32_t maxQueueInstances = std::max(numDecodeQueues, numEncodeQueues);
         assert(maxQueueInstances <= MAX_QUEUE_INSTANCES);
-        const std::vector<float> queuePriorities(maxQueueInstances, 0.0f);
+        const std::vector<float> queuePriorities((size_t)maxQueueInstances, 0.0f);
         std::array<VkDeviceQueueCreateInfo, MAX_QUEUE_FAMILIES> queueInfo = {};
         const bool isUnique = uniqueQueueFamilies.insert(m_gfxQueueFamily).second;
         assert(isUnique);
@@ -770,7 +770,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
         }
         if (createGraphicsQueue) {
             queueInfo[devInfo.queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = m_gfxQueueFamily;
+            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = (uint32_t)m_gfxQueueFamily;
             queueInfo[devInfo.queueCreateInfoCount].queueCount = 1;
             queueInfo[devInfo.queueCreateInfoCount].pQueuePriorities = queuePriorities.data();
             devInfo.queueCreateInfoCount++;
@@ -781,7 +781,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                 uniqueQueueFamilies.insert(m_presentQueueFamily).second) {
 
             queueInfo[devInfo.queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = m_presentQueueFamily;
+            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = (uint32_t)m_presentQueueFamily;
             queueInfo[devInfo.queueCreateInfoCount].queueCount = 1;
             queueInfo[devInfo.queueCreateInfoCount].pQueuePriorities = queuePriorities.data();
             devInfo.queueCreateInfoCount++;
@@ -855,8 +855,8 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                 (m_videoDecodeQueueFamily != -1) &&
                 uniqueQueueFamilies.insert(m_videoDecodeQueueFamily).second) {
             queueInfo[devInfo.queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = m_videoDecodeQueueFamily;
-            queueInfo[devInfo.queueCreateInfoCount].queueCount = numDecodeQueues;
+            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = (uint32_t)m_videoDecodeQueueFamily;
+            queueInfo[devInfo.queueCreateInfoCount].queueCount = (uint32_t)numDecodeQueues;
             queueInfo[devInfo.queueCreateInfoCount].pQueuePriorities = queuePriorities.data();
             devInfo.queueCreateInfoCount++;
         }
@@ -865,8 +865,8 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                 (m_videoEncodeQueueFamily != -1) &&
                 uniqueQueueFamilies.insert(m_videoEncodeQueueFamily).second) {
             queueInfo[devInfo.queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = m_videoEncodeQueueFamily;
-            queueInfo[devInfo.queueCreateInfoCount].queueCount = numEncodeQueues;
+            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = (uint32_t)m_videoEncodeQueueFamily;
+            queueInfo[devInfo.queueCreateInfoCount].queueCount = (uint32_t)numEncodeQueues;
             queueInfo[devInfo.queueCreateInfoCount].pQueuePriorities = queuePriorities.data();
             devInfo.queueCreateInfoCount++;
         }
@@ -875,7 +875,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                 (m_computeQueueFamily != -1) &&
                 uniqueQueueFamilies.insert(m_computeQueueFamily).second) {
             queueInfo[devInfo.queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = m_computeQueueFamily;
+            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = (uint32_t)m_computeQueueFamily;
             queueInfo[devInfo.queueCreateInfoCount].queueCount = 1;
             queueInfo[devInfo.queueCreateInfoCount].pQueuePriorities = queuePriorities.data();
             devInfo.queueCreateInfoCount++;
@@ -885,7 +885,7 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                 (m_transferQueueFamily != -1) &&
                 uniqueQueueFamilies.insert(m_transferQueueFamily).second) {
             queueInfo[devInfo.queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = m_transferQueueFamily;
+            queueInfo[devInfo.queueCreateInfoCount].queueFamilyIndex = (uint32_t)m_transferQueueFamily;
             queueInfo[devInfo.queueCreateInfoCount].queueCount = 1;
             queueInfo[devInfo.queueCreateInfoCount].pQueuePriorities = queuePriorities.data();
             devInfo.queueCreateInfoCount++;
@@ -917,34 +917,34 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
     vk::InitDispatchTableBottom(m_instance, m_device, this);
 
     if (createGraphicsQueue) {
-        GetDeviceQueue(m_device, GetGfxQueueFamilyIdx()    , 0, &m_gfxQueue);
+        GetDeviceQueue(m_device, (uint32_t)GetGfxQueueFamilyIdx()    , 0, &m_gfxQueue);
     }
     if (createComputeQueue) {
-        GetDeviceQueue(m_device, GetComputeQueueFamilyIdx(), 0, &m_computeQueue);
+        GetDeviceQueue(m_device, (uint32_t)GetComputeQueueFamilyIdx(), 0, &m_computeQueue);
     }
     if (createPresentQueue) {
-        GetDeviceQueue(m_device, GetPresentQueueFamilyIdx(), 0, &m_presentQueue);
+        GetDeviceQueue(m_device, (uint32_t)GetPresentQueueFamilyIdx(), 0, &m_presentQueue);
     }
     if (createTransferQueue) {
-        GetDeviceQueue(m_device, GetTransferQueueFamilyIdx(), 0, &m_transferQueue);
+        GetDeviceQueue(m_device, (uint32_t)GetTransferQueueFamilyIdx(), 0, &m_transferQueue);
     }
     if (numDecodeQueues) {
         assert(GetVideoDecodeQueueFamilyIdx() != -1);
         assert(GetVideoDecodeNumQueues() > 0);
-        m_videoDecodeQueues.resize(GetVideoDecodeNumQueues());
+        m_videoDecodeQueues.resize((size_t)GetVideoDecodeNumQueues());
         // m_videoDecodeQueueMutexes.resize(GetVideoDecodeNumQueues());
         for (uint32_t queueIdx = 0; queueIdx < (uint32_t)numDecodeQueues; queueIdx++) {
-            GetDeviceQueue(m_device, GetVideoDecodeQueueFamilyIdx(), queueIdx, &m_videoDecodeQueues[queueIdx]);
+            GetDeviceQueue(m_device, (uint32_t)GetVideoDecodeQueueFamilyIdx(), queueIdx, &m_videoDecodeQueues[queueIdx]);
         }
     }
 
     if (numEncodeQueues) {
         assert(GetVideoEncodeQueueFamilyIdx() != -1);
         assert(GetVideoEncodeNumQueues() > 0);
-        m_videoEncodeQueues.resize(GetVideoEncodeNumQueues());
+        m_videoEncodeQueues.resize((size_t)GetVideoEncodeNumQueues());
         // m_videoEncodeQueueMutexes.resize(GetVideoEncodeNumQueues());
         for (uint32_t queueIdx = 0; queueIdx < (uint32_t)numEncodeQueues; queueIdx++) {
-            GetDeviceQueue(m_device, GetVideoEncodeQueueFamilyIdx(), queueIdx, &m_videoEncodeQueues[queueIdx]);
+            GetDeviceQueue(m_device, (uint32_t)GetVideoEncodeQueueFamilyIdx(), queueIdx, &m_videoEncodeQueues[queueIdx]);
         }
     }
 
@@ -1017,11 +1017,11 @@ VulkanDeviceContext::~VulkanDeviceContext() {
     m_computeQueue = VK_NULL_HANDLE;
     m_presentQueue = VK_NULL_HANDLE;
 
-    for (uint32_t i = 0; i < m_videoDecodeQueues.size(); i++) {
+    for (size_t i = 0; i < m_videoDecodeQueues.size(); i++) {
         m_videoDecodeQueues[i] = VK_NULL_HANDLE;
     }
 
-    for (uint32_t i = 0; i < m_videoEncodeQueues.size(); i++) {
+    for (size_t i = 0; i < m_videoEncodeQueues.size(); i++) {
         m_videoEncodeQueues[i] = VK_NULL_HANDLE;
     }
 

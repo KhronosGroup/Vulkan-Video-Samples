@@ -1,3 +1,8 @@
+v0.4.4:
+  - Parser ABI break: bump NV_VULKAN_VIDEO_PARSER_API_VERSION to 0.9.10.
+    VkParserVp9PictureData::pic_idx[] is now int8_t (values 128-255 now
+    interpreted as negative).
+
 v0.4.3:
   - Encoder: fix DPB heap-buffer-overflow and add bounds checking across
     all codecs; clean up pNext chaining and restore CPU fallback

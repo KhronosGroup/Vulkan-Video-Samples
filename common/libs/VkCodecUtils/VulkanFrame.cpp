@@ -76,7 +76,7 @@ int VulkanFrame<FrameDataType>::AttachShell(const Shell& sh)
         std::cerr << std::endl << "Incompatible Vulkan API version: " << apiMajorVersion << "." << apiMinorVersion << "." << apiPatchVersion << std::endl;
         std::cerr << "Info: Driver version is: " << m_physicalDevProps.driverVersion << std::endl;
         std::cerr << "Please upgrade your driver. The version supported is: 1.2.199 or later aka " << std::hex << VK_MAKE_API_VERSION(0, 1, 2, 199) << std::endl;
-        assert(!"Incompatible API version - please upgrade your driver.");
+        VKVS_FAIL("Incompatible API version - please upgrade your driver.");
         return -1;
     }
 
@@ -127,7 +127,7 @@ void VulkanFrame<FrameDataType>::DetachShell()
 template<class FrameDataType>
 int32_t VulkanFrame<FrameDataType>::CreateFrameData(int32_t count)
 {
-    m_frameData.resize(count);
+    m_frameData.resize((size_t)count);
 
     m_frameDataIndex = 0;
 
@@ -167,8 +167,8 @@ int VulkanFrame<FrameDataType>::AttachSwapchain(const Shell& sh)
 
     PrepareViewport(ctx.extent);
 
-    uint32_t imageWidth  = (m_videoQueue->GetWidth() > 0)  ? m_videoQueue->GetWidth()  : m_scissor.extent.width;
-    uint32_t imageHeight = (m_videoQueue->GetHeight() > 0) ? m_videoQueue->GetHeight() : m_scissor.extent.height;
+    uint32_t imageWidth  = (m_videoQueue->GetWidth() > 0)  ? (uint32_t)m_videoQueue->GetWidth()  : m_scissor.extent.width;
+    uint32_t imageHeight = (m_videoQueue->GetHeight() > 0) ? (uint32_t)m_videoQueue->GetHeight() : m_scissor.extent.height;
     VkFormat imageFormat = m_videoQueue->GetFrameImageFormat();
 
     // Create test image, if enabled.
@@ -185,7 +185,7 @@ int VulkanFrame<FrameDataType>::AttachSwapchain(const Shell& sh)
     imageCreateInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
     imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     imageCreateInfo.queueFamilyIndexCount = 1;
-    const uint32_t queueFamilyIndices = m_videoRenderer->m_vkDevCtx->GetGfxQueueFamilyIdx();
+    const uint32_t queueFamilyIndices = (uint32_t)m_videoRenderer->m_vkDevCtx->GetGfxQueueFamilyIdx();
     imageCreateInfo.pQueueFamilyIndices = &queueFamilyIndices;
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
     imageCreateInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
@@ -212,7 +212,7 @@ int VulkanFrame<FrameDataType>::AttachSwapchain(const Shell& sh)
     // Create Vulkan's RenderPass
     VkResult result = m_videoRenderer->m_renderPass.CreateRenderPass(m_videoRenderer->m_vkDevCtx, ctx.format.format);
     if (result != VK_SUCCESS) {
-        assert(!"ERROR: Could't create RenderPass!");
+        VKVS_FAIL("ERROR: Could't create RenderPass!");
         return -1;
     }
 
@@ -226,7 +226,7 @@ int VulkanFrame<FrameDataType>::AttachSwapchain(const Shell& sh)
                                                                   &defaultSamplerInfo,
                                                                   &defaultSamplerYcbcrConversionCreateInfo);
     if (result != VK_SUCCESS) {
-        assert(!"ERROR: Could't create rawContexts!");
+        VKVS_FAIL("ERROR: Could't create rawContexts!");
         return -1;
     }
     return 0;
@@ -301,7 +301,7 @@ bool VulkanFrame<FrameDataType>::OnFrame( int32_t renderIndex,
         uint64_t timeDiffNanoSec = GetTimeDiffNanoseconds();
         std::cout << "\t\t Time nanoseconds: " << timeDiffNanoSec <<
                      " milliseconds: " << timeDiffNanoSec / 1000 <<
-                     " rate: " << 1000000000.0 / timeDiffNanoSec << std::endl;
+                     " rate: " << 1000000000.0 / (double)timeDiffNanoSec << std::endl;
     }
 
     FrameDataType& data = m_frameData[m_frameDataIndex];
@@ -392,7 +392,7 @@ bool VulkanFrame<FrameDataType>::OnFrame( int32_t renderIndex,
 
     if (gfxRendererIsEnabled == false) {
 
-        m_frameDataIndex = (m_frameDataIndex + 1) % m_frameData.size();
+        m_frameDataIndex = (uint32_t)((m_frameDataIndex + 1) % m_frameData.size());
         return continueLoop;
     }
 
@@ -548,7 +548,6 @@ VkResult VulkanFrame<FrameDataType>::DrawFrame( int32_t            renderIndex,
     bool getDecodeStatusBeforePresent = false;
     if (getDecodeStatusBeforePresent && (inFrame != nullptr) &&
             (inFrame->queryPool != VK_NULL_HANDLE) &&
-            (inFrame->startQueryId >= 0) &&
             (inFrame->numQueries > 0)) {
 
         if (inFrame->frameCompleteFence != VkFence()) {
@@ -708,7 +707,7 @@ VkResult VulkanFrame<FrameDataType>::DrawFrame( int32_t            renderIndex,
     close(fd);
 #endif
 
-    m_frameDataIndex = (m_frameDataIndex + 1) % m_frameData.size();
+    m_frameDataIndex = ((m_frameDataIndex + 1) % (uint32_t)m_frameData.size());
 
     if (false) {
         // Add a 20ms sleep

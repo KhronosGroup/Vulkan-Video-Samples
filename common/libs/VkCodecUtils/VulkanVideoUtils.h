@@ -63,8 +63,8 @@ struct ImageResourceInfo {
         if (pView) {
             VkImageResource* pImage = pView->GetImageResource();
             imageFormat = pImage->GetImageCreateInfo().format;
-            imageWidth = pImage->GetImageCreateInfo().extent.width;
-            imageHeight = pImage->GetImageCreateInfo().extent.height;
+            imageWidth = (int32_t)pImage->GetImageCreateInfo().extent.width;
+            imageHeight = (int32_t)pImage->GetImageCreateInfo().extent.height;
             arrayLayer = pView->GetImageSubresourceRange().baseArrayLayer;
             imageLayout = layout;
             image = pImage->GetImage();
@@ -283,8 +283,8 @@ public:
         image       = m_imageResource->GetImage();
         view        = m_imageView->GetImageView();
         imageFormat = pImageCreateInfo->format;
-        imageWidth =  pImageCreateInfo->extent.width;
-        imageHeight = pImageCreateInfo->extent.height;
+        imageWidth =  (int32_t)pImageCreateInfo->extent.width;
+        imageHeight = (int32_t)pImageCreateInfo->extent.height;
         imageLayout = pImageCreateInfo->initialLayout;
 
         if (initWithPattern && (requiredMemProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
@@ -308,8 +308,8 @@ public:
         image       = m_imageResource->GetImage();
         view        = m_imageView->GetImageView();
         imageFormat = imageCreateInfo.format;
-        imageWidth =  imageCreateInfo.extent.width;
-        imageHeight = imageCreateInfo.extent.height;
+        imageWidth =  (int32_t)imageCreateInfo.extent.width;
+        imageHeight = (int32_t)imageCreateInfo.extent.height;
         imageLayout = imageCreateInfo.initialLayout;
 
         VkSharedBaseObj<VulkanDeviceMemoryImpl> deviceMemory = m_imageResource->GetMemory();
@@ -406,7 +406,7 @@ public:
     {
         DestroyVertexBuffer();
 
-        uint32_t queueFamilyIndex = vkDevCtx->GetGfxQueueFamilyIdx();
+        uint32_t queueFamilyIndex = (uint32_t)vkDevCtx->GetGfxQueueFamilyIdx();
         return VkBufferResource::Create(vkDevCtx,
                                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
@@ -698,7 +698,7 @@ public:
     }
 
     VulkanPerDrawContext* GetDrawContext(int32_t scIndx) {
-        return ((size_t)scIndx < perDrawCtx.size()) ? &perDrawCtx[scIndx] : nullptr;
+        return ((size_t)scIndx < perDrawCtx.size()) ? &perDrawCtx[(size_t)scIndx] : nullptr;
     }
 
     ~VulkanRenderInfo() {

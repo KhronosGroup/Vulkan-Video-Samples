@@ -38,7 +38,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --m_refCount;
+        int32_t ret = --m_refCount;
         // Destroy the buffer if ref-count reaches zero
         if (ret == 0) {
             delete this;

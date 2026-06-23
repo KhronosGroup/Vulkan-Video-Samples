@@ -80,7 +80,7 @@ static inline FrameRate PackFrameRate(uint32_t numerator, uint32_t denominator)
 // Simplify an aspect ratio fraction (both inputs must be positive)
 static inline void SimplifyAspectRatio(int32_t* pARWidth, int32_t* pARHeight)
 {
-    uint32_t a = abs(*pARWidth), b = abs(*pARHeight);
+    uint32_t a = (uint32_t)abs(*pARWidth), b = (uint32_t)abs(*pARHeight);
     while (a) {
         uint32_t tmp = a;
         a = b % tmp;

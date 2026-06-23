@@ -39,7 +39,16 @@
 #include "VkCodecUtils/VulkanVideoEncodeDisplayQueue.h"
 #include "VkShell/Shell.h"
 #endif // VIDEO_DISPLAY_QUEUE_SUPPORT
+// mio is a vendored third-party header-only library; silence its warnings.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
 #include "mio/mio.hpp"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 class VkVideoEncoderH264;
 class VkVideoEncoderH265;
@@ -320,9 +329,9 @@ public:
 
         virtual int32_t Release()
         {
-            uint32_t ret = --m_refCount;
+            int32_t ret = --m_refCount;
             if (ret == 1) {
-                m_parent->ReleasePoolNodeToPool(m_parentIndex);
+                m_parent->ReleasePoolNodeToPool((uint32_t)m_parentIndex);
                 m_parentIndex = -1;
                 m_parent = nullptr;
                 Reset();
@@ -494,7 +503,7 @@ public:
 
     virtual int32_t Release()
     {
-        uint32_t ret = --refCount;
+        int32_t ret = --refCount;
         // Destroy the device if ref-count reaches zero
         if (ret == 0) {
             delete this;
@@ -548,7 +557,7 @@ public:
     {
         encodeFrameInfo->frameEncodeEncodeOrderNum = m_encodeEncodeFrameNum++;
         if (m_encoderConfig->verboseFrameStruct) {
-            DumpStateInfo("start encoding", 2, encodeFrameInfo, frameIdx, ofTotalFrames);
+            DumpStateInfo("start encoding", 2, encodeFrameInfo, (int32_t)frameIdx, ofTotalFrames);
         }
         return VK_SUCCESS;
     }

@@ -563,14 +563,14 @@ struct hevc_video_param_s : public StdVideoPictureParametersSet, public StdVideo
     uint8_t  layer_id_included_flag[MAX_VPS_LAYER_SETS][MAX_NUM_LAYER_IDS];
     uint32_t num_layers_in_id_list[MAX_VPS_LAYER_SETS];
     uint8_t  layer_set_layer_id_list[MAX_VPS_LAYER_SETS][MAX_NUM_LAYER_IDS];
-    uint32_t vps_num_hrd_parameters; 
+    uint32_t vps_num_hrd_parameters;
     // hrdParameters_t hrdParameters[MAX_VPS_LAYER_SETS]; // CMOD variable
     uint32_t hrd_layer_set_idx[MAX_VPS_LAYER_SETS];
     uint8_t  cprms_present_flag[MAX_VPS_LAYER_SETS];
 
     /* VPS Extension */
     uint8_t  scalability_mask_flag[MAX_NUM_SCALABILITY_TYPES];
-    uint32_t numScalabilityTypes; 
+    uint32_t numScalabilityTypes;
     uint8_t  dimension_id_len[MAX_NUM_SCALABILITY_TYPES];
 
     uint8_t  layer_id_in_nuh[MAX_NUM_LAYER_IDS];
@@ -651,10 +651,10 @@ typedef struct _hevc_slice_header_s
     uint32_t slice_segment_address;
 
     uint8_t colour_plane_id;
-    uint8_t short_term_ref_pic_set_sps_flag;
+    uint32_t short_term_ref_pic_set_sps_flag : 1;
     uint8_t short_term_ref_pic_set_idx;
     uint8_t num_long_term_sps;
-    
+
     uint16_t pic_order_cnt_lsb;
     uint8_t num_long_term_pics;
     uint8_t reserved1;

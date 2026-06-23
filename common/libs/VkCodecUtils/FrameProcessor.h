@@ -74,7 +74,7 @@ public:
         if (updateStartTime) {
             start_time = timeNow;
         }
-        return diffNanoseconds.count();
+        return (uint64_t)diffNanoseconds.count();
     }
 
     float GetFrameRateFps(bool &displayTimeNow, uint64_t* timeDiffNanoseconds = nullptr)
@@ -87,12 +87,12 @@ public:
             if (timeDiffNanoseconds) {
                 *timeDiffNanoseconds = diffNanoseconds;
             }
-            fps = (float)((double)(m_profileFramesCount * 1000000000) / diffNanoseconds);
+            fps = (float)((double)(m_profileFramesCount * 1000000000) / (double)diffNanoseconds);
             m_profileFramesCount = 0;
             displayTimeNow = true;
         } else {
             if (timeDiffNanoseconds) {
-                *timeDiffNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(timeNow - start_time).count();
+                *timeDiffNanoseconds = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(timeNow - start_time).count();
             }
             m_profileFramesCount++;
             displayTimeNow = false;
