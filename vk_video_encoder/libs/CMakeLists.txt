@@ -84,9 +84,24 @@ set(LIBVKVIDEOENCODER_SRC
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanBistreamBufferImpl.cpp
 )
 
-set(LIBVKVIDEOENCODER_DEFINITIONS
+# Common defines applied to both the shared and static libraries
+set(LIBVKVIDEOENCODER_DEFINITIONS "")
+
+# Defines specific to the shared library
+set(LIBVKVIDEOENCODER_SHARED_DEFINITIONS
     PRIVATE VK_VIDEO_ENCODER_IMPLEMENTATION
     PUBLIC VK_VIDEO_ENCODER_SHAREDLIB)
+
+# When this directory is added directly via add_subdirectory() by a parent that does
+# not declare the USE_ENCODER_SHADERC option, default it from shaderc availability so the
+# GPU compute filter is enabled whenever shaderc was found
+if(NOT DEFINED USE_ENCODER_SHADERC)
+    if(SHADERC_SHARED_LIBRARY OR SHADERC_LIB)
+        set(USE_ENCODER_SHADERC ON)
+    else()
+        set(USE_ENCODER_SHADERC OFF)
+    endif()
+endif()
 
 if(USE_ENCODER_SHADERC)
 list(APPEND LIBVKVIDEOENCODER_SRC
@@ -97,7 +112,7 @@ list(APPEND LIBVKVIDEOENCODER_SRC
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanComputePipeline.cpp
     ${VK_VIDEO_COMMON_LIBS_SOURCE_ROOT}/VkCodecUtils/VulkanComputePipeline.h
 )
-list(APPEND LIBVKVIDEOENCODER_DEFINITIONS PRIVATE -DSHADERC_SUPPORT)
+list(APPEND LIBVKVIDEOENCODER_DEFINITIONS PRIVATE SHADERC_SUPPORT)
 endif()
 
 include_directories(BEFORE "${CMAKE_CURRENT_LIST_DIR}/../")
@@ -121,6 +136,7 @@ add_dependencies(${VULKAN_VIDEO_ENCODER_LIB} ${LIBVKVIDEOENCODER_DEPENDENCIES})
 target_include_directories(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${VULKAN_VIDEO_ENCODER_INCLUDE} ${VULKAN_VIDEO_ENCODER_INCLUDE}/../NvVideoParser PRIVATE include)
 target_compile_definitions(${VULKAN_VIDEO_ENCODER_LIB}
     ${LIBVKVIDEOENCODER_DEFINITIONS}
+    ${LIBVKVIDEOENCODER_SHARED_DEFINITIONS}
 )
 
 find_package(Threads)
@@ -140,6 +156,13 @@ add_library(${VULKAN_VIDEO_ENCODER_STATIC_LIB} STATIC ${LIBVKVIDEOENCODER_SRC})
 if(USE_ENCODER_SHADERC)
     # Link the libraries
     target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_SHARED_LIBRARY})
+endif()
+
+# LIBVKVIDEOENCODER_DEFINITIONS may be empty when shaderc is off
+if(LIBVKVIDEOENCODER_DEFINITIONS)
+    target_compile_definitions(${VULKAN_VIDEO_ENCODER_STATIC_LIB}
+        ${LIBVKVIDEOENCODER_DEFINITIONS}
+    )
 endif()
 # Ensure the library depends on the generation of these files
 add_dependencies(${VULKAN_VIDEO_ENCODER_STATIC_LIB} ${LIBVKVIDEOENCODER_DEPENDENCIES})
