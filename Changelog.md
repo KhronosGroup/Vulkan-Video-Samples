@@ -1,3 +1,18 @@
+v0.4.4:
+  - Encoder: enable shaderc compute filter for static build allowing CTS
+    to encode AV1 properly
+  - CI: enable Windows long paths in CTS builds
+  - VVL: enable VK_KHR_video_encode_intra_refresh (--intraRefreshMode)
+    and emit one slice per partition for PER_PARTITION intra-refresh on
+    H.264 and H.265
+  - VVL: enable VK_KHR_video_encode_quantization_map (--qpMap)
+  - VVL: clamp max DPB size, map capability rejections to specific
+    unsupported VkResults, and simplify pNext chaining
+  - Encoder: dump full encode capabilities under --verbose, set layerCount
+    to 0 for DEFAULT/DISABLED rate control modes
+  - Tests: add intra-refresh and qpMap samples (H.265, AV1), AV1 10-bit
+    encode vector, VP9 skip test, --validate flag, and CSV result export
+
 v0.4.3:
   - Encoder: fix DPB heap-buffer-overflow and add bounds checking across
     all codecs; clean up pNext chaining and restore CPU fallback
