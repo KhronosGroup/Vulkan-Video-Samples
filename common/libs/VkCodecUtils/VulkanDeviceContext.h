@@ -130,14 +130,24 @@ public:
                 m_mutex = &devCtx->m_transferQueueMutex;
                 break;
             case DECODE:
-                assert((queueIndex >= 0) && (queueIndex < devCtx->m_videoDecodeNumQueues));
-                m_queue = &devCtx->m_videoDecodeQueues[queueIndex];
-                m_mutex = &devCtx->m_videoDecodeQueueMutexes[queueIndex];
+                if (devCtx->m_videoDecodeNumQueues) {
+                    assert((queueIndex >= 0) && (queueIndex < devCtx->m_videoDecodeNumQueues));
+                    m_queue = &devCtx->m_videoDecodeQueues[queueIndex];
+                    m_mutex = &devCtx->m_videoDecodeQueueMutexes[queueIndex];
+                } else {
+                    m_queue = nullptr;
+                    m_mutex = nullptr;
+                }
                 break;
             case ENCODE:
-                assert((queueIndex >= 0) && (queueIndex < devCtx->m_videoEncodeNumQueues));
-                m_queue = &devCtx->m_videoEncodeQueues[queueIndex];
-                m_mutex = &devCtx->m_videoEncodeQueueMutexes[queueIndex];
+                if (devCtx->m_videoEncodeNumQueues) {
+                    assert((queueIndex >= 0) && (queueIndex < devCtx->m_videoEncodeNumQueues));
+                    m_queue = &devCtx->m_videoEncodeQueues[queueIndex];
+                    m_mutex = &devCtx->m_videoEncodeQueueMutexes[queueIndex];
+                } else {
+                    m_queue = nullptr;
+                    m_mutex = nullptr;
+                }
                 break;
             case PRESENT:
                 m_queue = &devCtx->m_presentQueue;
