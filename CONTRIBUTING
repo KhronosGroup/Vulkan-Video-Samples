@@ -39,16 +39,16 @@ ci: add commit message validation workflow
 
 Commit messages are automatically validated on pull requests via commitlint. See `commitlint.config.js` for the full ruleset.
 
-To validate commit messages locally before pushing, install commitlint:                                                                                                             
-                                                                                                                                                                                          
-```                                                                                                                                                                                 
-npm install --save-dev @commitlint/cli @commitlint/config-conventional                                                                                                              
-```                                                                                                                                                                                 
-                                                                                                                                                                                          
-Then check the latest commit with:                                                                                                                                                  
-                                                                                                                                                                                       
-```                                                                                                                                                                                 
-npx commitlint --from=HEAD~1    
+To validate commit messages locally before pushing, install commitlint:
+
+```
+npm install --save-dev @commitlint/cli @commitlint/config-conventional
+```
+
+Then check the latest commit with:
+
+```
+npx commitlint --from=HEAD~1
 ```
 ---
 
@@ -146,41 +146,24 @@ The CTS build runs automatically when the PR title starts with `release:` or whe
 
 ---
 
-## Developer Certificate of Origin
+## Contributor License Agreement
 
-https://developercertificate.org/
+This project welcomes contributions and suggestions. Contributions require you
+to agree to a
+[Contributor License Agreement (CLA)](https://cla-assistant.io/KhronosGroup/Vulkan-Video-Samples)
+declaring that you have the right to, and actually do, grant the rights to use
+your contribution.
 
-Developer Certificate of Origin
-Version 1.1
+When you submit a pull request, a CLA bot will determine whether you need to
+sign a CLA. Simply follow the instructions provided.
 
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+## AI-Assisted Contributions
 
-Everyone is permitted to copy and distribute verbatim copies of this
-license document, but changing it is not allowed.
-
-
-Developer's Certificate of Origin 1.1
-
-By making a contribution to this project, I certify that:
-
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the open source license
-    indicated in the file; or
-
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the same open source license (unless I am
-    permitted to submit under a different license), as indicated
-    in the file; or
-
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
-
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed consistent with
-    this project or the open source license(s) involved.
+By submitting a Contribution to this repository, you additionally represent
+that, to the extent any of Your Contributions were developed with the
+assistance of artificial intelligence tools or AI-generated code, You have
+exercised sufficient review, judgment, and creative direction over such tools
+and resulting material to reasonably consider it Your original creation, and
+You are not aware of any third-party license, intellectual property claim, or
+other restriction arising from such use that is associated with any part of
+Your Contribution or use thereof.
