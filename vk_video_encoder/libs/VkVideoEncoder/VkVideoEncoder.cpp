@@ -217,12 +217,9 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
                         width, height);
             }
         } else if (m_encoderConfig->input.bpp == 10 || m_encoderConfig->input.bpp == 12) {
-            int shiftBits = 0;
-            if (m_encoderConfig->input.msbShift >= 0) {
-                shiftBits = m_encoderConfig->input.msbShift;
-            } else {
-                shiftBits = 16 - m_encoderConfig->input.bpp;
-            }
+            // msbShift is normalized to a non-negative value for bpp > 8 during
+            // argument parsing
+            int shiftBits = m_encoderConfig->input.msbShift;
 
             if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
                 yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I444ToP444(

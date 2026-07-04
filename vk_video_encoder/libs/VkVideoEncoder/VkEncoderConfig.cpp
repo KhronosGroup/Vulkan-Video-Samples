@@ -663,6 +663,10 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
         return -1;
     }
 
+    if (input.msbShift < 0 && input.bpp > 8) {
+        input.msbShift = static_cast<int8_t>(16 - input.bpp);
+    }
+
     frameCount = inputFileHandler.GetFrameCount(input.width, input.height, input.bpp, input.chromaSubsampling);
 
     if (numFrames == 0 || numFrames > frameCount) {
