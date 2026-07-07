@@ -165,6 +165,9 @@ struct EncoderConfigH264 : public EncoderConfig {
                                         uint32_t vbvBufferSize,
                                         double frameRate);
 
+    // Returns the next lower profile in the H.264 hierarchy, or INVALID at the bottom.
+    static StdVideoH264ProfileIdc GetNextLowerProfile(StdVideoH264ProfileIdc profile);
+
     static void SetAspectRatio(StdVideoH264SequenceParameterSetVui *vui, int32_t width, int32_t height,
                                int32_t darWidth, int32_t darHeight);
 
