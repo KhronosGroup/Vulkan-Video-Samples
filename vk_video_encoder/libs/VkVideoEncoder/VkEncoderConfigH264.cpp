@@ -368,11 +368,23 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
     return true;
 }
 
+StdVideoH264ProfileIdc EncoderConfigH264::GetNextLowerProfile(StdVideoH264ProfileIdc profile)
+{
+    switch (profile) {
+    case STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE: return STD_VIDEO_H264_PROFILE_IDC_HIGH;
+    case STD_VIDEO_H264_PROFILE_IDC_HIGH:                return STD_VIDEO_H264_PROFILE_IDC_MAIN;
+    case STD_VIDEO_H264_PROFILE_IDC_MAIN:                return STD_VIDEO_H264_PROFILE_IDC_BASELINE;
+    default:                                             return STD_VIDEO_H264_PROFILE_IDC_INVALID;
+    }
+}
+
 VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
-    // If the profile was not specified by the user, select the highest profile
-    // required by the requested features.
-    if (profileIdc == STD_VIDEO_H264_PROFILE_IDC_INVALID) {
+    // Track whether the profile was user-specified or auto-selected.
+    const bool autoSelected = (profileIdc == STD_VIDEO_H264_PROFILE_IDC_INVALID);
+
+    if (autoSelected) {
+        // Select the highest profile required for the requested features.
         // 8x8 transform support is hardware-dependent; it is verified after
         // the capability query and the mode is adjusted accordingly.
         bool use8x8Transform = (adaptiveTransformMode != ADAPTIVE_TRANSFORM_DISABLE);
@@ -394,11 +406,26 @@ VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceConte
         }
     }
 
-    assert(profileIdc != STD_VIDEO_H264_PROFILE_IDC_INVALID);
-    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profileIdc));
+    // Determine the minimum profile required by the content format.
+    StdVideoH264ProfileIdc minProfile = STD_VIDEO_H264_PROFILE_IDC_BASELINE;
+    if ((tuningMode == VK_VIDEO_ENCODE_TUNING_MODE_LOSSLESS_KHR) ||
+        (input.chromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR)) {
+        minProfile = STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE;
+    } else if (gopStructure.GetConsecutiveBFrameCount() > 0) {
+        minProfile = STD_VIDEO_H264_PROFILE_IDC_MAIN;
+    }
 
-    VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH264CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_KHR,
-                                                                          VkVideoEncodeH264QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUANTIZATION_MAP_CAPABILITIES_KHR>
+    // Probe from the desired profile down to minProfile, stopping at the first
+    // profile the hardware accepts. If the profile was user-specified, a single
+    // probe is made and failure is reported without fallback.
+    VkResult result = VK_SUCCESS;
+
+    for (;;) {
+        assert(profileIdc != STD_VIDEO_H264_PROFILE_IDC_INVALID);
+        videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profileIdc));
+
+        result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH264CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_KHR,
+                                                                     VkVideoEncodeH264QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUANTIZATION_MAP_CAPABILITIES_KHR>
                                                                 (vkDevCtx, videoCoreProfile,
                                                                  videoCapabilities,
                                                                  videoEncodeCapabilities,
@@ -406,17 +433,35 @@ VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceConte
                                                                  quantizationMapCapabilities,
                                                                  h264QuantizationMapCapabilities,
                                                                  intraRefreshCapabilities);
-    if (result != VK_SUCCESS) {
-        // Distinguish between "not supported" and "actual error"
-        if (IsVideoUnsupportedResult(result)) {
-            // Not supported by hardware/driver - return VK_ERROR_INCOMPATIBLE_DRIVER
-            std::cerr << "*** Video encode capabilities not supported by hardware/driver ("
-                      << VKVS_STRINGIFY(result) << ") ***" << std::endl;
+        if (result == VK_SUCCESS) {
+            break;
+        }
+
+        if (!IsVideoUnsupportedResult(result)) {
+            std::cerr << "*** Error getting video encode capabilities: " << VKVS_STRINGIFY(result) << " ***" << std::endl;
+            return result;
+        }
+
+        if (!autoSelected || (profileIdc == minProfile)) {
+            std::cerr << "*** H.264 profile " << profileIdc << " is not supported by the hardware/driver ***" << std::endl;
             return VK_ERROR_INCOMPATIBLE_DRIVER;
         }
-        // Actual error (e.g., out of memory)
-        std::cerr << "*** Error getting video capabilities: " << VKVS_STRINGIFY(result) << " ***" << std::endl;
-        return result;
+
+        StdVideoH264ProfileIdc nextProfile = GetNextLowerProfile(profileIdc);
+        if (verbose) {
+            std::cout << "H.264 profile " << profileIdc << " not supported, retrying with profile " << nextProfile << std::endl;
+        }
+        profileIdc = nextProfile;
+    }
+
+    // For auto-selected profiles, refine feature flags based on actual hardware
+    // capabilities reported for the chosen profile.
+    if (autoSelected && (adaptiveTransformMode == ADAPTIVE_TRANSFORM_AUTOSELECT)) {
+        bool hwSupports8x8 = (h264EncodeCapabilities.stdSyntaxFlags &
+                              VK_VIDEO_ENCODE_H264_STD_TRANSFORM_8X8_MODE_FLAG_SET_BIT_KHR) != 0;
+        if (!hwSupports8x8) {
+            adaptiveTransformMode = ADAPTIVE_TRANSFORM_DISABLE;
+        }
     }
 
     if (verbose) {
