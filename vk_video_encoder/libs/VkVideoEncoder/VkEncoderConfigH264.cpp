@@ -319,20 +319,11 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
     }
 
     if (adaptiveTransformMode == ADAPTIVE_TRANSFORM_ENABLE) {
-        pps->flags.transform_8x8_mode_flag = true;
-        if ((profileIdc == STD_VIDEO_H264_PROFILE_IDC_BASELINE) ||
-            (profileIdc == STD_VIDEO_H264_PROFILE_IDC_MAIN)) {
-            fprintf(stderr, "The profile selected does not support transform_8x8_mode_flag, disabling it.\n");
-            pps->flags.transform_8x8_mode_flag = false;
-        }
-    } else if (adaptiveTransformMode == ADAPTIVE_TRANSFORM_DISABLE) {
-        pps->flags.transform_8x8_mode_flag = false;
+        pps->flags.transform_8x8_mode_flag = (profileIdc >= STD_VIDEO_H264_PROFILE_IDC_HIGH);
+        if (!pps->flags.transform_8x8_mode_flag)
+            fprintf(stderr, "The transform_8x8_mode_flag has been disabled because the selected profile does not support it.\n");
     } else {
-        // Autoselect
-        if (profileIdc >= STD_VIDEO_H264_PROFILE_IDC_HIGH) {
-            // Unconditionally enable 8x8 transform
-            pps->flags.transform_8x8_mode_flag = true;
-        }
+        pps->flags.transform_8x8_mode_flag = false;
     }
 
     if (entropyCodingMode == ENTROPY_CODING_MODE_CABAC) {
@@ -454,14 +445,15 @@ VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceConte
         profileIdc = nextProfile;
     }
 
-    // For auto-selected profiles, refine feature flags based on actual hardware
-    // capabilities reported for the chosen profile.
-    if (autoSelected && (adaptiveTransformMode == ADAPTIVE_TRANSFORM_AUTOSELECT)) {
+    // If adaptiveTransformMode is AUTOSELECT, set it to either ENABLE or DISABLE
+    // based on hardware capabilities and the chosen profile, so that subsequent
+    // code using this parameter can take a simple binary decision.
+    if (adaptiveTransformMode == ADAPTIVE_TRANSFORM_AUTOSELECT) {
         bool hwSupports8x8 = (h264EncodeCapabilities.stdSyntaxFlags &
                               VK_VIDEO_ENCODE_H264_STD_TRANSFORM_8X8_MODE_FLAG_SET_BIT_KHR) != 0;
-        if (!hwSupports8x8) {
-            adaptiveTransformMode = ADAPTIVE_TRANSFORM_DISABLE;
-        }
+        adaptiveTransformMode = (hwSupports8x8 && (profileIdc >= STD_VIDEO_H264_PROFILE_IDC_HIGH))
+                                    ? ADAPTIVE_TRANSFORM_ENABLE
+                                    : ADAPTIVE_TRANSFORM_DISABLE;
     }
 
     if (verbose) {
