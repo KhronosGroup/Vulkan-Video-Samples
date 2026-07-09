@@ -459,6 +459,17 @@ bool EncoderConfigH265::IsSuitableLevel(uint32_t levelIdx, bool highTier)
         return false;
     }
 
+    if (frameRateNumerator > 0 && frameRateDenominator > 0) {
+        double frameRate = (double)frameRateNumerator / frameRateDenominator;
+        if (picSizeInSamples * frameRate > levelLimits[levelIdx].maxLumaSr) {
+            return false;
+        }
+    }
+
+    // XXX: We currently don't check the DPB size as per Annex A.4.2 (max DPB pictures as a function of
+    // picture size relative to MaxLumaPS), as it is handled separately in VerifyDpbSize().
+    // This is fine because we don't allow the user to set the DPB size today.
+
     if (widthCtbAligned > (uint32_t)sqrt(levelLimits[levelIdx].maxLumaPS * 8.0)) {
         return false;
     }
