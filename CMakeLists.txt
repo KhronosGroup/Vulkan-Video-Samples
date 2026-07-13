@@ -51,7 +51,7 @@ include(FindVulkanSDK)
 # Search for Vulkan SDK minimum version
 set (VULKAN_SDK_MIN_MAJOR_VERSION 1)
 set (VULKAN_SDK_MIN_MINOR_VERSION 4)
-set (VULKAN_SDK_MIN_PATCH_VERSION 321)
+set (VULKAN_SDK_MIN_PATCH_VERSION 353)
 FIND_VULKAN_SDK(${VULKAN_SDK_MIN_MAJOR_VERSION} ${VULKAN_SDK_MIN_MINOR_VERSION} ${VULKAN_SDK_MIN_PATCH_VERSION})
 
 option(USE_ENCODER_SHADERC "Enable shaderc GPU compute filters for encoder (e.g. YUV conversion). Only affects the encoder build; the decoder always uses shaderc." ON)
