@@ -435,11 +435,7 @@ bool EncoderConfigAV1::GetRateControlParameters(VkVideoEncodeRateControlInfoKHR*
     pRcLayerInfo->frameRateNumerator = frameRateNumerator;
     pRcLayerInfo->frameRateDenominator = frameRateDenominator;
 
-    if (rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR) {
-        pRcInfo->rateControlMode = VK_VIDEO_ENCODE_RATE_CONTROL_MODE_VBR_BIT_KHR;
-    } else {
-        pRcInfo->rateControlMode = rateControlMode;
-    }
+    pRcInfo->rateControlMode = rateControlMode;
     pRcInfo->virtualBufferSizeInMs = (uint32_t)(vbvBufferSize * 1000ull / hrdBitrate);
     pRcInfo->initialVirtualBufferSizeInMs = (uint32_t)(vbvInitialDelay * 1000ull / hrdBitrate);
 
