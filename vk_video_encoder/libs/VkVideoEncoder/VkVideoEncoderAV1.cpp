@@ -638,6 +638,9 @@ void VkVideoEncoderAV1::InitializeFrameHeader(StdVideoAV1SequenceHeader* pSequen
     }
     pStdPictureInfo->current_frame_id = (uint32_t)(pFrameInfo->gopPosition.encodeOrder % (1ULL << frameIdBits));
     pStdPictureInfo->order_hint = (uint8_t)(pFrameInfo->picOrderCntVal % (1 << orderHintBits));
+    // read_tx_mode(): non-lossless frames can only signal TX_MODE_LARGEST or
+    // TX_MODE_SELECT (ONLY_4X4 requires CodedLossless).
+    pStdPictureInfo->TxMode = CodedLossless ? STD_VIDEO_AV1_TX_MODE_ONLY_4X4 : STD_VIDEO_AV1_TX_MODE_SELECT;
     if (pFrameInfo->bOverlayFrame) {
         assert(pFrameInfo->bShowExistingFrame);
         pFrameInfo->frameToShowBufId = m_dpbAV1->GetOverlayRefBufId(pFrameInfo->picOrderCntVal);
