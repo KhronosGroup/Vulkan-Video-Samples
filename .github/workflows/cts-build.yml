@@ -99,4 +99,4 @@ jobs:
       - name: Build CTS
         run: |
           cd vk-gl-cts
-          python3 scripts/check_build_sanity.py -r vs-64-debug
+          python3 scripts/check_build_sanity.py --skip-prerequisites -r vs-64-debug
