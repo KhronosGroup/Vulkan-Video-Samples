@@ -199,8 +199,10 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
     return true;
 }
 
-VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx)
+VkResult EncoderConfigAV1::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
+
     const bool feedback2Requested = enablePictureFeedback || enablePixelCountFeedback ||
                                     enableSkippedPixelCountFeedback || enablePerPartitionFeedback;
     videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
