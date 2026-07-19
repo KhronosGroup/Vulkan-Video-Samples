@@ -965,6 +965,8 @@ public:
 
     virtual uint32_t GetDefaultVideoProfileIdc() { return 0; };
 
+    virtual bool DetermineLevelTier() = 0;
+
     virtual int8_t InitDpbCount() { return 16; };
 
     virtual bool InitRateControl();

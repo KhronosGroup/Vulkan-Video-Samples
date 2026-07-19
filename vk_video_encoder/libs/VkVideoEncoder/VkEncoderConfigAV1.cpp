@@ -354,17 +354,14 @@ bool EncoderConfigAV1::DetermineLevelTier()
         }
     }
     if (lvl > STD_VIDEO_AV1_LEVEL_7_3) {
-        level = STD_VIDEO_AV1_LEVEL_7_3;
-        tier = 0;
+        return false;
     }
-
     return true;
 }
 
 bool EncoderConfigAV1::InitRateControl()
 {
-    DetermineLevelTier();
-
+    // Level and tier are already initialized by DetermineLevelTier()
     // use level max values for now. Limit it to 120Mbits/sec
     uint32_t levelBitrate = std::min(GetLevelBitrate(level, tier), 120000000u);
 

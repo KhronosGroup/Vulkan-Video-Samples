@@ -191,6 +191,8 @@ struct EncoderConfigH264 : public EncoderConfig {
 
     virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_H264_PROFILE_IDC_HIGH; };
 
+    virtual bool DetermineLevelTier() override;
+
     // 1. First h.264 determine the number of the Dpb buffers required
     virtual int8_t InitDpbCount() override;
 
