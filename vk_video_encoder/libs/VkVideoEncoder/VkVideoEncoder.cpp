@@ -816,6 +816,11 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         return result;
     }
 
+    if (!encoderConfig->DetermineLevelTier()) {
+        std::cerr << "Failed to determine a suitable level for the given encoding parameters" << std::endl;
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
     if (encoderConfig->verbose) {
         const VkVideoCapabilitiesKHR& vidCaps = encoderConfig->videoCapabilities;
         const VkVideoEncodeCapabilitiesKHR& encCaps = encoderConfig->videoEncodeCapabilities;
