@@ -779,12 +779,9 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     m_encoderConfig = encoderConfig;
 
-    // Update the video profile
-    encoderConfig->InitVideoProfile();
-
-    result = encoderConfig->InitDeviceCapabilities(m_vkDevCtx);
+    result = encoderConfig->InitVideoProfileCapabilities(m_vkDevCtx);
     if (result != VK_SUCCESS) {
-        std::cerr << "InitDeviceCapabilties failed" << std::endl;
+        std::cerr << "InitVideoProfileCapabilities failed" << std::endl;
         return result;
     }
 
@@ -946,7 +943,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     // Reconfigure the gopStructure structure because the device may not support
     // specific GOP structure. For example it may not support B-frames.
-    // gopStructure.Init() should be called after  encoderConfig->InitDeviceCapabilities().
+    // gopStructure.Init() should be called after encoderConfig->InitVideoProfileCapabilities().
     m_encoderConfig->gopStructure.Init(m_encoderConfig->numFrames);
     if (encoderConfig->GetMaxBFrameCount() < m_encoderConfig->gopStructure.GetConsecutiveBFrameCount()) {
         if (m_encoderConfig->verbose) {

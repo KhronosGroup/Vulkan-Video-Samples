@@ -109,9 +109,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
         return VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR;
     }
 
-    virtual VkResult InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx) override;
-
-    virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_AV1_PROFILE_MAIN; }
+    virtual VkResult InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx) override;
 
     virtual int8_t InitDpbCount() override;
 

@@ -398,8 +398,12 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
     return true;
 }
 
-VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx)
+VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    // If the profile has not been specified, fall back to HIGH.
+    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(
+        profileIdc != STD_VIDEO_H264_PROFILE_IDC_INVALID ? profileIdc : STD_VIDEO_H264_PROFILE_IDC_HIGH));
+
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH264CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_KHR,
                                                                           VkVideoEncodeH264QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUANTIZATION_MAP_CAPABILITIES_KHR>
                                                                 (vkDevCtx, videoCoreProfile,

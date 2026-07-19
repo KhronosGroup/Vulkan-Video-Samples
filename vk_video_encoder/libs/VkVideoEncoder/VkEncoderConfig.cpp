@@ -817,24 +817,14 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, const char *argv[],
     return VK_ERROR_INITIALIZATION_FAILED;
 }
 
-void EncoderConfig::InitVideoProfile()
+VkVideoCoreProfile EncoderConfig::MakeVideoProfile(uint32_t codecProfile)
 {
-    if (encodeBitDepthLuma == 0) {
-        encodeBitDepthLuma = input.bpp;
-    }
-
-    if (encodeBitDepthChroma == 0) {
-        encodeBitDepthChroma = encodeBitDepthLuma;
-    }
-
-    // update the video profile
-    videoCoreProfile = VkVideoCoreProfile::CreateEncodeProfile(
-                                          codec, encodeChromaSubsampling,
-                                          GetComponentBitDepthFlagBits(encodeBitDepthLuma),
-                                          GetComponentBitDepthFlagBits(encodeBitDepthChroma),
-                                          (videoProfileIdc != (uint32_t)-1) ? videoProfileIdc :
-                                                  GetDefaultVideoProfileIdc(),
-                                          tuningMode);
+    return VkVideoCoreProfile::CreateEncodeProfile(
+                                    codec, encodeChromaSubsampling,
+                                    GetComponentBitDepthFlagBits(encodeBitDepthLuma),
+                                    GetComponentBitDepthFlagBits(encodeBitDepthChroma),
+                                    codecProfile,
+                                    tuningMode);
 }
 
 bool EncoderConfig::InitRateControl()

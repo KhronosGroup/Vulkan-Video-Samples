@@ -112,8 +112,10 @@ int EncoderConfigH265::DoParseArguments(int argc, const char* argv[])
     return 0;
 }
 
-VkResult EncoderConfigH265::InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx)
+VkResult EncoderConfigH265::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
+
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH265CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_CAPABILITIES_KHR,
                                                                           VkVideoEncodeH265QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_QUANTIZATION_MAP_CAPABILITIES_KHR>
                                                                 (vkDevCtx, videoCoreProfile,
@@ -634,7 +636,7 @@ bool EncoderConfigH265::InitParamameters(VpsH265 *vpsInfo, SpsH265 *spsInfo,
         spsInfo->decPicBufMgr.max_num_reorder_pics[i] = gopStructure.GetConsecutiveBFrameCount() ? 1 : 0;
     }
 
-    // Use pre-initialized profile, level, and tier from InitDeviceCapabilities() / DetermineLevelTier()
+    // Use pre-initialized profile, level, and tier from InitVideoProfileCapabilities() / DetermineLevelTier()
     spsInfo->profileTierLevel.general_profile_idc = profile;
     spsInfo->profileTierLevel.general_level_idc = levelIdc;
     spsInfo->profileTierLevel.flags.general_tier_flag = general_tier_flag;

@@ -188,8 +188,10 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
     return true;
 }
 
-VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx)
+VkResult EncoderConfigAV1::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
+
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeAV1CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_CAPABILITIES_KHR,
                                                                           VkVideoEncodeAV1QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_QUANTIZATION_MAP_CAPABILITIES_KHR>
                                                         (vkDevCtx, videoCoreProfile,
