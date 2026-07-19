@@ -34,6 +34,7 @@ from tests.libs.video_test_config_base import (
 from tests.libs.video_test_framework_base import (
     VulkanVideoTestFrameworkBase,
 )
+from tests.libs.video_test_framework_decode import build_decoder_command
 from tests.libs.video_test_fetch_sample import (
     FetchableResource,
 )
@@ -296,19 +297,15 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
             result.stderr, config
         )
 
+        result.meta["output_sections"] = [
+            ("Encoder Command Output", result.stdout, result.stderr),
+        ]
+
         # Validate encoded output with decoder if enabled
         if (self.validate_with_decoder and
                 output_file.exists() and
                 result.status == VideoTestStatus.SUCCESS):
-            validation_success, validation_output = (
-                self._validate_with_decoder(output_file, config)
-            )
-            if not validation_success:
-                # Decoder validation failed - mark encoder test as error
-                result.status = VideoTestStatus.ERROR
-                result.error_message = "Decoder validation failed"
-                # Store validation output for display after test result
-                result.meta["decoder_validation_output"] = validation_output
+            self._run_decoder_validation_stage(result, output_file, config)
 
         # Clean up output file only if test succeeded and keep_files is False
         if (output_file.exists() and
@@ -317,6 +314,27 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
             output_file.unlink()
 
         return result
+
+    def _run_decoder_validation_stage(
+        self, result: TestResult, output_file: Path, config: EncodeTestSample
+    ) -> None:
+        """Decode the encoded output and fold the outcome into result.
+
+        Appends the decoder-validation section (after the encoder's own,
+        matching runtime order) and marks the test as ERROR on failure.
+        """
+        (validation_success, validation_output,
+         decoder_stdout, decoder_stderr) = (
+            self._validate_with_decoder(output_file, config)
+        )
+        result.meta["output_sections"].append(
+            ("Decoder Validation Output", decoder_stdout, decoder_stderr)
+        )
+        if not validation_success:
+            result.status = VideoTestStatus.ERROR
+            result.error_message = "Decoder validation failed"
+            # Store failure tail for the failure-summary block
+            result.meta["decoder_validation_output"] = validation_output
 
     def _analyze_encoder_output(self, stderr: str,
                                 _config: EncodeTestSample) -> bool:
@@ -348,15 +366,48 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
             config: Encoder test configuration
 
         Returns:
-            Tuple of (success: bool, validation_output: str or None)
+            Tuple of (success: bool, failure_tail: str or None,
+                      decoder_stdout: str, decoder_stderr: str)
         """
-        # Use base class method to run decoder validation
-        return self.run_decoder_validation(
-            decoder_path=self.decoder_path,
+        decoder_path = self.decoder_path
+        if not decoder_path or not decoder_path.exists():
+            print("  ⚠️  Decoder path not valid for validation")
+            return False, "Decoder path not valid", "", ""
+
+        print(f"  🔍 Validating with decoder: {encoded_file.name}")
+
+        cmd = build_decoder_command(
+            decoder_path=decoder_path,
             input_file=encoded_file,
+            output_file=None,
             extra_decoder_args=self.decoder_args,
-            config=config,
+            no_display=True,
+            device_id=self.device_id,
         )
+
+        if self.verbose:
+            print(f"    Decoder command: {' '.join(cmd)}")
+
+        run_cwd = self._default_run_cwd()
+        result = self.execute_test_command(
+            cmd, config, timeout=self.timeout, cwd=run_cwd
+        )
+
+        if result.status == VideoTestStatus.SUCCESS:
+            print("  ✓ Decoder validation passed")
+            return True, None, result.stdout, result.stderr
+
+        print("  ✗ Decoder validation failed")
+        output_lines = [
+            f"status: {result.status.name}, exit code: {result.returncode}"]
+        if result.stdout:
+            for line in result.stdout.strip().split('\n')[-10:]:
+                output_lines.append(line)
+        if result.stderr:
+            for line in result.stderr.strip().split('\n')[-10:]:
+                output_lines.append(line)
+
+        return False, '\n'.join(output_lines), result.stdout, result.stderr
 
     def _get_output_extension(self, codec: CodecType) -> str:
         """Get appropriate file extension for codec"""
