@@ -114,6 +114,23 @@ int EncoderConfigH265::DoParseArguments(int argc, const char* argv[])
 
 VkResult EncoderConfigH265::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    // If profile hasn't been specified, determine it based on bit depth and chroma subsampling
+    if (profile == STD_VIDEO_H265_PROFILE_IDC_INVALID) {
+        if (encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_420_BIT_KHR) {
+            if (input.bpp == 8) {
+                profile = STD_VIDEO_H265_PROFILE_IDC_MAIN;
+            } else if (input.bpp <= 10) {
+                profile = STD_VIDEO_H265_PROFILE_IDC_MAIN_10;
+            } else {
+                profile = STD_VIDEO_H265_PROFILE_IDC_FORMAT_RANGE_EXTENSIONS;
+            }
+        } else {
+            // 4:2:2 or 4:4:4 requires Range Extensions profile
+            profile = STD_VIDEO_H265_PROFILE_IDC_FORMAT_RANGE_EXTENSIONS;
+        }
+    }
+
+    assert(profile != STD_VIDEO_H265_PROFILE_IDC_INVALID);
     videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
 
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH265CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_CAPABILITIES_KHR,

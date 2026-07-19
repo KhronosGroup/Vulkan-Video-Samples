@@ -183,7 +183,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
         return ((encodeWidth * encodeHeight * picSizeProfileFactor) >> 3);
     }
 
-    StdVideoAV1Profile                      profile{ STD_VIDEO_AV1_PROFILE_MAIN };
+    StdVideoAV1Profile                      profile{ STD_VIDEO_AV1_PROFILE_INVALID };
     StdVideoAV1Level                        level{ STD_VIDEO_AV1_LEVEL_INVALID };
     uint8_t                                 tier{};
     VkVideoEncodeAV1CapabilitiesKHR         av1EncodeCapabilities{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_CAPABILITIES_KHR };

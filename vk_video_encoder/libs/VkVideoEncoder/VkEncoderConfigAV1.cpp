@@ -190,6 +190,24 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
 
 VkResult EncoderConfigAV1::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    // If profile hasn't been specified, determine it based on bit depth and chroma subsampling
+    if (profile == STD_VIDEO_AV1_PROFILE_INVALID) {
+        // PROFESSIONAL is required for 12-bit or 422
+        if ((input.bpp > 10) ||
+            (encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_422_BIT_KHR)) {
+            profile = STD_VIDEO_AV1_PROFILE_PROFESSIONAL;
+        }
+        // HIGH is required for 444 chroma
+        else if (encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
+            profile = STD_VIDEO_AV1_PROFILE_HIGH;
+        }
+        // MAIN supports 8-bit and 10-bit with 420
+        else {
+            profile = STD_VIDEO_AV1_PROFILE_MAIN;
+        }
+    }
+
+    assert(profile != STD_VIDEO_AV1_PROFILE_INVALID);
     videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
 
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeAV1CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_CAPABILITIES_KHR,

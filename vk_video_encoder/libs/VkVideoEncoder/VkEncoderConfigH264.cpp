@@ -318,11 +318,6 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
         sps->pic_order_cnt_type = STD_VIDEO_H264_POC_TYPE_2;
     }
 
-    // FIXME: Check if the HW supports transform_8x8_mode_is_supported
-    // based on capabilities or profiles supported
-    const bool transform_8x8_mode_is_supported = true;
-    const bool bIsFastestPreset = false;
-
     if (adaptiveTransformMode == ADAPTIVE_TRANSFORM_ENABLE) {
         pps->flags.transform_8x8_mode_flag = true;
         if ((profileIdc == STD_VIDEO_H264_PROFILE_IDC_BASELINE) ||
@@ -334,12 +329,9 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
         pps->flags.transform_8x8_mode_flag = false;
     } else {
         // Autoselect
-        if (!bIsFastestPreset || transform_8x8_mode_is_supported) {
-            if ((profileIdc == STD_VIDEO_H264_PROFILE_IDC_INVALID) ||
-                (profileIdc >= STD_VIDEO_H264_PROFILE_IDC_HIGH)) {
-                // Unconditionally enable 8x8 transform
-                pps->flags.transform_8x8_mode_flag = true;
-            }
+        if (profileIdc >= STD_VIDEO_H264_PROFILE_IDC_HIGH) {
+            // Unconditionally enable 8x8 transform
+            pps->flags.transform_8x8_mode_flag = true;
         }
     }
 
@@ -354,28 +346,6 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
 
     if (constrained_intra_pred_flag) {
         pps->flags.constrained_intra_pred_flag = true;
-    }
-
-    // If the profileIdc hasn't been specified, force set it now.
-    if (profileIdc == STD_VIDEO_H264_PROFILE_IDC_INVALID) {
-        profileIdc = STD_VIDEO_H264_PROFILE_IDC_BASELINE;
-
-        if (entropyCodingMode == ENTROPY_CODING_MODE_CABAC) {
-            profileIdc = STD_VIDEO_H264_PROFILE_IDC_MAIN;
-        }
-
-        if ((gopStructure.GetConsecutiveBFrameCount() > 0) || pps->flags.entropy_coding_mode_flag || !sps->flags.frame_mbs_only_flag)
-            profileIdc = STD_VIDEO_H264_PROFILE_IDC_MAIN;
-
-        if (pps->flags.transform_8x8_mode_flag) {
-            profileIdc = STD_VIDEO_H264_PROFILE_IDC_HIGH;
-        }
-
-        if ((sps->flags.qpprime_y_zero_transform_bypass_flag &&
-             (rateControlMode == VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR)) ||
-                (sps->chroma_format_idc == STD_VIDEO_H264_CHROMA_FORMAT_IDC_444)) {
-            profileIdc = STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE;
-        }
     }
 
     sps->profile_idc = profileIdc;
@@ -400,9 +370,32 @@ bool EncoderConfigH264::InitSpsPpsParameters(StdVideoH264SequenceParameterSet *s
 
 VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
-    // If the profile has not been specified, fall back to HIGH.
-    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(
-        profileIdc != STD_VIDEO_H264_PROFILE_IDC_INVALID ? profileIdc : STD_VIDEO_H264_PROFILE_IDC_HIGH));
+    // If the profile was not specified by the user, select the highest profile
+    // required by the requested features.
+    if (profileIdc == STD_VIDEO_H264_PROFILE_IDC_INVALID) {
+        // 8x8 transform support is hardware-dependent; it is verified after
+        // the capability query and the mode is adjusted accordingly.
+        bool use8x8Transform = (adaptiveTransformMode != ADAPTIVE_TRANSFORM_DISABLE);
+
+        profileIdc = STD_VIDEO_H264_PROFILE_IDC_BASELINE;
+
+        // Upgrade to MAIN profile if using B-frames or CABAC entropy coding
+        if ((gopStructure.GetConsecutiveBFrameCount() > 0) || (entropyCodingMode == ENTROPY_CODING_MODE_CABAC))
+            profileIdc = STD_VIDEO_H264_PROFILE_IDC_MAIN;
+
+        if (use8x8Transform) {
+            profileIdc = STD_VIDEO_H264_PROFILE_IDC_HIGH;
+        }
+
+        // Upgrade to HIGH_444_PREDICTIVE for lossless encoding or 4:4:4 chroma
+        if ((tuningMode == VK_VIDEO_ENCODE_TUNING_MODE_LOSSLESS_KHR) ||
+            (input.chromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR)) {
+            profileIdc = STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE;
+        }
+    }
+
+    assert(profileIdc != STD_VIDEO_H264_PROFILE_IDC_INVALID);
+    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profileIdc));
 
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH264CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_KHR,
                                                                           VkVideoEncodeH264QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUANTIZATION_MAP_CAPABILITIES_KHR>
