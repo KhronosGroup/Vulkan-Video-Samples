@@ -1,0 +1,34 @@
+name: cpp-linter
+
+on:
+  # Trigger the workflow on push or pull request,
+  # but only for the main branch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  cpp-linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cpp-linter/cpp-linter-action@main
+        id: linter
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: file
+          lines-changed-only: true
+          format-review: true
+          thread-comments: update
+          ignore: '.github|build'
+
+      - name: Check for linter errors
+        if: steps.linter.outputs.checks-failed != 0
+        run: |
+          echo "Some linter checks failed. ${{ steps.linter.outputs.checks-failed }}"
+          exit 1
