@@ -510,14 +510,8 @@ VkResult EncoderConfigH264::InitDeviceCapabilities(const VulkanDeviceContext* vk
     return VK_SUCCESS;
 }
 
-int8_t EncoderConfigH264::InitDpbCount()
+bool EncoderConfigH264::DetermineLevelTier()
 {
-    dpbCount = 0; // TODO: What is the need for this?
-
-    // spsInfo->level represents the smallest level that we require for the
-    // given stream. This level constrains the maximum size (in terms of
-    // number of frames) that the DPB can have. levelDpbSize is this maximum
-    // value.
     uint32_t levelBitRate = ((rateControlMode != VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DISABLED_BIT_KHR) && hrdBitrate == 0)
                                 ? averageBitrate // constrained by avg bitrate
                                 : hrdBitrate;  // constrained by max bitrate
@@ -531,6 +525,15 @@ int8_t EncoderConfigH264::InitDpbCount()
 
     // find lowest possible level
     levelIdc = DetermineLevel(dpbCount, levelBitRate, vbvBufferSize, frameRate);
+    if (levelIdc == STD_VIDEO_H264_LEVEL_IDC_INVALID) {
+        return false;
+    }
+    return (levelIdc <= h264EncodeCapabilities.maxLevelIdc);
+}
+
+int8_t EncoderConfigH264::InitDpbCount()
+{
+    dpbCount = 0; // TODO: What is the need for this?
 
     uint8_t levelDpbSize = (uint8_t)(((1024 * levelLimits[levelIdc].maxDPB)) /
                             ((pic_width_in_mbs * pic_height_in_map_units) * 384));
