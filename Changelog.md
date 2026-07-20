@@ -23,8 +23,8 @@ v0.5.1:
     and do not fail encode tests the decoder cannot validate
 
 v0.5.0:
-  - Encoder: add VK_KHR_video_encode_feedback2 support for AV1
-    (--pictureFeedback, --pixelCountFeedback, --skippedPixelCountFeedback,
+  - Encoder: add VK_KHR_video_encode_feedback2 support for H.264, H.265 and AV1
+    (--pictureFeedback, --pixelFeedback, --skippedPixelFeedback,
     --enablePerPartitionFeedback, --maxPerPartitionFeedbackEntries)
   - Build: Vulkan SDK minimum raised to 1.4.358 (required by
     VK_KHR_video_encode_feedback2)
