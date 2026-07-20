@@ -277,6 +277,39 @@
       "source_filepath": "video/yuv/352x288_15_i420.yuv"
     },
     {
+      "name": "av1_encode_feedback",
+      "codec": "av1",
+      "profile": "main",
+      "extra_args": [
+        "--pictureFeedback",
+        "--pixelFeedback",
+        "--skippedPixelFeedback"
+      ],
+      "description": "Test AV1 picture-level encode feedback2 (qp, pixel counts)",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "av1_encode_feedback_per_partition",
+      "codec": "av1",
+      "profile": "main",
+      "extra_args": [
+        "--pictureFeedback",
+        "--enablePerPartitionFeedback",
+        "--maxPerPartitionFeedbackEntries",
+        "16"
+      ],
+      "description": "Test AV1 per-partition encode feedback2",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
       "name": "h264_resolution_too_small",
       "codec": "h264",
       "profile": null,
