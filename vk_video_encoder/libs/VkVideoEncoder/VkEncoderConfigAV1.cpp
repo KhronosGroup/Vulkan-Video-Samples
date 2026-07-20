@@ -139,17 +139,6 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
                     READ_PARAM(i, lrConfig.LoopRestorationSize[j], uint16_t);
                 }
             }
-        } else if (args[i] == "--pictureFeedback") {
-            enablePictureFeedback = true;
-        } else if (args[i] == "--pixelCountFeedback") {
-            enablePixelCountFeedback = true;
-        } else if (args[i] == "--skippedPixelCountFeedback") {
-            enableSkippedPixelCountFeedback = true;
-            enablePixelCountFeedback = true;
-        } else if (args[i] == "--enablePerPartitionFeedback") {
-            enablePerPartitionFeedback = true;
-        } else if (args[i] == "--maxPerPartitionFeedbackEntries") {
-            READ_PARAM(i, maxPerPartitionFeedbackEntries, uint32_t);
         } else if (args[i] == "--profile"){
             if (++i >= argc) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i-1].c_str());
@@ -258,8 +247,7 @@ VkResult EncoderConfigAV1::InitVideoProfileCapabilities(const VulkanDeviceContex
     assert(profile != STD_VIDEO_AV1_PROFILE_INVALID);
     videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
 
-    const bool feedback2Requested = enablePictureFeedback || enablePixelCountFeedback ||
-                                    enableSkippedPixelCountFeedback || enablePerPartitionFeedback;
+    const bool feedback2Requested = EncodeFeedback2Requested();
     videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
         { VK_STRUCTURE_TYPE_VIDEO_ENCODE_FEEDBACK_2_CAPABILITIES_KHR, nullptr };
     void* pExtCapabilities = feedback2Requested ? &videoEncodeFeedback2Capabilities : nullptr;
