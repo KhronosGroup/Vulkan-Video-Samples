@@ -1515,10 +1515,17 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     const EncoderConfigAV1* av1Config = encoderConfig->GetEncoderConfigAV1();
     if (av1Config != nullptr) {
         if (av1Config->enablePictureFeedback) {
+            const VkVideoEncodeFeedbackFlagsKHR qpFeedbackFlags =
+                VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR |
+                VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR;
+            const VkVideoEncodeFeedbackFlagsKHR unsupportedQpFlags =
+                qpFeedbackFlags & ~supportedFeedbackFlags;
+            if (unsupportedQpFlags != 0) {
+                std::cout << "Warning: dropping unsupported picture feedback flags: 0x"
+                          << std::hex << unsupportedQpFlags << std::dec << std::endl;
+            }
             encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR;
-            encodeFeedbackFlags |=
-                (supportedFeedbackFlags & (VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR |
-                                           VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR));
+            encodeFeedbackFlags |= (supportedFeedbackFlags & qpFeedbackFlags);
         }
         if (av1Config->enablePixelFeedback) {
             encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR |
