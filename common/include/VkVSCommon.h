@@ -40,11 +40,6 @@ extern "C" {
 #ifdef __cplusplus
 } // extern "C"
 
-// C++ only macros and utilities
-#include <iostream>
-#include "vulkan_interfaces.h"
-#include <string>
-
 // Macro to check Vulkan features and return error if not supported
 // Note: This macro contains a return statement - use with care
 #define CHECK_VULKAN_FEATURE(feature, name, optional) \
@@ -61,59 +56,6 @@ extern "C" {
 #ifndef VKVS_CASE_STR
 #define VKVS_CASE_STR(x) case x: return VKVS_STRINGIFY(x)
 #endif
-
-// Helper function to get string representation of VkResult codes
-inline const char* string_VkResult(VkResult result) {
-    switch (result) {
-        VKVS_CASE_STR(VK_SUCCESS);
-        VKVS_CASE_STR(VK_NOT_READY);
-        VKVS_CASE_STR(VK_TIMEOUT);
-        VKVS_CASE_STR(VK_EVENT_SET);
-        VKVS_CASE_STR(VK_EVENT_RESET);
-        VKVS_CASE_STR(VK_INCOMPLETE);
-        VKVS_CASE_STR(VK_ERROR_OUT_OF_HOST_MEMORY);
-        VKVS_CASE_STR(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-        VKVS_CASE_STR(VK_ERROR_INITIALIZATION_FAILED);
-        VKVS_CASE_STR(VK_ERROR_DEVICE_LOST);
-        VKVS_CASE_STR(VK_ERROR_MEMORY_MAP_FAILED);
-        VKVS_CASE_STR(VK_ERROR_LAYER_NOT_PRESENT);
-        VKVS_CASE_STR(VK_ERROR_EXTENSION_NOT_PRESENT);
-        VKVS_CASE_STR(VK_ERROR_FEATURE_NOT_PRESENT);
-        VKVS_CASE_STR(VK_ERROR_INCOMPATIBLE_DRIVER);
-        VKVS_CASE_STR(VK_ERROR_TOO_MANY_OBJECTS);
-        VKVS_CASE_STR(VK_ERROR_FORMAT_NOT_SUPPORTED);
-        VKVS_CASE_STR(VK_ERROR_FRAGMENTED_POOL);
-        VKVS_CASE_STR(VK_ERROR_OUT_OF_POOL_MEMORY);
-        VKVS_CASE_STR(VK_ERROR_INVALID_EXTERNAL_HANDLE);
-        VKVS_CASE_STR(VK_ERROR_FRAGMENTATION);
-        VKVS_CASE_STR(VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS);
-        VKVS_CASE_STR(VK_ERROR_SURFACE_LOST_KHR);
-        VKVS_CASE_STR(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
-        VKVS_CASE_STR(VK_SUBOPTIMAL_KHR);
-        VKVS_CASE_STR(VK_ERROR_OUT_OF_DATE_KHR);
-        VKVS_CASE_STR(VK_ERROR_INCOMPATIBLE_DISPLAY_KHR);
-        VKVS_CASE_STR(VK_ERROR_VALIDATION_FAILED_EXT);
-        VKVS_CASE_STR(VK_ERROR_INVALID_SHADER_NV);
-        VKVS_CASE_STR(VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT);
-        VKVS_CASE_STR(VK_ERROR_NOT_PERMITTED_EXT);
-        VKVS_CASE_STR(VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT);
-        VKVS_CASE_STR(VK_ERROR_UNKNOWN);
-        default:
-            return "VK_RESULT_UNKNOWN";
-    }
-}
-inline const char* string_VkResult_Extended(VkResult result) {
-    // First try video-specific error codes
-    switch (result) {
-        VKVS_CASE_STR(VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR);
-        VKVS_CASE_STR(VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR);
-        VKVS_CASE_STR(VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR);
-        VKVS_CASE_STR(VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR);
-        default:
-            // Fall back to generated string_VkResult()
-            return string_VkResult(result);
-    }
-}
 
 // Helper function to check if a VkResult indicates video profile/feature not supported
 // Returns true for video-specific KHR errors (profile, format, codec, std version)
