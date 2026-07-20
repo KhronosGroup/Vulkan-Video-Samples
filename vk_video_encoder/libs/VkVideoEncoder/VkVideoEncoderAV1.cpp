@@ -1040,12 +1040,16 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
     // Fetch the coded VCL data and its information
     result = GetEncodeFeedbackResults(queryPool, querySlotId, encodeResult);
 
-    assert(result == VK_SUCCESS);
-    assert(encodeResult.status == VK_QUERY_RESULT_STATUS_COMPLETE_KHR);
-
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nRetrieveData Error: Failed to get vcl query pool results.\n");
+        assert(result == VK_SUCCESS);
         return result;
+    }
+
+    if (encodeResult.status != VK_QUERY_RESULT_STATUS_COMPLETE_KHR) {
+        fprintf(stderr, "\nencodeResult.status is (0x%x) NOT STATUS_COMPLETE! bitstreamStartOffset %u, bitstreamSize %u\n",
+                encodeResult.status, encodeResult.bitstreamStartOffset, encodeResult.bitstreamSize);
+        return VK_ERROR_UNKNOWN;
     }
 
     bool flushFrameData = (pFrameInfo->stdPictureInfo.flags.show_frame || pFrameInfo->bShowExistingFrame);
