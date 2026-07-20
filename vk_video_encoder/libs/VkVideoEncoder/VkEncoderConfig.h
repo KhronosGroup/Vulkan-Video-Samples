@@ -496,6 +496,12 @@ public:
     size_t SetFileName(const char* inputFileName)
     {
         Destroy();
+        const size_t nameLength = strlen(inputFileName);
+        if (nameLength >= sizeof(m_fileName)) {
+            fprintf(stderr, "Output file name is too long (max %zu characters): %s\n",
+                    sizeof(m_fileName) - 1, inputFileName);
+            return 0;
+        }
         strcpy(m_fileName, inputFileName);
         return OpenFile();
     }
