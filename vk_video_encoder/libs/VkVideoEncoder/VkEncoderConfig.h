@@ -787,6 +787,18 @@ public:
     uint32_t intraRefreshCycleRestartIndex;
     uint32_t intraRefreshSkippedStartIndex;
 
+    // Parameters related to encode feedback2
+    bool     enablePictureFeedback;
+    bool     enablePixelFeedback;
+    bool     enableSkippedPixelFeedback;
+    bool     enablePerPartitionFeedback;
+    uint32_t maxPerPartitionFeedbackEntries;
+
+    bool EncodeFeedback2Requested() const {
+        return enablePictureFeedback || enablePixelFeedback ||
+               enableSkippedPixelFeedback || enablePerPartitionFeedback;
+    }
+
     // Vulkan Input color space and transfer characteristics parameters
     VkSamplerYcbcrModelConversion              ycbcrModel;
     VkSamplerYcbcrRange                        ycbcrRange;
@@ -892,6 +904,11 @@ public:
     , intraRefreshMode(REFRESH_NONE)
     , intraRefreshCycleRestartIndex(0)
     , intraRefreshSkippedStartIndex(0)
+    , enablePictureFeedback(false)
+    , enablePixelFeedback(false)
+    , enableSkippedPixelFeedback(false)
+    , enablePerPartitionFeedback(false)
+    , maxPerPartitionFeedbackEntries(1u)
     , ycbcrModel(VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709)
     , ycbcrRange(VK_SAMPLER_YCBCR_RANGE_ITU_FULL)
     , components{VK_COMPONENT_SWIZZLE_IDENTITY,

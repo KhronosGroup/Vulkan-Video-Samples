@@ -142,12 +142,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
     m_vkDevCtxt.AddReqDeviceExtensions(requiredDeviceExtension);
     m_vkDevCtxt.AddOptDeviceExtensions(optinalDeviceExtension);
 
-    bool enableFeedback2 = false;
-    if (const EncoderConfigAV1* av1Config = m_encoderConfig->GetEncoderConfigAV1()) {
-        enableFeedback2 = av1Config->enablePictureFeedback || av1Config->enablePixelCountFeedback ||
-                          av1Config->enableSkippedPixelCountFeedback || av1Config->enablePerPartitionFeedback;
-    }
-    m_vkDevCtxt.SetVideoEncodeFeedback2Enabled(enableFeedback2);
+    m_vkDevCtxt.SetVideoEncodeFeedback2Enabled(m_encoderConfig->EncodeFeedback2Requested());
 
     result = m_vkDevCtxt.InitVulkanDevice(m_encoderConfig->appName.c_str(), VK_NULL_HANDLE,
                                           m_encoderConfig->verbose);

@@ -76,6 +76,14 @@ static void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
     --intraRefreshCycleDuration     <integer> : Duration of (number of frames in) an intra-refresh cycle\n\
     --intraRefreshMode              <string>  : Intra-refresh mode to be used\n\
                                         picpartition, blockrows, blockcolumns, blocks\n\
+    --pictureFeedback                         : Enable picture-level feedback2 output\n\
+    --pixelFeedback                           : Enable pixel count feedback2 output (intra/inter)\n\
+    --skippedPixelFeedback                    : Enable skipped pixel feedback2 output (implies --pixelFeedback)\n\
+    --enablePerPartitionFeedback              : Enable per-partition feedback2 output\n\
+    --maxPerPartitionFeedbackEntries <integer> : Max per-partition feedback entries to request.\n\
+                                        Defaults to 1; for multi-slice H.264/H.265 or multi-tile AV1\n\
+                                        this must be raised to cover every partition, otherwise\n\
+                                        feedback is reported for the first partitions only.\n\
     --testIntraRefreshMidway        <integer> : Testing only - Index at which an intra-refresh cycle is to be interrupted.\n\
                                         Allowed values for this option are such that 0 <= index < intraRefreshCycleDuration.\n\
                                         A value of 0 is a no-op; for other values, a new intra-refresh\n\
@@ -146,11 +154,6 @@ static void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
                                         Eg: 1. \"--cdef --params 3  2  1 2 9 1   2 3 7 3   3 1 4 2   4 0 3 2\"\n\
                                             2. \"--cdef --params 3  0  1 2 9 1\"\n\
                                             3. \"--cdef\"\n\
-        --pictureFeedback               Enable picture-level feedback2 output\n\
-        --pixelCountFeedback            Enable pixel count feedback2 output (intra/inter)\n\
-        --skippedPixelCountFeedback     Enable skipped pixel count feedback2 output (implies --pixelCountFeedback)\n\
-        --enablePerPartitionFeedback    Enable per-partition feedback2 output\n\
-        --maxPerPartitionFeedbackEntries <integer> : Max per-partition feedback entries to request\n\
         --lr                            Enable loop restoration filter\n\
         --params                        Enabel custom loop restoration filter configuration when followed by --lr option\n\
                                         Otherwise default loop restoration filter configuration will be used\n\
@@ -581,6 +584,20 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
                 intraRefreshMode = REFRESH_BLOCKS;
             } else {
                 fprintf(stderr, "Invalid intra-refresh mode %s\n", args[i].c_str());
+                return -1;
+            }
+        } else if (args[i] == "--pictureFeedback") {
+            enablePictureFeedback = true;
+        } else if (args[i] == "--pixelFeedback") {
+            enablePixelFeedback = true;
+        } else if (args[i] == "--skippedPixelFeedback") {
+            enableSkippedPixelFeedback = true;
+            enablePixelFeedback = true;
+        } else if (args[i] == "--enablePerPartitionFeedback") {
+            enablePerPartitionFeedback = true;
+        } else if (args[i] == "--maxPerPartitionFeedbackEntries") {
+            if (++i >= argc || sscanf(args[i].c_str(), "%u", &maxPerPartitionFeedbackEntries) != 1) {
+                fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
         } else if (args[i] == "--testIntraRefreshMidway") {

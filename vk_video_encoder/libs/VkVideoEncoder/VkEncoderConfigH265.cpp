@@ -133,6 +133,10 @@ VkResult EncoderConfigH265::InitVideoProfileCapabilities(const VulkanDeviceConte
     assert(profile != STD_VIDEO_H265_PROFILE_IDC_INVALID);
     videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
 
+    videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
+        { VK_STRUCTURE_TYPE_VIDEO_ENCODE_FEEDBACK_2_CAPABILITIES_KHR, nullptr };
+    void* pExtCapabilities = EncodeFeedback2Requested() ? &videoEncodeFeedback2Capabilities : nullptr;
+
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH265CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_CAPABILITIES_KHR,
                                                                           VkVideoEncodeH265QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_QUANTIZATION_MAP_CAPABILITIES_KHR>
                                                                 (vkDevCtx, videoCoreProfile,
@@ -141,7 +145,8 @@ VkResult EncoderConfigH265::InitVideoProfileCapabilities(const VulkanDeviceConte
                                                                  h265EncodeCapabilities,
                                                                  quantizationMapCapabilities,
                                                                  h265QuantizationMapCapabilities,
-                                                                 intraRefreshCapabilities);
+                                                                 intraRefreshCapabilities,
+                                                                 pExtCapabilities);
     if (result != VK_SUCCESS) {
         // Distinguish between "not supported" and "actual error"
         if (IsVideoUnsupportedResult(result)) {
