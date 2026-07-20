@@ -1580,7 +1580,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     if (unsupportedFeedbackFlags != 0) {
         std::cerr << "Requested encode feedback flags are not supported: 0x"
                   << std::hex << unsupportedFeedbackFlags << std::dec << std::endl;
-        return VK_ERROR_INITIALIZATION_FAILED;
+        return VK_ERROR_FEATURE_NOT_PRESENT;
     }
 
     m_encodeFeedbackFlags = encodeFeedbackFlags;
