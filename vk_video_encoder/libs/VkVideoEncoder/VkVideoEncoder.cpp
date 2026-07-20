@@ -1529,15 +1529,44 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         }
 
         if (av1Config->enablePerPartitionFeedback) {
-            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR;
+            const VkVideoEncodeFeedback2CapabilitiesKHR& feedback2Caps =
+                encoderConfig->videoEncodeFeedback2Capabilities;
+            if (feedback2Caps.maxPerPartitionFeedbackEntries == 0) {
+                std::cerr << "Per-partition encode feedback is not supported "
+                             "by the implementation for this video profile." << std::endl;
+                return VK_ERROR_FEATURE_NOT_PRESENT;
+            }
 
-            perPartitionFeedbackCreateInfo.pNext = feedbackPNext;
-            perPartitionFeedbackCreateInfo.maxPerPartitionFeedbackEntries =
-                std::max(1u, av1Config->maxPerPartitionFeedbackEntries);
-            perPartitionFeedbackCreateInfo.perPartitionEncodeFeedbackFlags =
+            uint32_t maxEntries = std::max(1u, av1Config->maxPerPartitionFeedbackEntries);
+            if (maxEntries > feedback2Caps.maxPerPartitionFeedbackEntries) {
+                std::cout << "Warning: clamping maxPerPartitionFeedbackEntries from " << maxEntries
+                          << " to the supported maximum of "
+                          << feedback2Caps.maxPerPartitionFeedbackEntries << std::endl;
+                maxEntries = feedback2Caps.maxPerPartitionFeedbackEntries;
+            }
+
+            const VkVideoEncodePerPartitionFeedbackFlagsKHR requestedPartitionFlags =
                 VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR |
                 VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
                 VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR;
+            const VkVideoEncodePerPartitionFeedbackFlagsKHR partitionFlags =
+                requestedPartitionFlags & feedback2Caps.supportedPerPartitionEncodeFeedbackFlags;
+            if (partitionFlags != requestedPartitionFlags) {
+                std::cout << "Warning: dropping unsupported per-partition feedback flags: 0x"
+                          << std::hex << (requestedPartitionFlags & ~partitionFlags)
+                          << std::dec << std::endl;
+            }
+            if (partitionFlags == 0) {
+                std::cerr << "None of the requested per-partition feedback flags "
+                             "are supported by the implementation." << std::endl;
+                return VK_ERROR_FEATURE_NOT_PRESENT;
+            }
+
+            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR;
+
+            perPartitionFeedbackCreateInfo.pNext = feedbackPNext;
+            perPartitionFeedbackCreateInfo.maxPerPartitionFeedbackEntries = maxEntries;
+            perPartitionFeedbackCreateInfo.perPartitionEncodeFeedbackFlags = partitionFlags;
             feedbackPNext = &perPartitionFeedbackCreateInfo;
             perPartitionFeedbackEnabled = true;
         }
