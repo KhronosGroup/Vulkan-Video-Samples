@@ -227,10 +227,6 @@ struct EncoderConfigAV1 : public EncoderConfig {
     StdVideoAV1LoopRestoration              lrConfig{};
 
     bool                                    enablePictureFeedback{};
-    bool                                    customPictureFeedbackParams{};
-    int32_t                                 pictureFeedbackAvgQp{-1};
-    int32_t                                 pictureFeedbackMinQp{-1};
-    int32_t                                 pictureFeedbackMaxQp{-1};
     bool                                    enablePixelFeedback{};
     bool                                    enableSkippedPixelFeedback{};
     bool                                    enablePerPartitionFeedback{};

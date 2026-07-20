@@ -141,14 +141,6 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
             }
         } else if (args[i] == "--pictureFeedback") {
             enablePictureFeedback = true;
-
-            if (((i + 1) < argc) && (args[i + 1] == "--params")) {
-                ++i;
-                customPictureFeedbackParams = true;
-                READ_PARAM(i, pictureFeedbackAvgQp, int32_t);
-                READ_PARAM(i, pictureFeedbackMinQp, int32_t);
-                READ_PARAM(i, pictureFeedbackMaxQp, int32_t);
-            }
         } else if (args[i] == "--pixelFeedback") {
             enablePixelFeedback = true;
         } else if (args[i] == "--skippedPixelFeedback") {
