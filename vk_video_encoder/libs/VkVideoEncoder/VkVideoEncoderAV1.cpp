@@ -856,7 +856,7 @@ size_t VkVideoEncoderAV1::GetEncodeFeedbackResultsSize() const
         addU32();
     }
     if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_HAS_OVERRIDES_BIT_KHR) {
-        dataSize += sizeof(VkBool32);
+        addU32();
     }
     if (flags & VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR) {
         addI32();
