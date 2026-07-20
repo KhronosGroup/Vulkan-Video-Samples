@@ -111,7 +111,12 @@ public:
     bool    GetVideoEncodeQueryResultStatusSupport() const { return m_videoEncodeQueryResultStatusSupport; }
     VkQueueFlags GetVideoDecodeQueueFlag() const { return m_videoDecodeQueueFlags; }
     VkQueueFlags GetVideoEncodeQueueFlag() const { return m_videoEncodeQueueFlags; }
-    void SetVideoEncodeFeedback2Enabled(bool enable) { m_videoEncodeFeedback2Enabled = enable; }
+    void SetVideoEncodeFeedback2Enabled(bool enable) {
+        m_videoEncodeFeedback2Enabled = enable;
+        if (enable) {
+            AddReqDeviceExtension(VK_KHR_VIDEO_ENCODE_FEEDBACK_2_EXTENSION_NAME);
+        }
+    }
     bool GetVideoEncodeFeedback2Enabled() const { return m_videoEncodeFeedback2Enabled; }
     class MtQueueMutex {
 
