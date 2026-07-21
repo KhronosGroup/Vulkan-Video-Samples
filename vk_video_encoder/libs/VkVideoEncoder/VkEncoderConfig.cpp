@@ -145,8 +145,8 @@ static void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
                                             2. \"--cdef --params 3  0  1 2 9 1\"\n\
                                             3. \"--cdef\"\n\
         --pictureFeedback               Enable picture-level feedback2 output\n\
-        --pixelFeedback                 Enable pixel count feedback2 output (intra/inter)\n\
-        --skippedPixelFeedback          Enable skipped pixel feedback2 output (implies --pixelFeedback)\n\
+        --pixelCountFeedback            Enable pixel count feedback2 output (intra/inter)\n\
+        --skippedPixelCountFeedback     Enable skipped pixel count feedback2 output (implies --pixelCountFeedback)\n\
         --enablePerPartitionFeedback    Enable per-partition feedback2 output\n\
         --maxPerPartitionFeedbackEntries <integer> : Max per-partition feedback entries to request\n\
         --lr                            Enable loop restoration filter\n\

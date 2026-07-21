@@ -227,8 +227,8 @@ struct EncoderConfigAV1 : public EncoderConfig {
     StdVideoAV1LoopRestoration              lrConfig{};
 
     bool                                    enablePictureFeedback{};
-    bool                                    enablePixelFeedback{};
-    bool                                    enableSkippedPixelFeedback{};
+    bool                                    enablePixelCountFeedback{};
+    bool                                    enableSkippedPixelCountFeedback{};
     bool                                    enablePerPartitionFeedback{};
     uint32_t                                maxPerPartitionFeedbackEntries{1u};
 };

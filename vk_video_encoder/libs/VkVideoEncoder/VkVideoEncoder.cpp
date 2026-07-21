@@ -1527,11 +1527,11 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR;
             encodeFeedbackFlags |= (supportedFeedbackFlags & qpFeedbackFlags);
         }
-        if (av1Config->enablePixelFeedback) {
+        if (av1Config->enablePixelCountFeedback) {
             encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR |
                                    VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR;
         }
-        if (av1Config->enableSkippedPixelFeedback) {
+        if (av1Config->enableSkippedPixelCountFeedback) {
             encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR;
         }
 

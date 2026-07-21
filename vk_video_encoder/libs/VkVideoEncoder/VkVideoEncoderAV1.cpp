@@ -1189,7 +1189,7 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
 
 VkResult VkVideoEncoderAV1::Feedback2TextOutput::Init(const EncoderConfigAV1& config)
 {
-    m_pictureEnabled = config.enablePictureFeedback || config.enablePixelFeedback || config.enablePerPartitionFeedback;
+    m_pictureEnabled = config.enablePictureFeedback || config.enablePixelCountFeedback || config.enablePerPartitionFeedback;
     m_partitionEnabled = config.enablePerPartitionFeedback;
 
     if (!Enabled()) {

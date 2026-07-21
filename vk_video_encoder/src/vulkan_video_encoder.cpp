@@ -131,8 +131,8 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
 
     bool enableFeedback2 = false;
     if (const EncoderConfigAV1* av1Config = m_encoderConfig->GetEncoderConfigAV1()) {
-        enableFeedback2 = av1Config->enablePictureFeedback || av1Config->enablePixelFeedback ||
-                          av1Config->enableSkippedPixelFeedback || av1Config->enablePerPartitionFeedback;
+        enableFeedback2 = av1Config->enablePictureFeedback || av1Config->enablePixelCountFeedback ||
+                          av1Config->enableSkippedPixelCountFeedback || av1Config->enablePerPartitionFeedback;
     }
     m_vkDevCtxt.SetVideoEncodeFeedback2Enabled(enableFeedback2);
 

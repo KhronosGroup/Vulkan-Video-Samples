@@ -141,11 +141,11 @@ int EncoderConfigAV1::DoParseArguments(int argc, const char* argv[])
             }
         } else if (args[i] == "--pictureFeedback") {
             enablePictureFeedback = true;
-        } else if (args[i] == "--pixelFeedback") {
-            enablePixelFeedback = true;
-        } else if (args[i] == "--skippedPixelFeedback") {
-            enableSkippedPixelFeedback = true;
-            enablePixelFeedback = true;
+        } else if (args[i] == "--pixelCountFeedback") {
+            enablePixelCountFeedback = true;
+        } else if (args[i] == "--skippedPixelCountFeedback") {
+            enableSkippedPixelCountFeedback = true;
+            enablePixelCountFeedback = true;
         } else if (args[i] == "--enablePerPartitionFeedback") {
             enablePerPartitionFeedback = true;
         } else if (args[i] == "--maxPerPartitionFeedbackEntries") {
@@ -201,8 +201,8 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
 
 VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
-    const bool feedback2Requested = enablePictureFeedback || enablePixelFeedback ||
-                                    enableSkippedPixelFeedback || enablePerPartitionFeedback;
+    const bool feedback2Requested = enablePictureFeedback || enablePixelCountFeedback ||
+                                    enableSkippedPixelCountFeedback || enablePerPartitionFeedback;
     videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
         { VK_STRUCTURE_TYPE_VIDEO_ENCODE_FEEDBACK_2_CAPABILITIES_KHR, nullptr };
     void* pExtCapabilities = feedback2Requested ? &videoEncodeFeedback2Capabilities : nullptr;

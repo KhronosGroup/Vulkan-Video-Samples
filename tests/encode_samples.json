@@ -282,8 +282,8 @@
       "profile": "main",
       "extra_args": [
         "--pictureFeedback",
-        "--pixelFeedback",
-        "--skippedPixelFeedback"
+        "--pixelCountFeedback",
+        "--skippedPixelCountFeedback"
       ],
       "description": "Test AV1 picture-level encode feedback2 (qp, pixel counts)",
       "width": 352,
