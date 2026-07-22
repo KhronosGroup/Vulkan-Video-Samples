@@ -496,11 +496,17 @@ public:
     size_t SetFileName(const char* inputFileName)
     {
         Destroy();
+        const size_t nameLength = strlen(inputFileName);
+        if (nameLength >= sizeof(m_fileName)) {
+            fprintf(stderr, "Output file name is too long (max %zu characters): %s\n",
+                    sizeof(m_fileName) - 1, inputFileName);
+            return 0;
+        }
         strcpy(m_fileName, inputFileName);
         return OpenFile();
     }
 
-    const char* GetFileName()
+    const char* GetFileName() const
     {
         return m_fileName;
     }
@@ -715,6 +721,7 @@ public:
     VkVideoEncodeCapabilitiesKHR videoEncodeCapabilities;
     VkVideoEncodeQuantizationMapCapabilitiesKHR quantizationMapCapabilities;
     VkVideoEncodeIntraRefreshCapabilitiesKHR intraRefreshCapabilities;
+    VkVideoEncodeFeedback2CapabilitiesKHR videoEncodeFeedback2Capabilities;
     VkVideoEncodeQualityLevelPropertiesKHR qualityLevelProperties;
     VkVideoEncodeRateControlModeFlagBitsKHR rateControlMode;
     uint32_t averageBitrate; // kbits/sec
@@ -822,6 +829,7 @@ public:
     , videoEncodeCapabilities()
     , quantizationMapCapabilities()
     , intraRefreshCapabilities()
+    , videoEncodeFeedback2Capabilities()
     , rateControlMode(VK_VIDEO_ENCODE_RATE_CONTROL_MODE_FLAG_BITS_MAX_ENUM_KHR)
     , averageBitrate()
     , maxBitrate()

@@ -797,6 +797,11 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                                                                           false // videoEncodeAV1
                                                                         };
 
+        VkPhysicalDeviceVideoEncodeFeedback2FeaturesKHR feedback2Features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_ENCODE_FEEDBACK_2_FEATURES_KHR,
+                                                                            nullptr,
+                                                                            false // videoEncodeFeedback2
+                                                                          };
+
         // Chain only the structures that are requested
         VkBaseInStructure* pNext = nullptr;
         if (videoCodecs & VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR) {
@@ -806,6 +811,10 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
         if (videoCodecs & VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) {
             videoDecodeVP9Feature.pNext = pNext;
             pNext = (VkBaseInStructure*)&videoDecodeVP9Feature;
+        }
+        if (m_videoEncodeFeedback2Enabled) {
+            feedback2Features.pNext = pNext;
+            pNext = (VkBaseInStructure*)&feedback2Features;
         }
 
         VkPhysicalDeviceTimelineSemaphoreFeatures timelineSemaphoreFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
@@ -844,6 +853,8 @@ VkResult VulkanDeviceContext::CreateVulkanDevice(int32_t numDecodeQueues,
                              (videoEncodeAV1Feature.videoEncodeAV1 != VK_FALSE), "videoEncodeAV1", false);
         CHECK_VULKAN_FEATURE(((videoCodecs & VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR) != 0) ==
                              (videoDecodeVP9Feature.videoDecodeVP9 != VK_FALSE), "videoDecodeVP9", false);
+        CHECK_VULKAN_FEATURE((m_videoEncodeFeedback2Enabled != 0) ==
+                             (feedback2Features.videoEncodeFeedback2 != VK_FALSE), "videoEncodeFeedback2", false);
 
         // Validate feature support here.
         // TODO: Currntly this method is receiving all codec bits irrespective of the codec that is required to decode/encode provided input.
@@ -974,6 +985,7 @@ VulkanDeviceContext::VulkanDeviceContext()
     , m_importedDeviceHandle(false)
     , m_videoDecodeQueryResultStatusSupport(false)
     , m_videoEncodeQueryResultStatusSupport(false)
+    , m_videoEncodeFeedback2Enabled(false)
     , m_device()
     , m_gfxQueue()
     , m_computeQueue()

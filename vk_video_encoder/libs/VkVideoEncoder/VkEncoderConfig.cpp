@@ -144,6 +144,11 @@ static void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
                                         Eg: 1. \"--cdef --params 3  2  1 2 9 1   2 3 7 3   3 1 4 2   4 0 3 2\"\n\
                                             2. \"--cdef --params 3  0  1 2 9 1\"\n\
                                             3. \"--cdef\"\n\
+        --pictureFeedback               Enable picture-level feedback2 output\n\
+        --pixelCountFeedback            Enable pixel count feedback2 output (intra/inter)\n\
+        --skippedPixelCountFeedback     Enable skipped pixel count feedback2 output (implies --pixelCountFeedback)\n\
+        --enablePerPartitionFeedback    Enable per-partition feedback2 output\n\
+        --maxPerPartitionFeedbackEntries <integer> : Max per-partition feedback entries to request\n\
         --lr                            Enable loop restoration filter\n\
         --params                        Enabel custom loop restoration filter configuration when followed by --lr option\n\
                                         Otherwise default loop restoration filter configuration will be used\n\

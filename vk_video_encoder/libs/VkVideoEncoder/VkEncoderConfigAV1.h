@@ -225,6 +225,12 @@ struct EncoderConfigAV1 : public EncoderConfig {
     bool                                    enableLr{};
     bool                                    customLrConfig{};
     StdVideoAV1LoopRestoration              lrConfig{};
+
+    bool                                    enablePictureFeedback{};
+    bool                                    enablePixelCountFeedback{};
+    bool                                    enableSkippedPixelCountFeedback{};
+    bool                                    enablePerPartitionFeedback{};
+    uint32_t                                maxPerPartitionFeedbackEntries{1u};
 };
 
 #endif /* VKVIDEOENCODER_VKENCODERCONFIG_AV1_H_ */
