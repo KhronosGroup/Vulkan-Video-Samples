@@ -689,7 +689,6 @@ public:
     bool     noDeviceFallback;
     VkVideoCodecOperationFlagBitsKHR codec;
     bool useDpbArray;
-    uint32_t videoProfileIdc;
     uint32_t numInputImages;
     EncoderInputImageParameters input;
     uint8_t  encodeBitDepthLuma;
@@ -796,7 +795,6 @@ public:
     , noDeviceFallback(false)
     , codec(VK_VIDEO_CODEC_OPERATION_NONE_KHR)
     , useDpbArray(false)
-    , videoProfileIdc((uint32_t)-1)
     , numInputImages(DEFAULT_NUM_INPUT_IMAGES)
     , input()
     , encodeBitDepthLuma(0)
@@ -917,7 +915,7 @@ public:
     // Factory Function
     static VkResult CreateCodecConfig(int argc, const char *argv[], VkSharedBaseObj<EncoderConfig>& encoderConfig);
 
-    void InitVideoProfile();
+    VkVideoCoreProfile MakeVideoProfile(uint32_t codecProfile);
 
     int ParseArguments(int argc, const char *argv[]);
 
@@ -957,13 +955,21 @@ public:
             return VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR;
         }
 
+        if (encodeBitDepthLuma == 0) {
+            encodeBitDepthLuma = input.bpp;
+        }
+
+        if (encodeBitDepthChroma == 0) {
+            encodeBitDepthChroma = encodeBitDepthLuma;
+        }
+
         return VK_SUCCESS;
     }
 
     // These functions should be overwritten from the codec-specific classes
-    virtual VkResult InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx) { return VK_ERROR_INITIALIZATION_FAILED; };
+    virtual VkResult InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx) { return VK_ERROR_INITIALIZATION_FAILED; };
 
-    virtual uint32_t GetDefaultVideoProfileIdc() { return 0; };
+    virtual bool DetermineLevelTier() = 0;
 
     virtual int8_t InitDpbCount() { return 16; };
 
