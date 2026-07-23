@@ -108,6 +108,8 @@ MACRO(FIND_VULKAN_SDK minimum_major_version minimum_minor_version minimum_patch_
         # Set Vulkan Loader options to disable tests
         set(BUILD_TESTS OFF CACHE BOOL "Disable Vulkan-Loader tests" FORCE)
 
+        set(VulkanHeaders_VERSION "${minimum_major_version}.${minimum_minor_version}.${minimum_patch_version}")
+
         # Fetch the Vulkan Loader
         FetchContent_Declare(
             vulkan-loader
