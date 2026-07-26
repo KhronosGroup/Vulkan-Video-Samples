@@ -61,17 +61,20 @@ Windows 10 or Windows 11 with the following software packages:
 - [Vulkan SDK](https://vulkan.lunarg.com/sdk/home#windows)
   - Install current Vulkan SDK (i.e. VulkanSDK-1.4.304.0-Installer.exe or later)
   - Make sure to install the the correct SDK for the targeted system arch - x86_64 or ARM64
-- [FFMPEG libraries for Windows]
-  - Download the latest version of the FFMPEG shared libraries archive from https://github.com/BtbN/FFmpeg-Builds/releases
-  - The archive must have the following pattern in the name: For Windows x86_64 ffmpeg-*-win64-*-shared.zip
-  - Example download link:
-         For Windows x86_64 https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip
-         For Windows ARM64  https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-winarm64-lgpl-shared.zip
+- FFMPEG libraries (ONLY for Windows)
+  - FFmpeg is downloaded automatically during CMake configuration from https://github.com/BtbN/FFmpeg-Builds/releases
+  - The download is skipped if the libraries are already present in `vk_video_decoder\bin\libs\ffmpeg\<platform>\lib`
+  - To disable automatic download, pass `-DDOWNLOAD_FFMPEG=OFF` to CMake
+  - To download manually instead before the CMake configure, get the version of the FFMPEG shared libraries archive from any desired source.
+    - Example download link:
+         - For Windows x86_64 https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-lgpl-shared.zip
+         - For Windows ARM64  https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-winarm64-lgpl-shared.zip
   - Extract to <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg
-  - Verify that <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\win64\bin or <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\winarm64\bin contains:
+  - Verify that <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\win64\bin or <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\winarm64\bin contains the required DLLs:
     - avformat-59.dll
     - avutil-59.dll
     - avcodec-59.dll
+    - Note: the version might be different since the latest release is downloaded
   - Verify that <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\win64\lib or <APP_INSTALLED_LOC>\vk_video_decoder\bin\libs\ffmpeg\winarm64\lib contains the corresponding .lib files
 
 ### Windows Build Commands
