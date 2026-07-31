@@ -199,6 +199,7 @@ jobs:
           path: ${{ env.REPO_NAME }}-release-${{ matrix.platform }}.zip
 
   Vulkan-Video-Samples-win:
+    runs-on: ${{ matrix.os || 'windows-latest' }}
     strategy:
       matrix:
         platform: [windows-x64, windows-x64-clang, windows-x64-ffmpeg, windows-x86, windows-x86-clang, win-arm64]
@@ -221,13 +222,13 @@ jobs:
             cmake_arch: Win32
             toolset: ClangCL
           - platform: win-arm64
+            os: windows-11-arm
             arch: arm64
             cmake_arch: ARM64
-    runs-on: windows-latest
 
     steps:
       - name: Set up MSVC environment
-        if: matrix.arch != 'x64'
+        if: matrix.arch != 'x64' && matrix.os != 'windows-11-arm'
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch }}
