@@ -799,6 +799,23 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
     return result;
 }
 
+static bool IsLinearImageFormatSupported(const VulkanDeviceContext* vkDevCtx,
+                                         VkFormat format,
+                                         VkImageUsageFlags usage)
+{
+    VkPhysicalDeviceImageFormatInfo2 imageFormatInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2 };
+    imageFormatInfo.format = format;
+    imageFormatInfo.type   = VK_IMAGE_TYPE_2D;
+    imageFormatInfo.tiling = VK_IMAGE_TILING_LINEAR;
+    imageFormatInfo.usage  = usage;
+
+    VkImageFormatProperties2 imageFormatProperties = { VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2 };
+
+    return vkDevCtx->GetPhysicalDeviceImageFormatProperties2(vkDevCtx->getPhysicalDevice(),
+                                                             &imageFormatInfo,
+                                                             &imageFormatProperties) == VK_SUCCESS;
+}
+
 VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConfig)
 {
     VkResult result;
@@ -1037,19 +1054,20 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     VkFormat supportedDpbFormats[8];
     VkFormat supportedInFormats[8];
-    uint32_t formatCount = sizeof(supportedDpbFormats) / sizeof(supportedDpbFormats[0]);
+    uint32_t dpbFormatCount = sizeof(supportedDpbFormats) / sizeof(supportedDpbFormats[0]);
     result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
                                                                VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR,
-                                                               formatCount, supportedDpbFormats);
+                                                               dpbFormatCount, supportedDpbFormats);
 
     if(result != VK_SUCCESS) {
         fprintf(stderr, "\nInitEncoder Error: Failed to get desired video format for the DPB.\n");
         return result;
     }
 
+    uint32_t inFormatCount = sizeof(supportedInFormats) / sizeof(supportedInFormats[0]);
     result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
                                                       VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR,
-                                                      formatCount, supportedInFormats);
+                                                      inFormatCount, supportedInFormats);
 
     if(result != VK_SUCCESS) {
         fprintf(stderr, "\nInitEncoder Error: Failed to get desired video format for input images.\n");
@@ -1066,9 +1084,10 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         VkImageUsageFlagBits imageUsageFlag = (encoderConfig->qpMapMode == EncoderConfig::DELTA_QP_MAP) ? VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR
                                                                                                         : VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR;
 
+        uint32_t qpMapFormatCount = sizeof(supportedQpMapFormats) / sizeof(supportedQpMapFormats[0]);
         result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
                                                           imageUsageFlag,
-                                                          formatCount, supportedQpMapFormats, supportedQpMapTiling,
+                                                          qpMapFormatCount, supportedQpMapFormats, supportedQpMapTiling,
                                                           true, supportedQpMapTexelSize);
 
         if(result != VK_SUCCESS) {
@@ -1207,16 +1226,28 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         std::max(m_maxCodedExtent.height, encoderConfig->input.height)
     };
 
+    const VkImageUsageFlags probeLinearImageUsage = ( VK_IMAGE_USAGE_SAMPLED_BIT |
+                                                      VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
     // When compute filter is available, the linear image stores raw input format
     // and the filter handles conversion. Without it, the linear image must match
     // the encode source format since CopyLinearToOptimalImage does no conversion.
-    const VkFormat linearImageFormat =
 #ifdef SHADERC_SUPPORT
-        encoderConfig->enablePreprocessComputeFilter
-            ? encoderConfig->input.vkFormat
-            : m_imageInFormat;
+    if (encoderConfig->enablePreprocessComputeFilter &&
+        !IsLinearImageFormatSupported(m_vkDevCtx, encoderConfig->input.vkFormat, probeLinearImageUsage)) {
+        fprintf(stderr, "\nWarning: input format %s (%d) is not supported by the device "
+                "for linear staging images. Disabling the preprocess compute filter "
+                "and falling back to CPU conversion to the encode format %s (%d).\n",
+                VkVideoCoreProfile::VkFormatToName(encoderConfig->input.vkFormat), encoderConfig->input.vkFormat,
+                VkVideoCoreProfile::VkFormatToName(m_imageInFormat), m_imageInFormat);
+        encoderConfig->enablePreprocessComputeFilter = false;
+    }
+    const bool useComputeFilter = (encoderConfig->enablePreprocessComputeFilter != 0);
+    const VkFormat linearImageFormat = useComputeFilter ? encoderConfig->input.vkFormat
+                                                        : m_imageInFormat;
 #else
-        m_imageInFormat;
+    const bool useComputeFilter = false;
+    const VkFormat linearImageFormat = m_imageInFormat;
     if (encoderConfig->input.vkFormat != m_imageInFormat) {
         fprintf(stderr, "\nWarning: input format (%d) differs from encode format (%d) "
                 "but compute filter is not available (built without SHADERC_SUPPORT). "
@@ -1225,13 +1256,28 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     }
 #endif
 
+    // The compute filter samples the staging image and reads it through
+    // per-plane storage views; the CPU path only copies from it.
+    const VkImageUsageFlags linearImageUsage =
+        useComputeFilter ? VkImageUsageFlags( VK_IMAGE_USAGE_SAMPLED_BIT |
+                                              VK_IMAGE_USAGE_STORAGE_BIT |
+                                              VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+                         : VkImageUsageFlags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
+    if (!IsLinearImageFormatSupported(m_vkDevCtx, linearImageFormat,
+                                      useComputeFilter ? probeLinearImageUsage
+                                                       : linearImageUsage)) {
+        fprintf(stderr, "\nInitEncoder Error: linear staging image format %s (%d) "
+                "is not supported by the device.\n",
+                VkVideoCoreProfile::VkFormatToName(linearImageFormat), linearImageFormat);
+        return VK_ERROR_FORMAT_NOT_SUPPORTED;
+    }
+
     result = m_linearInputImagePool->Configure( m_vkDevCtx,
                                                 encoderConfig->numInputImages,
                                                 linearImageFormat,
                                                 linearInputImageExtent,
-                                                  ( VK_IMAGE_USAGE_SAMPLED_BIT |
-                                                    VK_IMAGE_USAGE_STORAGE_BIT |
-                                                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT),
+                                                linearImageUsage,
                                                 m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                   ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
