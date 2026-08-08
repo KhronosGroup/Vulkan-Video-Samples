@@ -589,8 +589,12 @@ void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
         const size_t srcStride = (size_t)inputPlaneLayouts[plane].rowPitch;
         const size_t dstStride = (size_t)dstSubresourceLayout[plane].rowPitch;
 
+        // Semi-planar formats interleave Cb and Cr in the second plane:
+        // 2 samples per chroma pixel
+        const uint32_t samplesPerPixel = ((plane > 0) && (numPlanes == 2)) ? 2 : 1;
+
         // Line width in bytes
-        const size_t lineBytes = planeWidth * bytesPerPixel;
+        const size_t lineBytes = planeWidth * samplesPerPixel * bytesPerPixel;
 
         // Get the starting pointers for this plane
         const uint8_t* srcRow = srcPlane;

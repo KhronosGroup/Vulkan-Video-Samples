@@ -149,6 +149,12 @@ public:
                     default:
                         break;
                 }
+
+                if (numPlanes == 2) {
+                    // Semi-planar input: Cb and Cr are interleaved in a single
+                    // plane, so the plane stride covers both components.
+                    planeStride *= 2;
+                }
             }
 
             if (planeLayouts[plane].rowPitch < (planeStride)) {
