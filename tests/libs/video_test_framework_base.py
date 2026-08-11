@@ -238,7 +238,8 @@ class VulkanVideoTestFrameworkBase:
         """
         raise NotImplementedError("Subclasses must implement check_resources")
 
-    def cleanup_results(self, test_type: str = "test") -> None:
+    def cleanup_results(self, test_type: str = "test",
+                        protected_files: Optional[List[Path]] = None) -> None:
         """Clean up output artifacts if keep_files is False and no failures."""
         has_failures = any(
             r.status in [VideoTestStatus.ERROR, VideoTestStatus.CRASH]
@@ -268,8 +269,11 @@ class VulkanVideoTestFrameworkBase:
             return
 
         try:
+            resolved_protected = {p.resolve() for p in (protected_files or [])}
             for item in self.results_dir.iterdir():
-                if item.is_file() and not item.name.endswith('_results.json'):
+                if (item.is_file()
+                        and not item.name.endswith('_results.json')
+                        and item.resolve() not in resolved_protected):
                     item.unlink()
                 elif item.is_dir():
                     shutil.rmtree(item)
@@ -482,6 +486,8 @@ class VulkanVideoTestFrameworkBase:
                 json.dump({
                     "system_info": {
                         "gpu_name": sys_info.gpu_name,
+                        "vendor_id": sys_info.vendor_id,
+                        "device_id": sys_info.device_id,
                         "driver_name": sys_info.driver_name,
                         "driver_version": sys_info.driver_version,
                         "os_name": sys_info.os_name,
