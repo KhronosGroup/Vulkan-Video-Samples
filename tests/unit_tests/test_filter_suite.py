@@ -74,6 +74,10 @@ class MockFramework(VulkanVideoTestFrameworkBase):
         """Create test suite - mock implementation returns empty list."""
         return []
 
+    def build_dry_run_command(self, _config):
+        """Dry run command - mock implementation skips the probe."""
+        return None
+
     def run_single_test(self, _config):
         """Run single test - mock implementation does nothing."""
 

@@ -28,6 +28,7 @@ from typing import Dict, List, Optional
 
 from tests.libs.video_test_config_base import (
     BaseTestConfig,
+    SkipCategory,
     SkipFilter,
     SkipRule,
     TestResult,
@@ -38,6 +39,7 @@ from tests.libs.video_test_config_base import (
 )
 
 from tests.libs.video_test_platform_utils import PlatformUtils
+from tests.libs.video_test_dry_run_probe import run_dry_run
 from tests.libs.video_test_driver_detect import (
     parse_driver_from_output, parse_system_info_from_output, SystemInfo,
     get_os_info
@@ -119,6 +121,52 @@ class VulkanVideoTestFrameworkBase:
         self._system_info: Optional[SystemInfo] = None
         self._test_pattern_active = False
         self._skipped_samples: Dict[str, Optional[SkipRule]] = {}
+
+    def build_dry_run_command(self, config) -> Optional[list]:
+        """Command initializing the app without processing a frame - to be
+        implemented by subclasses
+
+        Returns None when no command can be built, which makes the hardware
+        probe a no-op for that test.
+        """
+        raise NotImplementedError(
+            "Subclasses must implement build_dry_run_command"
+        )
+
+    def _detect_driver_once(self, test_configs: list) -> None:
+        """Run one app to learn the GPU driver before the suite starts."""
+        for config in test_configs:
+            if self._detected_driver is not None:
+                return
+            cmd = self.build_dry_run_command(config)
+            if cmd:
+                _, stdout, stderr = run_dry_run(
+                    cmd, unsupported_exit_code=EX_UNAVAILABLE,
+                    cwd=self._default_run_cwd()
+                )
+                self._detect_driver_from_output(stdout, stderr)
+
+    def _is_hw_supported(self, config) -> bool:
+        """Check hardware support by initializing the app with --dryRun."""
+        supported, stdout, stderr = run_dry_run(
+            self.build_dry_run_command(config),
+            unsupported_exit_code=EX_UNAVAILABLE,
+            cwd=self._default_run_cwd(),
+        )
+        self._detect_driver_from_output(stdout, stderr)
+        return supported
+
+    def _is_hard_crash_skip(self, sample_name: str, test_type: str,
+                            test_format: str = "vvs") -> Optional[SkipRule]:
+        """Hard_crash skip rule matching the detected driver, or None."""
+        if self._detected_driver is None:
+            return None
+        return is_test_skipped(
+            sample_name, test_format,
+            [r for r in self._skip_rules
+             if r.category == SkipCategory.HARD_CRASH],
+            current_driver=self._detected_driver, test_type=test_type,
+        )
 
     @property
     def skipped_samples(self) -> Dict[str, Optional[SkipRule]]:
@@ -600,6 +648,7 @@ class VulkanVideoTestFrameworkBase:
         output_file: Path = None,
         extra_decoder_args: list = None,
         no_display: bool = True,
+        dry_run: bool = False,
     ) -> list:
         """Build decoder command with standard options."""
         cmd = [
@@ -622,6 +671,8 @@ class VulkanVideoTestFrameworkBase:
         cmd.append("--noDeviceFallback")
         if extra_decoder_args:
             cmd.extend(extra_decoder_args)
+        if dry_run:
+            cmd.append("--dryRun")
 
         return cmd
 
@@ -759,6 +810,47 @@ class VulkanVideoTestFrameworkBase:
             return False
         return result.status in (VideoTestStatus.CRASH, VideoTestStatus.ERROR)
 
+    def _check_pre_run_skip(self, config, test_type: str,
+                            index: int, total: int) -> Optional[TestResult]:
+        """Return a TestResult if the test must be skipped, else None."""
+        test_name = getattr(config, 'display_name', config.name)
+
+        def early(tail: str, status: VideoTestStatus, message: str,
+                  returncode: int = 0) -> TestResult:
+            print(f"[{index}/{total}] {tail}")
+            return TestResult(
+                config=config, returncode=returncode, execution_time=0,
+                status=status, stdout="", stderr="", error_message=message,
+            )
+
+        if config.name in self._skipped_samples:
+            skip_rule = self._skipped_samples[config.name]
+            reason = skip_rule.reason if skip_rule else "In skip list"
+            return early(f"Skipping: {test_name} ({reason})",
+                         VideoTestStatus.SKIPPED, f"Skipped: {reason}")
+
+        # Checked before the dry-run probe: the probe launches the very
+        # binary a hard_crash rule exists to keep from running.
+        hard_crash_rule = self._is_hard_crash_skip(config.name, test_type)
+        if hard_crash_rule is not None:
+            reason = hard_crash_rule.reason or "hard crash"
+            driver = self._detected_driver
+            note = f"known to hard crash on {driver}: {reason}"
+            return early(f"Not run: {test_name} ({note})",
+                         VideoTestStatus.SKIPPED, f"Not run, {note}")
+
+        # Hardware codec support (--dryRun probe)
+        if not self._is_hw_supported(config):
+            codec = config.codec.value
+            return early(
+                f"Not supported: {test_name} "
+                f"(no HW {test_type} support for {codec})",
+                VideoTestStatus.NOT_SUPPORTED,
+                f"No HW {test_type} support for {codec} (dry run)",
+                returncode=EX_UNAVAILABLE)
+
+        return None
+
     def run_test_suite_base(self, test_configs: list,
                             test_type: str = "decode") -> List[TestResult]:
         """Run complete test suite with common flow."""
@@ -773,25 +865,20 @@ class VulkanVideoTestFrameworkBase:
         results: List[TestResult] = []
         total = len(test_configs)
 
+        # Driver-specific skip rules need the driver, and it is only known
+        # once an app has run. Probe once here so the rules apply from the
+        # first test rather than from the second.
+        self._detect_driver_once(test_configs)
+
         for i, config in enumerate(test_configs, 1):
             test_name = getattr(config, 'display_name', config.name)
 
-            # Check if this test is in the universal skip list
-            if config.name in self._skipped_samples:
-                skip_rule = self._skipped_samples[config.name]
-                reason = skip_rule.reason if skip_rule else "In skip list"
-                print(f"[{i}/{total}] Skipping: {test_name} ({reason})")
-                skipped_result = TestResult(
-                    config=config,
-                    returncode=0,
-                    execution_time=0,
-                    status=VideoTestStatus.SKIPPED,
-                    stdout="",
-                    stderr="",
-                    error_message=f"Skipped: {reason}",
-                )
-                results.append(skipped_result)
-                self.results.append(skipped_result)
+            early_result = self._check_pre_run_skip(
+                config, test_type, i, total
+            )
+            if early_result is not None:
+                results.append(early_result)
+                self.results.append(early_result)
                 print()
                 continue
 
