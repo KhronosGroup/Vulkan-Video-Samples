@@ -65,6 +65,11 @@ from tests.libs.video_test_result_reporter import (
     print_final_summary,
 )
 
+from tests.libs.video_test_result_storage import (
+    RESULTS_FILENAME,
+    handle_compare_results,
+)
+
 
 @dataclass
 class FrameworkConfig:  # pylint: disable=too-many-instance-attributes
@@ -214,13 +219,13 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
 
         return encode_ok and decode_ok
 
-    def cleanup_results(self):
+    def cleanup_results(self, protected_files=None):
         """Clean up output artifacts if keep_files is False"""
         if self.encode_framework:
-            self.encode_framework.cleanup_results("encode")
+            self.encode_framework.cleanup_results("encode", protected_files)
 
         if self.decode_framework:
-            self.decode_framework.cleanup_results("decode")
+            self.decode_framework.cleanup_results("decode", protected_files)
 
     def download_assets(self) -> bool:
         """Download test assets using the fetch scripts"""
@@ -717,6 +722,23 @@ def create_argument_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_TEST_TIMEOUT,
         help=f"Per-test timeout in seconds (default: {DEFAULT_TEST_TIMEOUT})")
+    parser.add_argument(
+        "--save-results", action="store_true",
+        help="Save results to vvs_test_results.json keyed by GPU name. "
+             "Automatically compares against previous run if available "
+             "and returns error on regressions")
+    parser.add_argument(
+        "--no-compare-results", action="store_true",
+        help="Do not compare the results to "
+             "vvs_test_results.json keyed by GPU name.")
+    default_results = str(
+        Path(__file__).parent / "results" / RESULTS_FILENAME
+    )
+    parser.add_argument(
+        "--results-file",
+        default=default_results,
+        help="Path to the results JSON file for "
+             "save/compare (default: %(default)s)")
 
     # Encoder-specific options
     encoder_group = parser.add_argument_group("encoder options")
@@ -874,8 +896,27 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
     # Print summary
     success = framework.print_summary(encode_results, decode_results)
 
+    # Compare and save results only for full test suite runs (not -t filtered)
+    if not args.no_compare_results and not args.test:
+        system_info = None
+        if (framework.decode_framework
+                and framework.decode_framework.system_info.gpu_name):
+            system_info = framework.decode_framework.system_info
+        if (not system_info and framework.encode_framework
+                and framework.encode_framework.system_info.gpu_name):
+            system_info = framework.encode_framework.system_info
+        if system_info:
+            no_regression = handle_compare_results(
+                system_info,
+                framework.all_results,
+                Path(args.results_file),
+                args.save_results,
+            )
+            if not no_regression:
+                success = False
+
     # Cleanup results if requested
-    framework.cleanup_results()
+    framework.cleanup_results(protected_files=[Path(args.results_file)])
 
     # Export results if requested (after cleanup to preserve export files)
     if args.export_json:
