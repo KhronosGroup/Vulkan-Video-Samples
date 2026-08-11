@@ -224,6 +224,19 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
             self.skip_filter, test_format="vvs", test_type="decode"
         )
 
+    def build_dry_run_command(self, config: DecodeTestSample) -> list:
+        """Command that initializes the decoder without decoding a frame."""
+        if not self.decoder_path or not config.full_path.exists():
+            return None
+        cmd = self.build_decoder_command(
+            decoder_path=self.decoder_path,
+            input_file=config.full_path,
+            output_file=None,
+            extra_decoder_args=config.extra_args,
+            no_display=True,
+        )
+        return cmd + ["--dryRun"]
+
     def run_single_test(self, config: DecodeTestSample) -> TestResult:
         """Run a single test case - implementation for base class"""
         result = self._run_decoder_test(config)
