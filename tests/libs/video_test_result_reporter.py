@@ -158,3 +158,75 @@ def print_command_output(result: TestResult, max_lines: int = 0) -> None:
         else:
             for line in lines:
                 print(f"     {line}")
+
+
+def count_results_by_status(results: List[TestResult]) -> tuple:
+    """Count results by status type"""
+    passed = sum(1 for r in results if r.status == VideoTestStatus.SUCCESS)
+    not_supported = sum(
+        1 for r in results if r.status == VideoTestStatus.NOT_SUPPORTED
+    )
+    crashed = sum(1 for r in results if r.status == VideoTestStatus.CRASH)
+    failed = sum(1 for r in results if r.status == VideoTestStatus.ERROR)
+    skipped = sum(
+        1 for r in results if r.status == VideoTestStatus.SKIPPED
+    )
+    return passed, not_supported, crashed, failed, skipped
+
+
+def group_results_by_codec(results: List[TestResult]) -> dict:
+    """Group results by codec with counts"""
+    codec_results = {}
+    for result in results:
+        codec = result.config.codec.value
+        if codec not in codec_results:
+            codec_results[codec] = {
+                "pass": 0, "not_supported": 0, "crash": 0, "fail": 0,
+                "skipped": 0, "total": 0
+            }
+
+        codec_results[codec]["total"] += 1
+        if result.status == VideoTestStatus.SUCCESS:
+            codec_results[codec]["pass"] += 1
+        elif result.status == VideoTestStatus.NOT_SUPPORTED:
+            codec_results[codec]["not_supported"] += 1
+        elif result.status == VideoTestStatus.CRASH:
+            codec_results[codec]["crash"] += 1
+        elif result.status == VideoTestStatus.SKIPPED:
+            codec_results[codec]["skipped"] += 1
+        else:
+            codec_results[codec]["fail"] += 1
+    return codec_results
+
+
+def result_to_dict(result: TestResult, test_type: str) -> dict:
+    """Convert a TestResult to a dictionary for JSON export."""
+    test_name = (result.config.display_name
+                 if hasattr(result.config, 'display_name')
+                 else result.config.name)
+    result_dict = {
+        "name": test_name,
+        "codec": result.config.codec.value,
+        "test_type": test_type,
+        "description": result.config.description,
+        "status": result.status.value,
+        "success": result.success,
+        "returncode": result.returncode,
+        "execution_time_ms": round(
+            result.execution_time * 1000, 2
+        ),
+        "warning_found": result.warning_found,
+        "warning_message": result.warning_message,
+        "error_message": result.error_message,
+        "command_line": result.command_line
+    }
+
+    if hasattr(result.config, 'full_path'):
+        result_dict["input_file"] = str(result.config.full_path)
+    elif hasattr(result.config, 'full_yuv_path'):
+        result_dict["input_file"] = str(result.config.full_yuv_path)
+
+    if hasattr(result.config, 'profile') and result.config.profile:
+        result_dict["profile"] = result.config.profile
+
+    return result_dict
