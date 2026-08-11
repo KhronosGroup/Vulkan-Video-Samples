@@ -233,12 +233,13 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
                                       "encoder YUV resource",
                                       auto_download)
 
-    def _run_encoder_test(self, config: EncodeTestSample) -> TestResult:
-        """Run encoder test for specified codec and profile"""
-        if not self.encoder_path:
-            return create_error_result(config, "Encoder path not specified")
+    def build_encoder_command(self, config: EncodeTestSample,
+                              dry_run: bool = False) -> list:
+        """Build the encoder command line for a test configuration.
 
-        # Use the YUV file specified in the test configuration
+        The output file is not appended here so that a dry run, which must not
+        produce one, can reuse the exact same arguments.
+        """
         yuv_file = config.full_yuv_path
 
         # Base command
@@ -277,6 +278,25 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
         if qpmap_path is not None:
             cmd.extend(["--qpMap", config.qpmap,
                         "--qpMapFileName", str(qpmap_path)])
+
+        if dry_run:
+            cmd.append("--dryRun")
+
+        return cmd
+
+    def build_dry_run_command(self,
+                              config: EncodeTestSample) -> Optional[list]:
+        """Command that initializes the encoder without encoding a frame."""
+        if not self.encoder_path:
+            return None
+        return self.build_encoder_command(config, dry_run=True)
+
+    def _run_encoder_test(self, config: EncodeTestSample) -> TestResult:
+        """Run encoder test for specified codec and profile"""
+        if not self.encoder_path:
+            return create_error_result(config, "Encoder path not specified")
+
+        cmd = self.build_encoder_command(config)
 
         # Output file to results folder
         output_file = self.results_dir / (
