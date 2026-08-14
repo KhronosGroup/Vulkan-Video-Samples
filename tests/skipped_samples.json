@@ -7,6 +7,7 @@
       "source_filepath": "video/av1/av1-argon_test1019.obu",
       "format": "vvs",
       "drivers": [
+        "amd",
         "radv"
       ],
       "platforms": [
@@ -22,6 +23,7 @@
       "source_filepath": "video/av1/av1-argon_test787.obu",
       "format": "vvs",
       "drivers": [
+        "amd",
         "radv"
       ],
       "platforms": [
@@ -37,8 +39,9 @@
       "source_filepath": "video/av1/av1-argon_test9354_2.obu",
       "format": "vvs",
       "drivers": [
-        "radv",
-        "anv"
+        "amd",
+        "anv",
+        "radv"
       ],
       "platforms": [
         "all"
@@ -76,6 +79,20 @@
       "reason": "md5 mismatch",
       "bug_url": "",
       "date_added": "2026-01-19"
+    },
+    {
+      "name": "av1_svc_l1t2_8bit",
+      "format": "vvs",
+      "drivers": [
+        "amd"
+      ],
+      "platforms": [
+        "all"
+      ],
+      "reproduction": "always",
+      "reason": "md5 mismatch",
+      "bug_url": "",
+      "date_added": "2026-04-01"
     },
     {
       "name": "h265_itu_slist_b",
