@@ -259,6 +259,7 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             if ((input.numPlanes < 2) || (input.numPlanes > 3)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 fprintf(stderr, "Currently supported number of planes are 2 or 3\n");
+                return -1;
             }
         } else if (args[i] == "--inputChromaSubsampling") {
             std::string chromeSubsampling = args[i + 1];
