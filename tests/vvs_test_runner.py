@@ -433,9 +433,17 @@ class VulkanVideoTestFramework:  # pylint: disable=too-many-instance-attributes
             print(f"### {system_info.get_header()}")
             print()
 
+        # Passed tests that could not have their output validated
+        total_warnings = sum(1 for r in self.all_results
+                             if r.status == VideoTestStatus.SUCCESS
+                             and r.warning_message)
+
         # Skipped tests are now included in all_results
         print(f"Total Tests:   {total_tests:3}")
-        print(f"Passed:        {total_passed:3}")
+        passed_line = f"Passed:        {total_passed:3}"
+        if total_warnings > 0:
+            passed_line += f" ({total_warnings} warning(s))"
+        print(passed_line)
         print(f"Crashed:       {total_crashed:3}")
         print(f"Failed:        {total_failed:3}")
         print(f"Not Supported: {total_not_supported:3}")
