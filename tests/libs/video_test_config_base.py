@@ -290,6 +290,7 @@ class TestResult:
             "stdout": kwargs.get("stdout", ""),
             "stderr": kwargs.get("stderr", ""),
             "warning_found": bool(kwargs.get("warning_found", False)),
+            "warning_message": kwargs.get("warning_message", ""),
             "error_message": kwargs.get("error_message", ""),
             "command_line": kwargs.get("command_line", ""),
         }
@@ -329,6 +330,18 @@ class TestResult:
     def warning_found(self, value: bool) -> None:
         """Set the warning flag for this result."""
         self.meta["warning_found"] = bool(value)
+
+    @property
+    def warning_message(self) -> str:
+        """Optional warning message about a non-fatal issue."""
+        return self.meta.get("warning_message", "")
+
+    @warning_message.setter
+    def warning_message(self, value: str) -> None:
+        """Set the warning message and flag for this result."""
+        self.meta["warning_message"] = value
+        if value:
+            self.meta["warning_found"] = True
 
     @property
     def error_message(self) -> str:
