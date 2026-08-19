@@ -38,6 +38,42 @@ from tests.libs.video_test_utils import (
 )
 
 
+def build_decoder_command(  # pylint: disable=too-many-arguments
+    decoder_path: Path,
+    input_file: Path,
+    *,
+    device_id=None,
+    output_file: Path = None,
+    extra_decoder_args: list = None,
+    no_display: bool = True,
+) -> list:
+    """Build decoder command with standard options."""
+    cmd = [
+        str(decoder_path),
+        "-i", str(input_file),
+    ]
+
+    cmd.append("--verbose")
+
+    has_filter_arg = (extra_decoder_args
+                      and "--enablePostProcessFilter"
+                      in extra_decoder_args)
+    if not has_filter_arg:
+        cmd.extend(["--enablePostProcessFilter", "0"])
+
+    if output_file:
+        cmd.extend(["-o", str(output_file)])
+    if no_display:
+        cmd.append("--noPresent")
+    if device_id is not None:
+        cmd.extend(["--deviceID", str(device_id)])
+    cmd.append("--noDeviceFallback")
+    if extra_decoder_args:
+        cmd.extend(extra_decoder_args)
+
+    return cmd
+
+
 @dataclass(init=False)
 class DecodeTestSample(BaseTestConfig):
     """Configuration for decoder test cases with download capability"""
@@ -174,12 +210,13 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
             output_file = self.results_dir / f"decoded_{config.name}.yuv"
 
         # Build decoder command using shared method
-        cmd = self.build_decoder_command(
+        cmd = build_decoder_command(
             decoder_path=self.decoder_path,
             input_file=input_file,
             output_file=output_file,
             extra_decoder_args=config.extra_args,
             no_display=not self.display,
+            device_id=self.device_id,
         )
 
         # Use base class to execute (handles subprocess details)
@@ -227,6 +264,9 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
     def run_single_test(self, config: DecodeTestSample) -> TestResult:
         """Run a single test case - implementation for base class"""
         result = self._run_decoder_test(config)
+        result.meta["output_sections"] = [
+            ("Decoder Command Output", result.stdout, result.stderr),
+        ]
         self._validate_test_result(result)
         return result
 

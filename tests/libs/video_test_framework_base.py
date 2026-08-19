@@ -44,7 +44,7 @@ from tests.libs.video_test_driver_detect import (
 )
 from tests.libs.video_test_result_reporter import (
     get_status_display, print_codec_breakdown, print_detailed_results,
-    print_final_summary, print_command_output)
+    print_final_summary)
 from tests.libs.video_test_utils import DEFAULT_TEST_TIMEOUT
 
 # Exit codes from sysexits.h
@@ -592,93 +592,6 @@ class VulkanVideoTestFrameworkBase:
         except (OSError, subprocess.SubprocessError) as e:
             return create_error_result(config, str(e), command_line)
 
-    def build_decoder_command(  # pylint: disable=too-many-arguments
-        self,
-        decoder_path: Path,
-        input_file: Path,
-        *,
-        output_file: Path = None,
-        extra_decoder_args: list = None,
-        no_display: bool = True,
-    ) -> list:
-        """Build decoder command with standard options."""
-        cmd = [
-            str(decoder_path),
-            "-i", str(input_file),
-            "--verbose",
-        ]
-        has_filter_arg = (extra_decoder_args
-                          and "--enablePostProcessFilter"
-                          in extra_decoder_args)
-        if not has_filter_arg:
-            cmd.extend(["--enablePostProcessFilter", "0"])
-
-        if output_file:
-            cmd.extend(["-o", str(output_file)])
-        if no_display:
-            cmd.append("--noPresent")
-        if self.device_id is not None:
-            cmd.extend(["--deviceID", str(self.device_id)])
-        cmd.append("--noDeviceFallback")
-        if extra_decoder_args:
-            cmd.extend(extra_decoder_args)
-
-        return cmd
-
-    def run_decoder_validation(
-        self,
-        decoder_path: Path,
-        input_file: Path,
-        extra_decoder_args: list = None,
-        config: BaseTestConfig = None,
-    ) -> tuple:
-        """Validate encoded file with decoder. Returns (success, output)."""
-        if not decoder_path or not decoder_path.exists():
-            print("  ⚠️  Decoder path not valid for validation")
-            return False, "Decoder path not valid"
-
-        print(f"  🔍 Validating with decoder: {input_file.name}")
-
-        cmd = self.build_decoder_command(
-            decoder_path=decoder_path,
-            input_file=input_file,
-            output_file=None,
-            extra_decoder_args=extra_decoder_args,
-            no_display=True,
-        )
-
-        if self.verbose:
-            print(f"    Decoder command: {' '.join(cmd)}")
-
-        run_cwd = self._default_run_cwd()
-        result = self.execute_test_command(
-            cmd, config, timeout=self.timeout, cwd=run_cwd
-        )
-
-        if self.verbose:
-            if result.stdout:
-                print("    Decoder stdout:")
-                print(result.stdout)
-            if result.stderr:
-                print("    Decoder stderr:")
-                print(result.stderr)
-
-        if result.status == VideoTestStatus.SUCCESS:
-            print("  ✓ Decoder validation passed")
-            return True, None
-
-        print("  ✗ Decoder validation failed")
-        output_lines = [
-            f"status: {result.status.name}, exit code: {result.returncode}"]
-        if result.stdout:
-            for line in result.stdout.strip().split('\n')[-10:]:
-                output_lines.append(line)
-        if result.stderr:
-            for line in result.stderr.strip().split('\n')[-10:]:
-                output_lines.append(line)
-
-        return False, '\n'.join(output_lines)
-
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     # pylint: disable=too-many-locals
     def filter_test_suite(
@@ -891,23 +804,37 @@ class VulkanVideoTestFrameworkBase:
         if result.error_message:
             print(f"   Error: {result.error_message}")
 
-        if result.status in (VideoTestStatus.CRASH, VideoTestStatus.ERROR):
-            print(f"   Command: {result.command_line}")
-            print_command_output(result)
-        elif self.validate and (
-                _has_validation_messages(result.stdout) or
-                _has_validation_messages(result.stderr)):
-            print("   ⚠️  Vulkan validation layer reported messages:")
-            print_command_output(result)
-        elif self.verbose and (result.stdout or result.stderr):
-            print_command_output(result)
+        # Decide whether the captured-output blocks should be shown.
+        is_failure = result.status in (
+            VideoTestStatus.CRASH, VideoTestStatus.ERROR)
+        has_validation_msgs = self.validate and (
+            _has_validation_messages(result.stdout) or
+            _has_validation_messages(result.stderr))
+        show_output = is_failure or has_validation_msgs or self.verbose
 
-        decoder_output = result.meta.get("decoder_validation_output")
-        if decoder_output and result.status == VideoTestStatus.ERROR:
-            print("   --- Decoder validation output (last 10 lines) ---")
-            for line in decoder_output.split('\n'):
-                print(f"   | {line}")
-            print("   --- End of decoder validation output ---")
+        if is_failure:
+            print(f"   Command: {result.command_line}")
+        elif has_validation_msgs:
+            print("   ⚠️  Vulkan validation layer reported messages:")
+
+        if show_output:
+            # Subclasses supply their own labeled sections (in runtime order);
+            # fall back to a single generic block when none were provided.
+            sections = result.meta.get("output_sections") or [
+                ("Command Output", result.stdout, result.stderr)
+            ]
+            for section_label, stdout, stderr in sections:
+                if not (stdout or stderr):
+                    continue
+                print(f"   === {section_label} ===")
+                if stdout:
+                    print("   STDOUT:")
+                    for line in stdout.splitlines():
+                        print(f"     {line}")
+                if stderr:
+                    print("   STDERR:")
+                    for line in stderr.splitlines():
+                        print(f"     {line}")
 
 
 __all__ = ['VulkanVideoTestFrameworkBase']
