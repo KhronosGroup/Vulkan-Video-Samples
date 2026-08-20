@@ -26,6 +26,10 @@ public:
                                 int argc, const char** argv);
     virtual int64_t GetNumberOfFrames()
     {
+        // A dry run stops once initialization has succeeded, so no frame is encoded.
+        if (m_encoderConfig->dryRun) {
+            return 0;
+        }
         return m_encoderConfig->numFrames;
     }
     virtual VkResult EncodeNextFrame(int64_t& frameNumEncoded);
@@ -47,10 +51,17 @@ public:
             m_encoder->WaitForThreadsToComplete();
         }
 
-        if (m_encoderConfig && m_encoderConfig->verbose) {
-            std::cout << "Done processing " << m_lastFrameIndex << " input frames!" << std::endl
-                      << "Encoded file's location is at " << m_encoderConfig->outputFileHandler.GetFileName()
-                      << std::endl;
+        // Teardown also runs after a failed Initialize(), where neither the
+        // encoder nor the config is necessarily constructed.
+        if (m_encoder && m_encoderConfig) {
+            if (m_encoderConfig->dryRun) {
+                std::cout << "Dry run: encoder initialized successfully, no frame encoded."
+                          << std::endl;
+            } else if (m_encoderConfig->verbose) {
+                std::cout << "Done processing " << m_lastFrameIndex << " input frames!" << std::endl
+                          << "Encoded file's location is at " << m_encoderConfig->outputFileHandler.GetFileName()
+                          << std::endl;
+            }
         }
 
         m_encoder       = nullptr;
