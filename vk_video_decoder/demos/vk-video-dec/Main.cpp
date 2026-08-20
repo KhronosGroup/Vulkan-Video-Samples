@@ -142,7 +142,7 @@ int main(int argc, const char **argv)
         }
 
         VkSharedBaseObj<VkVideoFrameOutput> frameToFile;
-        if (!decoderConfig.outputFileName.empty()) {
+        if (!decoderConfig.outputFileName.empty() && !decoderConfig.dryRun) {
             const char* crcOutputFile = decoderConfig.outputcrcPerFrame ? decoderConfig.crcOutputFileName.c_str() : nullptr;
             result = VkVideoFrameOutput::Create(decoderConfig.outputFileName.c_str(),
                                               decoderConfig.outputy4m,
@@ -225,7 +225,7 @@ int main(int argc, const char **argv)
         }
 
         VkSharedBaseObj<VkVideoFrameOutput> frameToFile;
-        if (!decoderConfig.outputFileName.empty()) {
+        if (!decoderConfig.outputFileName.empty() && !decoderConfig.dryRun) {
             const char* crcOutputFile = decoderConfig.outputcrcPerFrame ? decoderConfig.crcOutputFileName.c_str() : nullptr;
             result = VkVideoFrameOutput::Create(decoderConfig.outputFileName.c_str(),
                                               decoderConfig.outputy4m,

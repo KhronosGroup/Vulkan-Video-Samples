@@ -1192,7 +1192,9 @@ VkResult VkVideoEncoderAV1::Feedback2TextOutput::Init(const EncoderConfigAV1& co
     m_pictureEnabled = config.enablePictureFeedback || config.enablePixelCountFeedback || config.enablePerPartitionFeedback;
     m_partitionEnabled = config.enablePerPartitionFeedback;
 
-    if (!Enabled()) {
+    // A dry run stops before any frame is encoded, so opening the feedback
+    // file here would leave an empty one behind.
+    if (!Enabled() || config.dryRun) {
         return VK_SUCCESS;
     }
 

@@ -161,6 +161,8 @@ public:
 
     void SetVerbose(bool verbose) { m_verbose = verbose ? VK_TRUE : VK_FALSE; }
 
+    void SetDryRun(bool dryRun) { m_dryRun = dryRun ? VK_TRUE : VK_FALSE; }
+
     virtual int32_t AddRef();
     virtual int32_t Release();
 
@@ -174,6 +176,11 @@ public:
     }
 
     VkResult GetLastResult() const { return m_lastVkResult; }
+
+    /**
+    * @brief  Returns True once StartVideoSequence() has validated the stream against the device capabilities and created the video session.
+    */
+    bool IsVideoSequenceStarted() const { return m_videoFormat.coded_width != 0; }
 
     /**
     *   @brief  This callback function gets called when when decoding of sequence starts,
@@ -229,6 +236,7 @@ private:
         , m_resetDecoder(VK_TRUE)
         , m_dumpDecodeData(VK_FALSE)
         , m_verbose(VK_FALSE)
+        , m_dryRun(VK_FALSE)
         , m_numImageTypes(1) // At least the decoder requires images for DPB
         , m_numImageTypesEnabled(DecodeFrameBufferIf::IMAGE_TYPE_MASK_DECODE_DPB)
         , m_imageSpecsIndex()
@@ -336,6 +344,7 @@ private:
     uint32_t m_resetDecoder : 1;
     uint32_t m_dumpDecodeData : 1;
     uint32_t m_verbose : 1;
+    uint32_t m_dryRun : 1;
     uint32_t m_numImageTypes;
     uint32_t m_numImageTypesEnabled;
     DecodeFrameBufferIf::ImageSpecsIndex m_imageSpecsIndex;

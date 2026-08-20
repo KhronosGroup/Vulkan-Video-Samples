@@ -689,6 +689,7 @@ private:
 
 public:
     std::string appName;
+    std::string outputFileName;
     vk::DeviceUuidUtils deviceUUID;
     int32_t  deviceId;
     int32_t  queueId;
@@ -793,10 +794,12 @@ public:
     // 2: replicate only one row and one column to the padding area;
     uint32_t enablePictureRowColReplication : 2;
     uint32_t enableOutOfOrderRecording : 1; // Testing only - don't use for production!
+    uint32_t dryRun : 1;
 
     EncoderConfig()
     : refCount(0)
     , appName()
+    , outputFileName()
     , deviceId(-1)
     , queueId(0)
     , noDeviceFallback(false)
@@ -889,6 +892,7 @@ public:
     , enablePreprocessComputeFilter(true)
     , enablePictureRowColReplication(1)
     , enableOutOfOrderRecording(false)
+    , dryRun(false)
     { }
 
     virtual ~EncoderConfig() {}

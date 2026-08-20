@@ -787,6 +787,12 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         FAIL_WITH_RESULT(VK_ERROR_INITIALIZATION_FAILED, "decoder not initialized");
     }
 
+    // Codecs such as AV1 and H.265 create the video decode session from within the picture
+    // parser itself, so the frame processor cannot stop the dry run before this point.
+    if (m_dryRun) {
+        return -1;
+    }
+
     assert((m_videoFormat.codec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR) ||
            (pDecodePictureInfo->flags.applyFilmGrain == VK_FALSE));
 

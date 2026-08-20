@@ -296,6 +296,16 @@ int main(int argc, const char* argv[])
         }
     }
 
+    if (encoderConfig->dryRun) {
+        // The encoder is fully initialized at this point: the device is selected,
+        // the capabilities are validated against the requested profile and the
+        // video session exists. Report and stop before touching any input frame.
+        encoder->WaitForThreadsToComplete();
+        std::cout << "Dry run: encoder initialized successfully, no frame encoded."
+                  << std::endl;
+        return EXIT_SUCCESS;
+    }
+
     // Enter the encoding frame loop
     uint32_t curFrameIndex = 0;
     for(; curFrameIndex < encoderConfig->numFrames; curFrameIndex++) {
