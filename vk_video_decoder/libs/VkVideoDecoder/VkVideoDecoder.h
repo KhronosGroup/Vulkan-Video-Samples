@@ -175,6 +175,10 @@ public:
 
     VkResult GetLastResult() const { return m_lastVkResult; }
 
+    // True once StartVideoSequence() has validated the stream against the device
+    // capabilities and created the video session.
+    bool IsVideoSequenceStarted() const { return m_videoFormat.coded_width != 0; }
+
     /**
     *   @brief  This callback function gets called when when decoding of sequence starts,
     */

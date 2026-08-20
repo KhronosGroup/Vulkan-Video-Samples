@@ -682,20 +682,19 @@ VkResult VulkanDeviceContext::InitPhysicalDevice(int32_t deviceId, const vk::Dev
                     PrintExtensions(true);
                 }
 
-                if (verbose) {
 
-                    vk::DeviceUuidUtils currentDeviceUuid(deviceVulkan11Properties.deviceUUID);
-                    std::cout << "*** Selected Vulkan physical device with name: " << devProp2.properties.deviceName << std::hex
-                              << ", vendor ID: " << devProp2.properties.vendorID
-                              << ", device UUID: " << currentDeviceUuid.ToString()
-                              << ", and device ID: " << devProp2.properties.deviceID << std::dec
-                              << ", driver ID: " << deviceDriverProperties.driverID
-                              << ", driver name: " << deviceDriverProperties.driverName
-                              << ", driver info: " << deviceDriverProperties.driverInfo
-                              << ", Num Decode Queues: " << m_videoDecodeNumQueues
-                              << ", Num Encode Queues: " << m_videoEncodeNumQueues
-                              << " ***" << std::endl << std::flush;
-                }
+
+                vk::DeviceUuidUtils currentDeviceUuid(deviceVulkan11Properties.deviceUUID);
+                std::cout << "*** Selected Vulkan physical device with name: " << devProp2.properties.deviceName << std::hex
+                            << ", vendor ID: " << devProp2.properties.vendorID
+                            << ", device UUID: " << currentDeviceUuid.ToString()
+                            << ", and device ID: " << devProp2.properties.deviceID << std::dec
+                            << ", driver ID: " << deviceDriverProperties.driverID
+                            << ", driver name: " << deviceDriverProperties.driverName
+                            << ", driver info: " << deviceDriverProperties.driverInfo
+                            << ", Num Decode Queues: " << m_videoDecodeNumQueues
+                            << ", Num Encode Queues: " << m_videoEncodeNumQueues
+                            << " ***" << std::endl << std::flush;
                 return VK_SUCCESS;
             }
         }

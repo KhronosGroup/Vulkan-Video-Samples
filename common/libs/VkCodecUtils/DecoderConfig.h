@@ -60,6 +60,7 @@ struct DecoderConfig {
         validateVerbose = false;
 
         noPresent = false;
+        dryRun = false;
 
         maxFrameCount = -1;
         videoFileName = "";
@@ -187,6 +188,15 @@ struct DecoderConfig {
                 "Runs this program headless without presenting decode result to "
                 "screen",
                 [this](const char **args, const ProgramArgs &a) {
+                    noPresent = true;
+                    return true;
+                }},
+            {"--dryRun", nullptr, 0,
+                "Probe the hardware only: decode up to the first sequence header so the "
+                "video session and the decode capabilities get validated, then exit "
+                "without decoding any frame (implies --noPresent)",
+                [this](const char **args, const ProgramArgs &a) {
+                    dryRun = true;
                     noPresent = true;
                     return true;
                 }},
@@ -461,6 +471,7 @@ struct DecoderConfig {
     uint32_t validateVerbose : 1;
     uint32_t verbose : 1;
     uint32_t noPresent : 1;
+    uint32_t dryRun : 1;
     uint32_t enableHwLoadBalancing : 1;
     uint32_t selectVideoWithComputeQueue : 1;
     uint32_t outputy4m : 1;

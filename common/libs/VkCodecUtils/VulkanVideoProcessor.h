@@ -91,6 +91,7 @@ private:
         , m_videoStreamsCompleted(false)
         , m_usesStreamDemuxer(false)
         , m_usesFramePreparser(false)
+        , m_dryRun(false)
         , m_loopCount(1)
         , m_startFrame(0)
         , m_maxFrameCount(-1)
@@ -123,6 +124,7 @@ private:
     uint32_t m_videoStreamsCompleted : 1;
     uint32_t m_usesStreamDemuxer : 1;
     uint32_t m_usesFramePreparser : 1;
+    uint32_t m_dryRun : 1;
     int32_t   m_loopCount;
     uint32_t  m_startFrame;
     int32_t   m_maxFrameCount;

@@ -127,6 +127,7 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     m_loopCount = loopCount;
     m_startFrame = 0;
     m_maxFrameCount = maxFrameCount;
+    m_dryRun = programConfig.dryRun;
 
     return VK_SUCCESS;
 }
@@ -458,6 +459,16 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
         parserError = (ParserProcessNextDataChunk() < 0);
         if (parserError) {
             break;
+        }
+
+        // Capabilities are only validated once the parser reaches a sequence header
+        // and the decoder creates the video session, so a dry run has to parse up to
+        // that point - but no further.
+        if (m_dryRun && m_vkVideoDecoder->IsVideoSequenceStarted()) {
+            m_videoStreamsCompleted = true;
+            std::cout << "Dry run: decoder initialized successfully, no frame decoded."
+                      << std::endl;
+            return VkVideoQueueResult::EndOfStream;
         }
 
         framesInQueue = m_vkVideoFrameBuffer->DequeueDecodedPicture(pFrame);
