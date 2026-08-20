@@ -7,7 +7,8 @@
       "source_filepath": "video/av1/av1-argon_test1019.obu",
       "format": "vvs",
       "drivers": [
-        "radv"
+        "radv",
+        "amd"
       ],
       "platforms": [
         "all"
@@ -22,7 +23,8 @@
       "source_filepath": "video/av1/av1-argon_test787.obu",
       "format": "vvs",
       "drivers": [
-        "radv"
+        "radv",
+        "amd"
       ],
       "platforms": [
         "all"
@@ -38,7 +40,9 @@
       "format": "vvs",
       "drivers": [
         "radv",
-        "anv"
+        "anv",
+        "amd",
+        "intel"
       ],
       "platforms": [
         "all"
@@ -120,6 +124,20 @@
       "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/149",
       "date_added": "2026-01-22",
       "source_filepath": "resources/video/av1/av1-176x144-main-globalmotion-8.ivf"
+    },
+    {
+      "name": "av1_svc_l1t2_8bit",
+      "format": "vvs",
+      "drivers": [
+        "amd"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "reproduction": "always",
+      "reason": "MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/234",
+      "date_added": "2026-08-20"
     }
   ],
   "encode": [

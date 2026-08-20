@@ -1,3 +1,17 @@
+v0.5.0:
+  - Encoder: add VK_KHR_video_encode_feedback2 support for AV1
+    (--pictureFeedback, --pixelCountFeedback, --skippedPixelCountFeedback,
+    --enablePerPartitionFeedback, --maxPerPartitionFeedbackEntries)
+  - Build: Vulkan SDK minimum raised to 1.4.358 (required by
+    VK_KHR_video_encode_feedback2)
+  - Encoder: default msbShift for >8-bit input so high bit-depth samples
+    are no longer encoded LSB-aligned
+  - Encoder: set the AV1 transfer mode properly and stop forcing a default
+    AV1 rateControlMode
+  - Common: validate queue existence in VulkanDeviceContext to avoid an
+    assert when no encode queue is available
+  - Docs: add AI-Assisted Contributions and CLA pre-disclosure to CONTRIBUTING
+
 v0.4.4:
   - Encoder: enable shaderc compute filter for static build allowing CTS
     to encode AV1 properly

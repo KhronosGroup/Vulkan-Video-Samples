@@ -9,8 +9,8 @@ extern "C" {
 
 // Version information
 #define VKVS_VERSION_MAJOR 0
-#define VKVS_VERSION_MINOR 4
-#define VKVS_VERSION_PATCH 4
+#define VKVS_VERSION_MINOR 5
+#define VKVS_VERSION_PATCH 0
 
 // Helper macros for version string construction (prefixed to avoid reserved identifier issues)
 #define VKVS_STRINGIFY(x) #x
