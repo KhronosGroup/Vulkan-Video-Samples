@@ -45,7 +45,10 @@ public:
     {
         m_encoder->WaitForThreadsToComplete();
 
-        if (m_encoderConfig->verbose) {
+        if (m_encoderConfig->dryRun) {
+            std::cout << "Dry run: encoder initialized successfully, no frame encoded."
+                      << std::endl;
+        } else if (m_encoderConfig->verbose) {
             std::cout << "Done processing " << m_lastFrameIndex << " input frames!" << std::endl
                       << "Encoded file's location is at " << m_encoderConfig->outputFileHandler.GetFileName()
                       << std::endl;
