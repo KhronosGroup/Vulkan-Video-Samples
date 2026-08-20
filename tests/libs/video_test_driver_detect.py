@@ -27,15 +27,23 @@ from typing import Optional
 class SystemInfo:
     """System information detected from test output."""
     gpu_name: str = ""
+    vendor_id: str = ""
+    device_id: str = ""
     driver_name: str = ""
     driver_version: str = ""
     os_name: str = ""
 
     def get_header(self) -> str:
-        """Generate header string: GPU Model / Driver Version / OS"""
+        """Generate header string: GPU (vendor:device) / Driver Version / OS"""
         parts = []
         if self.gpu_name:
-            parts.append(self.gpu_name)
+            gpu_str = self.gpu_name
+            if self.vendor_id or self.device_id:
+                ids = ":".join(
+                    i for i in [self.vendor_id, self.device_id] if i
+                )
+                gpu_str = f"{gpu_str} ({ids})"
+            parts.append(gpu_str)
         if self.driver_name or self.driver_version:
             driver_str = self.driver_name
             if self.driver_version:
@@ -48,7 +56,8 @@ class SystemInfo:
 
     def is_empty(self) -> bool:
         """Check if system info has any data."""
-        return not any([self.gpu_name, self.driver_name,
+        return not any([self.gpu_name, self.vendor_id,
+                       self.device_id, self.driver_name,
                        self.driver_version, self.os_name])
 
 
@@ -304,11 +313,18 @@ class DriverMapping:
         return vendor_names.get(vendor_id, f"Unknown (0x{vendor_id:04X})")
 
 
+def _extract_field(output: str, pattern: str) -> str:
+    """Extract a single field from combined output using a regex pattern."""
+    match = re.search(pattern, output, re.IGNORECASE)
+    return match.group(1).strip() if match else ""
+
+
 def parse_system_info_from_output(stdout: str, stderr: str = "") -> SystemInfo:
     """
     Parse full system information from test executable output.
 
-    Extracts GPU name, driver name, driver version, and OS info.
+    Extracts GPU name, vendor/device IDs, driver name, driver version,
+    and OS info.
 
     Args:
         stdout: Standard output from test executable
@@ -323,36 +339,21 @@ def parse_system_info_from_output(stdout: str, stderr: str = "") -> SystemInfo:
         driver ID: 5, driver name: NVIDIA,
         Num Decode Queues: 16, Num Encode Queues: 3 ***
     """
-    combined_output = stdout + "\n" + stderr
+    combined = stdout + "\n" + stderr
     info = SystemInfo(os_name=get_os_info())
 
-    # Extract GPU name from "device with name: XXX,"
-    gpu_pattern = r'device with name:\s*([^,]+)'
-    gpu_match = re.search(gpu_pattern, combined_output, re.IGNORECASE)
-    if gpu_match:
-        info.gpu_name = gpu_match.group(1).strip()
+    info.gpu_name = _extract_field(combined, r'device with name:\s*([^,]+)')
+    info.vendor_id = _extract_field(combined,
+                                    r'vendor ID:\s*([^,]+)')
+    info.device_id = _extract_field(combined,
+                                    r'device ID:\s*([^,]+)')
+    info.driver_name = _extract_field(combined, r'driver name:\s*([^,\n*]+)')
 
-    # Extract driver name
-    driver_name_pattern = r'driver name:\s*([^,\n*]+)'
-    driver_match = re.search(driver_name_pattern, combined_output,
-                             re.IGNORECASE)
-    if driver_match:
-        info.driver_name = driver_match.group(1).strip()
-
-    # Extract driver version if present (format varies by vendor)
-    # NVIDIA format: "driver version: 550.120"
-    # Mesa format: "driver info: Mesa 24.0.0"
-    version_pattern = r'driver version:\s*([^\n,*]+)'
-    version_match = re.search(version_pattern, combined_output, re.IGNORECASE)
-    if version_match:
-        info.driver_version = version_match.group(1).strip()
-    else:
-        # Try driver info pattern (Mesa)
-        driver_info_pattern = r'driver info:\s*([^\n,*]+)'
-        info_match = re.search(driver_info_pattern, combined_output,
-                               re.IGNORECASE)
-        if info_match:
-            info.driver_version = info_match.group(1).strip()
+    # Driver version: try "driver version:" first, fall back to "driver info:"
+    info.driver_version = (
+        _extract_field(combined, r'driver version:\s*([^\n,*]+)')
+        or _extract_field(combined, r'driver info:\s*([^\n,*]+)')
+    )
 
     return info
 
