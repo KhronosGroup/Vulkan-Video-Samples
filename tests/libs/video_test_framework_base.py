@@ -404,9 +404,20 @@ class VulkanVideoTestFrameworkBase:
         print(f"Not Supported: {not_supported:3}")
         if skipped_hw > 0:
             print(f"Skipped:       {skipped_hw:3} (in skip list)")
+
+        not_validated = [r for r in results if r.warning_message]
+
         effective_total = len(results) - not_supported - skipped_hw
         if effective_total > 0:
             print(f"Success Rate: {passed/effective_total*100:.1f}%")
+
+        if not_validated:
+            print()
+            print("⚠️  The encoded output of the following tests could not be "
+                  "validated:")
+            for result in not_validated:
+                name = getattr(result.config, 'display_name', result.config.name)
+                print(f"   - {name}")
 
         return print_final_summary(
             (passed, not_supported, crashed, failed), test_type
@@ -435,6 +446,7 @@ class VulkanVideoTestFrameworkBase:
                 result.execution_time * 1000, 2
             ),
             "warning_found": result.warning_found,
+            "warning_message": result.warning_message,
             "error_message": result.error_message,
             "command_line": result.command_line
         }
@@ -632,10 +644,12 @@ class VulkanVideoTestFrameworkBase:
         extra_decoder_args: list = None,
         config: BaseTestConfig = None,
     ) -> tuple:
-        """Validate encoded file with decoder. Returns (success, output)."""
+        """Validate encoded file with decoder.
+        Returns (success, output, status)."""
+
         if not decoder_path or not decoder_path.exists():
             print("  ⚠️  Decoder path not valid for validation")
-            return False, "Decoder path not valid"
+            return False, "Decoder path not valid", VideoTestStatus.ERROR
 
         print(f"  🔍 Validating with decoder: {input_file.name}")
 
@@ -665,9 +679,13 @@ class VulkanVideoTestFrameworkBase:
 
         if result.status == VideoTestStatus.SUCCESS:
             print("  ✓ Decoder validation passed")
-            return True, None
+            return True, None, result.status
 
-        print("  ✗ Decoder validation failed")
+        if result.status != VideoTestStatus.NOT_SUPPORTED:
+            # The NOT_SUPPORTED case is reported by the caller alongside the
+            # test result, so avoid printing a duplicate warning here.
+            print("  ✗ Decoder validation failed")
+
         output_lines = [
             f"status: {result.status.name}, exit code: {result.returncode}"]
         if result.stdout:
@@ -677,7 +695,7 @@ class VulkanVideoTestFrameworkBase:
             for line in result.stderr.strip().split('\n')[-10:]:
                 output_lines.append(line)
 
-        return False, '\n'.join(output_lines)
+        return False, '\n'.join(output_lines), result.status
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     # pylint: disable=too-many-locals
@@ -902,8 +920,12 @@ class VulkanVideoTestFrameworkBase:
         elif self.verbose and (result.stdout or result.stderr):
             print_command_output(result)
 
+        if result.warning_message:
+            print(f"   ⚠️  {result.warning_message}")
+
         decoder_output = result.meta.get("decoder_validation_output")
-        if decoder_output and result.status == VideoTestStatus.ERROR:
+        if decoder_output and (result.status == VideoTestStatus.ERROR or
+                               result.warning_message):
             print("   --- Decoder validation output (last 10 lines) ---")
             for line in decoder_output.split('\n'):
                 print(f"   | {line}")

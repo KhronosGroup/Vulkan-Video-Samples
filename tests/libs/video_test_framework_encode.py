@@ -300,13 +300,19 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
         if (self.validate_with_decoder and
                 output_file.exists() and
                 result.status == VideoTestStatus.SUCCESS):
-            validation_success, validation_output = (
+            validation_success, validation_output, validation_status = (
                 self._validate_with_decoder(output_file, config)
             )
             if not validation_success:
-                # Decoder validation failed - mark encoder test as error
-                result.status = VideoTestStatus.ERROR
-                result.error_message = "Decoder validation failed"
+                if validation_status == VideoTestStatus.NOT_SUPPORTED:
+                    result.warning_message = (
+                        "Decoder does not support this configuration, "
+                        "encoded output was not validated"
+                    )
+                else:
+                    # Decoder validation failed - mark encoder test as error
+                    result.status = VideoTestStatus.ERROR
+                    result.error_message = "Decoder validation failed"
                 # Store validation output for display after test result
                 result.meta["decoder_validation_output"] = validation_output
 
@@ -348,7 +354,8 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
             config: Encoder test configuration
 
         Returns:
-            Tuple of (success: bool, validation_output: str or None)
+            Tuple of (success: bool, validation_output: str or None,
+                      status: VideoTestStatus)
         """
         # Use base class method to run decoder validation
         return self.run_decoder_validation(
