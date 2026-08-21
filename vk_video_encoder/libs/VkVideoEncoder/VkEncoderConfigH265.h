@@ -85,8 +85,8 @@ struct EncoderConfigH265 : public EncoderConfig {
     size_t                 levelLimitsTblSize;
 
     EncoderConfigH265()
-      : profile(STD_VIDEO_H265_PROFILE_IDC_MAIN)
-      , levelIdc(STD_VIDEO_H265_LEVEL_IDC_5_2)
+      : profile(STD_VIDEO_H265_PROFILE_IDC_INVALID)
+      , levelIdc(STD_VIDEO_H265_LEVEL_IDC_INVALID)
       , h265EncodeCapabilities()
       , general_tier_flag(false)
       , numRefL0(1)
@@ -149,13 +149,12 @@ struct EncoderConfigH265 : public EncoderConfig {
         if (result != VK_SUCCESS) {
             return result;
         }
+
         // TODO: more h.265 parameters init ...
         return VK_SUCCESS;
     }
 
-    virtual VkResult InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx) override;
-
-    virtual uint32_t GetDefaultVideoProfileIdc() override { return STD_VIDEO_H265_PROFILE_IDC_MAIN; };
+    virtual VkResult InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx) override;
 
     // 1. First h.265 determine the number of the Dpb buffers required
     virtual int8_t InitDpbCount() override;
@@ -193,7 +192,7 @@ struct EncoderConfigH265 : public EncoderConfig {
                           StdVideoH265SequenceParameterSetVui* vui = nullptr);
 
     bool IsSuitableLevel(uint32_t levelIdx, bool highTier);
-    StdVideoH265ProfileTierLevel GetLevelTier();
+    virtual bool DetermineLevelTier() override;
     void InitializeSpsRefPicSet(SpsH265 *pSps);
 
 };

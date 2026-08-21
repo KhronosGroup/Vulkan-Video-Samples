@@ -199,8 +199,28 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
     return true;
 }
 
-VkResult EncoderConfigAV1::InitDeviceCapabilities(const VulkanDeviceContext* vkDevCtx)
+VkResult EncoderConfigAV1::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    // If profile hasn't been specified, determine it based on bit depth and chroma subsampling
+    if (profile == STD_VIDEO_AV1_PROFILE_INVALID) {
+        // PROFESSIONAL is required for 12-bit or 422
+        if ((encodeBitDepthLuma > 10) ||
+            (encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_422_BIT_KHR)) {
+            profile = STD_VIDEO_AV1_PROFILE_PROFESSIONAL;
+        }
+        // HIGH is required for 444 chroma
+        else if (encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
+            profile = STD_VIDEO_AV1_PROFILE_HIGH;
+        }
+        // MAIN supports 8-bit and 10-bit with 420
+        else {
+            profile = STD_VIDEO_AV1_PROFILE_MAIN;
+        }
+    }
+
+    assert(profile != STD_VIDEO_AV1_PROFILE_INVALID);
+    videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
+
     const bool feedback2Requested = enablePictureFeedback || enablePixelCountFeedback ||
                                     enableSkippedPixelCountFeedback || enablePerPartitionFeedback;
     videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
@@ -376,17 +396,14 @@ bool EncoderConfigAV1::DetermineLevelTier()
         }
     }
     if (lvl > STD_VIDEO_AV1_LEVEL_7_3) {
-        level = STD_VIDEO_AV1_LEVEL_7_3;
-        tier = 0;
+        return false;
     }
-
     return true;
 }
 
 bool EncoderConfigAV1::InitRateControl()
 {
-    DetermineLevelTier();
-
+    // Level and tier are already initialized by DetermineLevelTier()
     // use level max values for now. Limit it to 120Mbits/sec
     uint32_t levelBitrate = std::min(GetLevelBitrate(level, tier), 120000000u);
 
