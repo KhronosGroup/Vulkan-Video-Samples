@@ -43,9 +43,11 @@ public:
 
     void Deinitialize()
     {
-        m_encoder->WaitForThreadsToComplete();
+        if (m_encoder) {
+            m_encoder->WaitForThreadsToComplete();
+        }
 
-        if (m_encoderConfig->verbose) {
+        if (m_encoderConfig && m_encoderConfig->verbose) {
             std::cout << "Done processing " << m_lastFrameIndex << " input frames!" << std::endl
                       << "Encoded file's location is at " << m_encoderConfig->outputFileHandler.GetFileName()
                       << std::endl;
