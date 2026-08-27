@@ -331,7 +331,8 @@ class VulkanVideoTestFrameworkBase:
         for sample in samples:
             skip_rule = is_test_skipped(
                 sample.name, test_format, self._skip_rules,
-                current_driver=self.current_driver, test_type=test_type
+                current_driver=self.current_driver, test_type=test_type,
+                current_device=self.system_info.device_id
             )
             if skip_rule is not None:
                 count += 1
@@ -828,7 +829,8 @@ class VulkanVideoTestFrameworkBase:
 
                 skip_rule = is_test_skipped(
                     config.name, "vvs", self._skip_rules,
-                    current_driver=self.current_driver, test_type=test_type
+                    current_driver=self.current_driver, test_type=test_type,
+                    current_device=self.system_info.device_id
                 )
 
                 if self._should_mask_as_skipped(skip_rule, result):

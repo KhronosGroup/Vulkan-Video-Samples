@@ -266,6 +266,51 @@
       "reason": "",
       "bug_url": "",
       "date_added": "2026-01-20"
+    },
+    {
+      "name": "h264_high444_profile",
+      "format": "vvs",
+      "drivers": [
+        "nvidia"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "reproduction": "always",
+      "reason": "Bad negociation of profile",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/231",
+      "date_added": "2026-08-27"
+    },
+    {
+      "name": "h265_main10_profile",
+      "format": "vvs",
+      "drivers": [
+        "anv"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "reproduction": "always",
+      "reason": "assert in debug mode",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/237",
+      "date_added": "2026-08-27"
+    },
+    {
+      "name": "av1_main_profile_10bit",
+      "format": "vvs",
+      "drivers": [
+        "anv"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "reproduction": "always",
+      "reason": "assert in debug mode",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/237",
+      "date_added": "2026-08-28",
+      "devices": [
+        "56a1"
+      ]
     }
   ]
 }
