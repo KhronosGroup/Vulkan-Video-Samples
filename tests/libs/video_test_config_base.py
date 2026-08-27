@@ -76,6 +76,12 @@ class SkipRule:  # pylint: disable=too-many-instance-attributes
         format: Test suite format ('vvs', 'fluster', 'soothe')
         drivers: List of GPU drivers to skip. Valid values:
                  'all', 'nvidia', 'nvk', 'intel', 'anv', 'amd', 'radv'
+        devices: List of Vulkan device IDs (VkPhysicalDeviceProperties
+                 deviceID) to narrow the rule to specific hardware, since
+                 one driver spans many generations (anv covers both DG2 and
+                 GT1-class iGPUs). Hex strings with or without a '0x'
+                 prefix, wildcards allowed ('56a*'). Empty matches every
+                 device.
         platforms: List of platforms to skip ('all', 'windows', 'linux')
                    Note: Platform filtering is defined but not enforced.
         reproduction: Whether failure is consistent ('always', 'flaky')
@@ -87,6 +93,7 @@ class SkipRule:  # pylint: disable=too-many-instance-attributes
     test_type: str
     format: str
     drivers: List[str] = field(default_factory=lambda: ["all"])
+    devices: List[str] = field(default_factory=list)
     platforms: List[str] = field(default_factory=lambda: ["all"])
     reproduction: str = "always"
     reason: str = ""
@@ -110,6 +117,7 @@ def _parse_skip_entry(entry: Dict[str, Any], test_type: str) -> SkipRule:
         test_type=test_type,
         format=entry.get('format', 'vvs'),
         drivers=entry.get('drivers', ['all']),
+        devices=entry.get('devices', []),
         platforms=entry.get('platforms', ['all']),
         reproduction=entry.get('reproduction', 'always'),
         reason=entry.get('reason', ''),
@@ -172,12 +180,34 @@ def load_skip_list(skip_list_path: Optional[str] = None) -> List[SkipRule]:
     return skip_rules
 
 
-def is_test_skipped(
+def _device_matches(rule_devices: List[str], current_device: str) -> bool:
+    """Check a rule's device list against the detected Vulkan device ID.
+
+    An empty list means the rule is not device-specific. IDs are compared
+    as bare lowercase hex so '0x56A0', '56a0' and the glob '56a*' all match
+    a detected '56a0'.
+    """
+    if not rule_devices:
+        return True
+    if not current_device:
+        return False
+
+    def normalize(device_id: str) -> str:
+        device_id = device_id.strip().lower()
+        return device_id[2:] if device_id.startswith("0x") else device_id
+
+    detected = normalize(current_device)
+    return any(fnmatch.fnmatch(detected, normalize(d)) for d in rule_devices)
+
+
+def is_test_skipped(  # pylint: disable=too-many-arguments
     test_name: str,
     test_format: str,
     skip_rules: List[SkipRule],
+    *,
     current_driver: str = "all",
-    test_type: str = "decode"
+    test_type: str = "decode",
+    current_device: str = ""
 ) -> Optional[SkipRule]:
     """
     Check if a test should be skipped based on the skip list.
@@ -188,6 +218,7 @@ def is_test_skipped(
     - Test type matches the rule's type (decode/encode)
     - Test format matches the rule's format
     - Current driver is in the rule's drivers list (or rule has 'all')
+    - Current device ID is in the rule's devices list (or the list is empty)
 
     Note: Test names are normalized by stripping decode_/encode_ prefixes
     before matching against skip rules.
@@ -198,6 +229,8 @@ def is_test_skipped(
         skip_rules: List of SkipRule objects to check against
         current_driver: Current GPU driver name (default: 'all' to match all)
         test_type: Type of the test ('decode', 'encode')
+        current_device: Current Vulkan device ID; rules with a 'devices'
+                        list only match when it is one of them
 
     Returns:
         The matching SkipRule if the test is skipped, None otherwise
@@ -223,6 +256,10 @@ def is_test_skipped(
 
         # Check driver match
         if "all" not in rule.drivers and current_driver not in rule.drivers:
+            continue
+
+        # Check device match, narrowing drivers that span generations
+        if not _device_matches(rule.devices, current_device):
             continue
 
         # All conditions match - test is skipped

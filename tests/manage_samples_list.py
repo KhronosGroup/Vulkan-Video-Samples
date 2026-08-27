@@ -28,6 +28,7 @@ limitations under the License.
 import argparse
 import fnmatch
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -56,6 +57,10 @@ VALID_FORMATS = ["vvs", "fluster", "soothe"]
 VALID_DRIVERS = ["all", "nvidia", "nvk", "amd", "radv", "intel", "anv"]
 VALID_PLATFORMS = ["all", "linux", "windows"]
 VALID_REPRODUCTION = ["always", "flaky"]
+
+# Skip-list device IDs: VkPhysicalDeviceProperties deviceID as hex digits,
+# with optional fnmatch wildcards
+_DEVICE_ID_RE = re.compile(r'[0-9a-fA-F*?\[\]!-]+')
 
 # Valid codecs for decode/encode samples
 VALID_CODECS = ["h264", "h265", "av1", "vp9"]
@@ -235,6 +240,14 @@ def get_list_input(prompt: str, default: Optional[List[str]] = None,
         return items
 
 
+def get_optional_list_input(prompt: str) -> List[str]:
+    """Get a comma-separated list that may be left empty."""
+    value = input(f"{prompt} (comma-separated, blank for all): ").strip()
+    if not value:
+        return []
+    return [item.strip() for item in value.split(',') if item.strip()]
+
+
 def add_skip_entry(  # pylint: disable=too-many-locals
         skip_list: Dict, preset_name: Optional[str] = None) -> None:
     """Interactively add a new skip entry
@@ -280,6 +293,9 @@ def add_skip_entry(  # pylint: disable=too-many-locals
     # Optional fields with defaults
     drivers = get_list_input("Drivers to skip", default=["all"],
                              choices=VALID_DRIVERS)
+    devices = get_optional_list_input(
+        "Vulkan device IDs to restrict the skip to, e.g. 0x56a0,56a* "
+        "(one driver spans several generations)")
     platforms = get_list_input("Platforms to skip", default=["all"],
                                choices=VALID_PLATFORMS)
     reproduction = get_input("Reproduction type", default="always",
@@ -308,6 +324,9 @@ def add_skip_entry(  # pylint: disable=too-many-locals
         "bug_url": bug_url,
         "date_added": date_added,
     }
+
+    if devices:
+        entry["devices"] = devices
 
     # Add optional source_filepath if provided
     if source_filepath:
@@ -346,35 +365,30 @@ def list_skip_entries(skip_list: Dict) -> None:
     print("=" * 70)
 
     idx = 1
-    if decode_entries:
-        print(f"\n--- DECODE ({len(decode_entries)} entries) ---")
-        for entry in decode_entries:
-            drivers_str = ', '.join(entry.get('drivers', ['all']))
-            print(f"\n[{idx}] {entry['name']}")
-            print(f"    Format: {entry.get('format', 'vvs')}, "
-                  f"Drivers: {drivers_str}")
-            if entry.get('reason'):
-                print(f"    Reason: {entry['reason']}")
-            if entry.get('bug_url'):
-                print(f"    Bug: {entry['bug_url']}")
-            if entry.get('date_added'):
-                print(f"    Added: {entry['date_added']}")
+    for section, entries in (("DECODE", decode_entries),
+                             ("ENCODE", encode_entries)):
+        if not entries:
+            continue
+        print(f"\n--- {section} ({len(entries)} entries) ---")
+        for entry in entries:
+            _print_skip_entry(entry, idx)
             idx += 1
 
-    if encode_entries:
-        print(f"\n--- ENCODE ({len(encode_entries)} entries) ---")
-        for entry in encode_entries:
-            drivers_str = ', '.join(entry.get('drivers', ['all']))
-            print(f"\n[{idx}] {entry['name']}")
-            print(f"    Format: {entry.get('format', 'vvs')}, "
-                  f"Drivers: {drivers_str}")
-            if entry.get('reason'):
-                print(f"    Reason: {entry['reason']}")
-            if entry.get('bug_url'):
-                print(f"    Bug: {entry['bug_url']}")
-            if entry.get('date_added'):
-                print(f"    Added: {entry['date_added']}")
-            idx += 1
+
+def _print_skip_entry(entry: Dict, idx: int) -> None:
+    """Print a single skip entry."""
+    drivers_str = ', '.join(entry.get('drivers', ['all']))
+    print(f"\n[{idx}] {entry['name']}")
+    print(f"    Format: {entry.get('format', 'vvs')}, "
+          f"Drivers: {drivers_str}")
+    if entry.get('devices'):
+        print(f"    Devices: {', '.join(entry['devices'])}")
+    if entry.get('reason'):
+        print(f"    Reason: {entry['reason']}")
+    if entry.get('bug_url'):
+        print(f"    Bug: {entry['bug_url']}")
+    if entry.get('date_added'):
+        print(f"    Added: {entry['date_added']}")
 
 
 # pylint: disable=too-many-locals,too-many-statements,too-many-branches
@@ -413,31 +427,31 @@ def remove_skip_entries(skip_list: Dict) -> None:
         # Normalize pattern to strip decode_/encode_ prefix
         normalized_pattern = normalize_test_name(name_pattern)
 
-        for i, entry in enumerate(decode_entries):
-            if fnmatch.fnmatch(entry['name'], normalized_pattern):
-                to_remove.append(('decode', i))
-                print(f"  Matched: {entry['name']} (decode)")
-
-        for i, entry in enumerate(encode_entries):
-            if fnmatch.fnmatch(entry['name'], normalized_pattern):
-                to_remove.append(('encode', i))
-                print(f"  Matched: {entry['name']} (encode)")
+        for section, entries in (('decode', decode_entries),
+                                 ('encode', encode_entries)):
+            for i, entry in enumerate(entries):
+                if fnmatch.fnmatch(entry['name'], normalized_pattern):
+                    to_remove.append((section, i))
+                    print(f"  Matched: {entry['name']} ({section})")
 
     elif choice == "2":
-        # Remove by driver
+        # Remove by driver, optionally narrowed to a device ID
         driver = get_input("Enter driver name", choices=VALID_DRIVERS)
+        device = get_input("Enter device ID (blank for any)",
+                           allow_empty=True)
 
-        for i, entry in enumerate(decode_entries):
-            if driver in entry.get('drivers', []):
-                to_remove.append(('decode', i))
-                print(f"  Matched: {entry['name']} (decode, drivers: "
-                      f"{', '.join(entry['drivers'])})")
-
-        for i, entry in enumerate(encode_entries):
-            if driver in entry.get('drivers', []):
-                to_remove.append(('encode', i))
-                print(f"  Matched: {entry['name']} (encode, drivers: "
-                      f"{', '.join(entry['drivers'])})")
+        for section, entries in (('decode', decode_entries),
+                                 ('encode', encode_entries)):
+            for i, entry in enumerate(entries):
+                if driver not in entry.get('drivers', []):
+                    continue
+                if device and device not in entry.get('devices', []):
+                    continue
+                to_remove.append((section, i))
+                info = f"drivers: {', '.join(entry['drivers'])}"
+                if entry.get('devices'):
+                    info += f", devices: {', '.join(entry['devices'])}"
+                print(f"  Matched: {entry['name']} ({section}, {info})")
 
     elif choice == "3":
         # Remove by entry number (combined list)
@@ -475,22 +489,13 @@ def remove_skip_entries(skip_list: Dict) -> None:
         return
 
     # Group removals by section and remove in reverse order
-    decode_to_remove = sorted(
-        [idx for section, idx in to_remove if section == 'decode'],
-        reverse=True
-    )
-    encode_to_remove = sorted(
-        [idx for section, idx in to_remove if section == 'encode'],
-        reverse=True
-    )
-
-    for idx in decode_to_remove:
-        removed = decode_entries.pop(idx)
-        print(f"  ✓ Removed: {removed['name']} (decode)")
-
-    for idx in encode_to_remove:
-        removed = encode_entries.pop(idx)
-        print(f"  ✓ Removed: {removed['name']} (encode)")
+    for section, entries in (('decode', decode_entries),
+                             ('encode', encode_entries)):
+        indices = sorted((idx for sect, idx in to_remove if sect == section),
+                         reverse=True)
+        for idx in indices:
+            removed = entries.pop(idx)
+            print(f"  ✓ Removed: {removed['name']} ({section})")
 
     print(f"✓ Removed {len(to_remove)} entries")
 
@@ -521,6 +526,14 @@ def _validate_skip_entry(entry: Dict, section: str, index: int,
                 f"{entry_name} ({section}): Invalid drivers: "
                 f"{', '.join(invalid_drivers)}")
 
+    # Validate device IDs: hex, optional '0x' prefix, wildcards allowed
+    for device in entry.get('devices', []):
+        stripped = device[2:] if device.lower().startswith('0x') else device
+        if not stripped or not _DEVICE_ID_RE.fullmatch(stripped):
+            errors.append(
+                f"{entry_name} ({section}): Invalid device ID '{device}' "
+                "(expected hex like '0x56a0', '56a0' or '56a*')")
+
     # Validate platforms
     if 'platforms' in entry:
         invalid_platforms = [p for p in entry['platforms']
@@ -536,6 +549,12 @@ def _validate_skip_entry(entry: Dict, section: str, index: int,
         errors.append(
             f"{entry_name} ({section}): Invalid reproduction "
             f"'{entry['reproduction']}'")
+
+    if entry.get('devices') and 'all' in entry.get('drivers', ['all']):
+        warnings.append(
+            f"{entry_name} ({section}): 'devices' is set while drivers is "
+            "'all'; a Vulkan device ID is only meaningful for a specific "
+            "driver")
 
     # Check for missing metadata
     if not entry.get('reason'):
