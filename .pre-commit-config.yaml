@@ -1,0 +1,11 @@
+repos:
+  - repo: local
+    hooks:
+      - id: check-code-format
+        name: Check C/C++ code formatting
+        entry: python scripts/check_code_format.py
+        language: system
+        files: \.(c|cc|cxx|cpp|h|hpp)$
+        exclude: ^include/vulkan/
+        pass_filenames: false
+        always_run: false
