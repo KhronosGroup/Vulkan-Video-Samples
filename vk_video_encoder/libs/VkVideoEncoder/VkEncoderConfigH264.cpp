@@ -371,6 +371,10 @@ StdVideoH264ProfileIdc EncoderConfigH264::GetNextLowerProfile(StdVideoH264Profil
 
 VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceContext* vkDevCtx)
 {
+    const uint8_t consecutiveBFrameCount = gopStructure.GetConsecutiveBFrameCount();
+    const uint8_t inputBFrames =
+        (consecutiveBFrameCount == CONSECUTIVE_B_FRAME_COUNT_MAX_VALUE) ? 0 : consecutiveBFrameCount;
+
     // Track whether the profile was user-specified or auto-selected.
     const bool autoSelected = (profileIdc == STD_VIDEO_H264_PROFILE_IDC_INVALID);
 
@@ -383,7 +387,7 @@ VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceConte
         profileIdc = STD_VIDEO_H264_PROFILE_IDC_BASELINE;
 
         // Upgrade to MAIN profile if using B-frames or CABAC entropy coding
-        if ((gopStructure.GetConsecutiveBFrameCount() > 0) || (entropyCodingMode == ENTROPY_CODING_MODE_CABAC))
+        if ((inputBFrames > 0) || (entropyCodingMode == ENTROPY_CODING_MODE_CABAC))
             profileIdc = STD_VIDEO_H264_PROFILE_IDC_MAIN;
 
         if (use8x8Transform) {
@@ -402,7 +406,7 @@ VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceConte
     if ((tuningMode == VK_VIDEO_ENCODE_TUNING_MODE_LOSSLESS_KHR) ||
         (encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR)) {
         minProfile = STD_VIDEO_H264_PROFILE_IDC_HIGH_444_PREDICTIVE;
-    } else if (gopStructure.GetConsecutiveBFrameCount() > 0) {
+    } else if (inputBFrames > 0) {
         minProfile = STD_VIDEO_H264_PROFILE_IDC_MAIN;
     }
 
