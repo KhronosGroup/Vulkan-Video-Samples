@@ -733,14 +733,20 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--save-results", action="store_true",
         help="Save this run's results to the results file (see "
-             "--results-file), keyed by GPU. Comparison against the "
-             "previous run happens regardless; use --no-compare-results "
-             "to disable it. Ignored for filtered runs (-t, --codec, "
-             "--only-skipped, --extended, --encoder-only, --decoder-only)")
+             "--results-file), keyed by GPU, without prompting. When "
+             "omitted, an interactive run offers to save if the "
+             "comparison found improvements or new tests. Comparison "
+             "against the previous run happens regardless; use "
+             "--no-compare-results to disable it. Ignored for filtered "
+             "runs (-t, --codec, --only-skipped, --extended, "
+             "--encoder-only, --decoder-only)")
     parser.add_argument(
         "--no-compare-results", action="store_true",
         help="Do not compare the results to "
              "vvs_test_results.json keyed by GPU name.")
+    parser.add_argument(
+        "--no-prompt", action="store_true",
+        help="Never prompt the user. Useful for CI.")
     default_results = str(
         Path(__file__).parent / "results" / RESULTS_FILENAME
     )
@@ -925,6 +931,7 @@ def run_framework_tests(args: argparse.Namespace, encoder_path: str,
                 framework.all_results,
                 Path(args.results_file),
                 args.save_results,
+                args.no_prompt,
             )
             if not no_regression:
                 success = False

@@ -20,9 +20,10 @@ limitations under the License.
 
 import json
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from tests.libs.video_test_config_base import TestResult, VideoTestStatus
 from tests.libs.video_test_driver_detect import SystemInfo
@@ -190,19 +191,59 @@ def _print_summary(diff: dict) -> None:
     print(f"{prefix} Summary: {', '.join(parts)}\n")
 
 
+def _should_offer_save(diff: dict) -> bool:
+    """Offer a baseline update when the suite gained ground: a test moved up
+    the severity ladder, or the set of test names changed - appeared, or
+    disappeared, leaving a stale baseline entry that would be reported as
+    removed on every later run.
+
+    Never offered when the run also regressed: accepting would adopt the
+    regression as the new reference and hide it from every later run.
+    Recording a regressed baseline stays an explicit --save-results
+    decision.
+    """
+    if diff["regressions"]:
+        return False
+    return bool(diff["improvements"] or diff["new_tests"]
+                or diff["removed_tests"])
+
+
+def _confirm_save(never_prompt: bool) -> bool:
+    """Ask whether to update the stored baseline. Defaults to no.
+
+    Only asked when both stdin and stdout are a TTY: with output
+    redirected the prompt would land in the log file and the run would
+    block on input with nothing on screen to explain it.
+    Ctrl-C and EOF both decline: the prompt is an optional extra at the
+    end of a finished run, not a step worth failing the run over.
+    """
+    if never_prompt:
+        return False
+
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        return False
+    try:
+        answer = input("Save these results as the new baseline? [y/N]: ")
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer.strip().lower() in ("y", "yes")
+
+
 def compare_and_print(
     previous: Dict[str, str],
     current: Dict[str, str],
     hardware_key: str,
     previous_timestamp: str,
-) -> bool:
+) -> Tuple[bool, dict]:
     """Compare previous and current results, print diff.
 
-    Returns False if regressions are found, True otherwise.
+    Returns (no_regression, diff): the bool is False if regressions are
+    found, the dict is the classification from _classify_results.
     """
     diff = _classify_results(previous, current)
     _print_comparison(diff, hardware_key, previous_timestamp)
-    return len(diff["regressions"]) == 0
+    return len(diff["regressions"]) == 0, diff
 
 
 def save_results(
@@ -248,8 +289,12 @@ def handle_compare_results(
     results: List[TestResult],
     results_file: Path,
     save_to_file: bool,
+    never_prompt: bool = False,
 ) -> bool:
     """High-level entry point: compare against previous run, then save.
+
+    save_to_file saves unconditionally; never_prompt suppresses only the
+    interactive offer, leaving an explicit --save-results intact.
 
     Returns False if regressions are detected, True otherwise.
     """
@@ -263,6 +308,7 @@ def handle_compare_results(
                                          system_info.os_name)
 
     no_regression = True
+    offer_save = False
     if results_file.exists():
         try:
             with open(results_file, 'r', encoding='utf-8') as f:
@@ -274,12 +320,14 @@ def handle_compare_results(
         previous_results = (previous_entry or {}).get("results")
         if previous_results:
             current_map = _build_current_results(results)
-            no_regression = compare_and_print(
+            no_regression, diff = compare_and_print(
                 previous_results,
                 current_map,
                 hardware_key,
                 previous_entry.get("last_run", "unknown"),
             )
-    if save_to_file:
+            offer_save = _should_offer_save(diff)
+
+    if save_to_file or (offer_save and _confirm_save(never_prompt)):
         save_results(results_file, hardware_key, system_info, results)
     return no_regression
