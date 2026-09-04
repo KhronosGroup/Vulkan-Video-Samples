@@ -29,6 +29,7 @@
       "platforms": [
         "all"
       ],
+      "category": "hard_crash",
       "reproduction": "always",
       "reason": "Argon test - needs investigation, OBU frame header parsing issue.",
       "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/124",

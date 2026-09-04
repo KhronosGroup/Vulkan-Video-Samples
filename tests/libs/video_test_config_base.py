@@ -19,6 +19,7 @@ limitations under the License.
 """
 
 import json
+import sys
 import zipfile
 import fnmatch
 from dataclasses import dataclass, field
@@ -59,6 +60,18 @@ class SkipFilter(Enum):
     ALL = "all"              # Both skipped and non-skipped tests
 
 
+class SkipCategory(Enum):
+    """Classification of why a test is skipped.
+
+    Determines behaviour when the matching driver is detected:
+    - NONE: default, test is run and masked as SKIPPED on failure.
+    - HARD_CRASH: causes a hard crash (segfault, device lost, etc.),
+      test is skipped before execution when the driver is confirmed.
+    """
+    NONE = "none"
+    HARD_CRASH = "hard_crash"
+
+
 @dataclass
 class SkipRule:  # pylint: disable=too-many-instance-attributes
     """
@@ -85,6 +98,7 @@ class SkipRule:  # pylint: disable=too-many-instance-attributes
         platforms: List of platforms to skip ('all', 'windows', 'linux')
                    Note: Platform filtering is defined but not enforced.
         reproduction: Whether failure is consistent ('always', 'flaky')
+        category: Classification of the skip reason.
         reason: Human-readable explanation for the skip
         bug_url: Link to tracking issue
         date_added: When the skip was added (YYYY-MM-DD format)
@@ -96,9 +110,22 @@ class SkipRule:  # pylint: disable=too-many-instance-attributes
     devices: List[str] = field(default_factory=list)
     platforms: List[str] = field(default_factory=lambda: ["all"])
     reproduction: str = "always"
+    category: SkipCategory = SkipCategory.NONE
     reason: str = ""
     bug_url: str = ""
     date_added: str = ""
+
+
+def _parse_skip_category(value: object) -> SkipCategory:
+    """Parse a skip_category value from JSON into a SkipCategory enum."""
+    if isinstance(value, str):
+        try:
+            return SkipCategory(value)
+        except ValueError:
+            print(f"Warning: unknown skip category '{value}', "
+                  f"treating as '{SkipCategory.NONE.value}'", file=sys.stderr)
+            return SkipCategory.NONE
+    return SkipCategory.NONE
 
 
 def _parse_skip_entry(entry: Dict[str, Any], test_type: str) -> SkipRule:
@@ -120,6 +147,9 @@ def _parse_skip_entry(entry: Dict[str, Any], test_type: str) -> SkipRule:
         devices=entry.get('devices', []),
         platforms=entry.get('platforms', ['all']),
         reproduction=entry.get('reproduction', 'always'),
+        category=_parse_skip_category(
+            entry.get('category', 'none')
+        ),
         reason=entry.get('reason', ''),
         bug_url=entry.get('bug_url', ''),
         date_added=entry.get('date_added', ''),

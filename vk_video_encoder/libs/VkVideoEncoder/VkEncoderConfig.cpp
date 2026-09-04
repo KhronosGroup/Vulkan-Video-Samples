@@ -30,6 +30,7 @@ static void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
     -o, --output                    .264/5,ivf Output H264/5/AV1 File Name \n\
     -c, --codec                     <string> select codec type: avc (h264) or hevc (h265) or av1\n\
     --verbose                       verbose output\n\
+    --dryRun                        initialize the encoder, then exit without encoding any frame\n\
     --dpbMode                       <string>  : select DPB mode: layered, separate\n\
     --inputWidth                    <integer> : Input Width \n\
     --inputHeight                   <integer> : Input Height \n\
@@ -197,10 +198,9 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             if (!vk::IsValidFilePath(args[i].c_str(), false)) {
                 return -1;
             }
-            size_t fileSize = outputFileHandler.SetFileName(args[i].c_str());
-            if (fileSize <= 0) {
-                return (int)fileSize;
-            }
+            // Opening is deferred until the whole command line is parsed, so that
+            // --dryRun given after -o still avoids creating the file.
+            outputFileName = args[i];
         } else if (args[i] == "-h" || args[i] == "--help") {
             printHelp(codec);
             exit(EXIT_SUCCESS);
@@ -490,6 +490,10 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
                                "deviceUuid must be represented by 16 hex (32 bytes) values.", args[i].c_str(), args[i].length());
                 return -1;
             }
+        } else if (args[i] == "--dryRun") {
+            // Probe the hardware only: the encoder is fully initialized, then
+            // torn down without encoding any frame.
+            dryRun = true;
         } else if (args[i] == "--noDeviceFallback") {
             noDeviceFallback = true;
         } else if (args[i] == "--qpMap") {
@@ -596,7 +600,14 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
         return -1;
     }
 
-    if (!outputFileHandler.HasFileName()) {
+    if (!outputFileName.empty() && !dryRun) {
+        size_t fileSize = outputFileHandler.SetFileName(outputFileName.c_str());
+        if (fileSize <= 0) {
+            return (int)fileSize;
+        }
+    }
+
+    if (!outputFileHandler.HasFileName() && !dryRun) {
         const char* defaultOutName = (codec == VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR) ? "out.264" :
                                      (codec == VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR) ? "out.265" : "out.ivf";
         if (verbose) {

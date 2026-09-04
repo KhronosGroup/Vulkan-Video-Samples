@@ -19,7 +19,7 @@ limitations under the License.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from tests.libs.video_test_fetch_sample import FetchableResource
 from tests.libs.video_test_config_base import (
@@ -222,6 +222,18 @@ class VulkanVideoDecodeTestFramework(VulkanVideoTestFrameworkBase):
         return self.filter_test_suite(
             self.decode_samples,
             self.skip_filter, test_format="vvs", test_type="decode"
+        )
+
+    def build_dry_run_command(self,
+                              config: DecodeTestSample) -> Optional[list]:
+        """Command that initializes the decoder without decoding a frame."""
+        if not self.decoder_path or not config.full_path.exists():
+            return None
+        return self.build_decoder_command(
+            decoder_path=self.decoder_path,
+            input_file=config.full_path,
+            extra_decoder_args=config.extra_args,
+            dry_run=True,
         )
 
     def run_single_test(self, config: DecodeTestSample) -> TestResult:
