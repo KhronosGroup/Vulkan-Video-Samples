@@ -40,6 +40,11 @@ These options can be specified during CMake configuration. For example:
 cmake -DBUILD_DECODER=ON -DBUILD_ENCODER=OFF -DBUILD_VIDEO_PARSER=ON ...
 ```
 
+### FFmpeg Location
+
+If FFmpeg is installed in a non-standard location, set `FFMPEG_ROOT` to its
+install prefix (as a CMake variable or an environment variable).
+
 ## Building On Windows
 
 ### Windows Build Requirements
