@@ -253,7 +253,8 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
             width, height = str(config.width), str(config.height)
             cmd.extend(["--inputWidth", width])
             cmd.extend(["--inputHeight", height])
-            cmd.extend(["--inputNumPlanes", "3"])
+            if not config.extra_args or "--inputNumPlanes" not in config.extra_args:
+                cmd.extend(["--inputNumPlanes", "3"])
 
         cmd.append("--verbose")
 

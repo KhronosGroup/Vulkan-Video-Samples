@@ -182,6 +182,25 @@
       "source_filepath": "video/yuv/352x288_i420_10le.yuv"
     },
     {
+      "name": "h265_main10_profile_p010",
+      "codec": "h265",
+      "profile": "main10",
+      "extra_args": [
+        "--inputBpp",
+        "10",
+        "--msbShift",
+        "0",
+        "--inputNumPlanes",
+        "2"
+      ],
+      "description": "Test H.265 Main10 profile encoding",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_30_p010le.yuv",
+      "source_checksum": "c7d9ec2b39be350011086d52b3f973277cfcbbddf7c925a0ddde4b835229ddee",
+      "source_filepath": "video/yuv/352x288_30_p010le.yuv.yuv"
+    },
+    {
       "name": "h265_ip_gop",
       "codec": "h265",
       "profile": "main",
