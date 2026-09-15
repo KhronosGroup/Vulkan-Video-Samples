@@ -244,10 +244,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
         fenceCurrentWaitTimeout += fenceWaitTimeout;
 
         result = vkIf->WaitForFences(device, 1, &fence, true, fenceWaitTimeout);
-        if (result == VK_TIMEOUT) {
-            fprintf(stderr, "\t **** WARNING: fence  %s(%llu) is not done after %llu mSec with result 0x%x ****\n",
-                            fenceName, (long long unsigned int)fence, (long long unsigned int)fenceCurrentWaitTimeout/(1000ULL * 1000ULL), result);
-        } else {
+        if (result != VK_TIMEOUT) {
             break; // either success or an error occured
         }
 
