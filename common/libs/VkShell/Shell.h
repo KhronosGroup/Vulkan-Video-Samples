@@ -45,7 +45,6 @@ public:
         int32_t     m_backBufferCount;
         uint32_t    m_directToDisplayMode : 1;
         uint32_t    m_vsync : 1;
-        uint32_t    m_verbose : 1;
 
         Configuration(const char* windowName, int32_t backBufferCount = 4, bool directToDisplayMode = false,
                int32_t initialWidth = 1920, int32_t initialHeight = 1080, int32_t initialBitdepth = 8,
@@ -57,7 +56,6 @@ public:
             , m_backBufferCount(backBufferCount)
             , m_directToDisplayMode(false)
             , m_vsync(vsync)
-            , m_verbose(verbose)
         {}
 
     };

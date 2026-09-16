@@ -611,7 +611,7 @@ class VulkanVideoTestFrameworkBase:
         cmd = [
             str(decoder_path),
             "-i", str(input_file),
-            "--verbose",
+            "--logLevel", str(4),
         ]
         has_filter_arg = (extra_decoder_args
                           and "--enablePostProcessFilter"

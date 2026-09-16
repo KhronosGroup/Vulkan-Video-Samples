@@ -559,8 +559,8 @@ void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
         } else if (chromaHorzRatio == 2 && chromaVertRatio == 1) {
             subsamplingDesc = "4:2:2";
         }
-        printf("YCbCr copy with %s subsampling (chromaHorzRatio=%d, chromaVertRatio=%d), %d-bit\n",
-               subsamplingDesc, chromaHorzRatio, chromaVertRatio, bitDepth);
+        LOG_DEBUG("YCbCr copy with %s subsampling (chromaHorzRatio=%d, chromaVertRatio=%d), %d-bit\n",
+                subsamplingDesc, chromaHorzRatio, chromaVertRatio, bitDepth);
     }
 
     // Handle all planes
@@ -723,17 +723,17 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
                m_encoderConfig->outputFileHandler.GetFileHandle());
 
         if (m_encoderConfig->verboseFrameStruct) {
-            std::cout << "       == Non-Vcl data " << (nonVcl ? "SUCCESS" : "FAIL")
-                      << " File Output non-VCL data with size: " << encodeFrameInfo->bitstreamHeaderBufferSize
-                      << ", Input Order: " << encodeFrameInfo->gopPosition.inputOrder
-                      << ", Encode  Order: " << encodeFrameInfo->gopPosition.encodeOrder
-                      << std::endl << std::flush;
+            LOG_S_DEBUG << "       == Non-Vcl data " << (nonVcl ? "SUCCESS" : "FAIL")
+                       << " File Output non-VCL data with size: " << encodeFrameInfo->bitstreamHeaderBufferSize
+                       << ", Input Order: " << encodeFrameInfo->gopPosition.inputOrder
+                       << ", Encode  Order: " << encodeFrameInfo->gopPosition.encodeOrder
+                       << std::endl << std::flush;
         }
     }
 
     VkResult result = encodeFrameInfo->encodeCmdBuffer->SyncHostOnCmdBuffComplete(false, "encoderEncodeFence");
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nWait on encoder complete fence has failed with result 0x%x.\n", result);
+        LOG_S_ERROR << "Wait on encoder complete fence has failed with result 0x" << result << std::endl;
         return result;
     }
 
@@ -759,14 +759,16 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
 
 
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nRetrieveData Error: Failed to get vcl query pool results.\n");
+        LOG_S_ERROR << "RetrieveData Error: Failed to get vcl query pool results." << std::endl;
         assert(result == VK_SUCCESS);
         return result;
     }
 
     if (encodeResult.status != VK_QUERY_RESULT_STATUS_COMPLETE_KHR) {
-        fprintf(stderr, "\nencodeResult.status is (0x%x) NOT STATUS_COMPLETE! bitstreamStartOffset %u, bitstreamSize %u\n",
-                encodeResult.status, encodeResult.bitstreamStartOffset, encodeResult.bitstreamSize);
+        LOG_S_ERROR << "encodeResult.status is (0x" << encodeResult.status
+                    << ") NOT STATUS_COMPLETE! bitstreamStartOffset"
+                    << encodeResult.bitstreamStartOffset
+                    << ", bitstreamSize " << encodeResult.bitstreamSize << std::endl;
         assert(encodeResult.status == VK_QUERY_RESULT_STATUS_COMPLETE_KHR);
         return VK_INCOMPLETE;
     }
@@ -780,14 +782,14 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
         size_t bytesWritten = fwrite(data + encodeResult.bitstreamStartOffset + totalBytesWritten, 1, remainingBytes,
                                     m_encoderConfig->outputFileHandler.GetFileHandle());
         if (bytesWritten == 0) {
-            std::cerr << "Error writing VCL data" << std::endl;
+            LOG_S_ERROR << "Error writing VCL data" << std::endl;
             return VK_ERROR_OUT_OF_HOST_MEMORY;
         }
         totalBytesWritten += bytesWritten;
     }
 
     if (m_encoderConfig->verboseFrameStruct) {
-        std::cout << "       == Output VCL data " << ((totalBytesWritten == encodeResult.bitstreamSize) ? "SUCCESS" : "FAIL") << " with size: " << encodeResult.bitstreamSize
+        LOG_S_DEBUG << "       == Output VCL data " << ((totalBytesWritten == encodeResult.bitstreamSize) ? "SUCCESS" : "FAIL") << " with size: " << encodeResult.bitstreamSize
                   << " and offset: " << encodeResult.bitstreamStartOffset
                   << ", Input Order: " << encodeFrameInfo->gopPosition.inputOrder
                   << ", Encode  Order: " << encodeFrameInfo->gopPosition.encodeOrder << std::endl << std::flush;
@@ -801,7 +803,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     if (!VulkanVideoCapabilities::IsCodecTypeSupported(m_vkDevCtx,
                                                        m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                        encoderConfig->codec)) {
-        std::cout << "*** The video codec " << VkVideoCoreProfile::CodecToName(encoderConfig->codec) << " is not supported! ***" << std::endl;
+        LOG_S_ERROR << "*** The video codec " << VkVideoCoreProfile::CodecToName(encoderConfig->codec) << " is not supported! ***" << std::endl;
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 
@@ -809,12 +811,12 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     result = encoderConfig->InitVideoProfileCapabilities(m_vkDevCtx);
     if (result != VK_SUCCESS) {
-        std::cerr << "InitVideoProfileCapabilities failed" << std::endl;
+        LOG_S_ERROR << "InitVideoProfileCapabilities failed" << std::endl;
         return result;
     }
 
     if (!encoderConfig->DetermineLevelTier()) {
-        std::cerr << "Failed to determine a suitable level for the given encoding parameters" << std::endl;
+        LOG_S_ERROR << "Failed to determine a suitable level for the given encoding parameters" << std::endl;
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
@@ -823,26 +825,26 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         const VkVideoEncodeCapabilitiesKHR& encCaps = encoderConfig->videoEncodeCapabilities;
 
         const std::string sep(80, '=');
-        std::cout << sep << std::endl;
-        std::cout << "                            Encoder Capabilities" << std::endl;
-        std::cout << sep << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "flags" << ": 0x" << std::hex << encCaps.flags << std::dec << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "minCodedExtent" << ": " << vidCaps.minCodedExtent.width << " x " << vidCaps.minCodedExtent.height << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "maxCodedExtent" << ": " << vidCaps.maxCodedExtent.width << " x " << vidCaps.maxCodedExtent.height << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "pictureAccessGranularity" << ": " << vidCaps.pictureAccessGranularity.width << " x " << vidCaps.pictureAccessGranularity.height << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "encodeInputPictureGranularity" << ": " << encCaps.encodeInputPictureGranularity.width << " x " << encCaps.encodeInputPictureGranularity.height << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "maxDpbSlots" << ": " << vidCaps.maxDpbSlots << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "maxActiveReferencePictures" << ": " << vidCaps.maxActiveReferencePictures << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "maxQualityLevels" << ": " << encCaps.maxQualityLevels << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "maxRateControlLayers" << ": " << encCaps.maxRateControlLayers << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "maxBitrate" << ": " << encCaps.maxBitrate << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "rateControlModes" << ": 0x" << std::hex << encCaps.rateControlModes << std::dec << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "minBitstreamBufferOffsetAlignment" << ": " << vidCaps.minBitstreamBufferOffsetAlignment << std::endl;
-        std::cout << "  " << std::left << std::setw(48) << "minBitstreamBufferSizeAlignment" << ": " << vidCaps.minBitstreamBufferSizeAlignment << std::endl;
+        LOG_S_DEBUG << sep << std::endl;
+        LOG_S_DEBUG << "                            Encoder Capabilities" << std::endl;
+        LOG_S_DEBUG << sep << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "flags" << ": 0x" << std::hex << encCaps.flags << std::dec << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "minCodedExtent" << ": " << vidCaps.minCodedExtent.width << " x " << vidCaps.minCodedExtent.height << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "maxCodedExtent" << ": " << vidCaps.maxCodedExtent.width << " x " << vidCaps.maxCodedExtent.height << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "pictureAccessGranularity" << ": " << vidCaps.pictureAccessGranularity.width << " x " << vidCaps.pictureAccessGranularity.height << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "encodeInputPictureGranularity" << ": " << encCaps.encodeInputPictureGranularity.width << " x " << encCaps.encodeInputPictureGranularity.height << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "maxDpbSlots" << ": " << vidCaps.maxDpbSlots << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "maxActiveReferencePictures" << ": " << vidCaps.maxActiveReferencePictures << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "maxQualityLevels" << ": " << encCaps.maxQualityLevels << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "maxRateControlLayers" << ": " << encCaps.maxRateControlLayers << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "maxBitrate" << ": " << encCaps.maxBitrate << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "rateControlModes" << ": 0x" << std::hex << encCaps.rateControlModes << std::dec << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "minBitstreamBufferOffsetAlignment" << ": " << vidCaps.minBitstreamBufferOffsetAlignment << std::endl;
+        LOG_S_DEBUG << "  " << std::left << std::setw(48) << "minBitstreamBufferSizeAlignment" << ": " << vidCaps.minBitstreamBufferSizeAlignment << std::endl;
     }
 
     if (encoderConfig->qualityLevel >= encoderConfig->videoEncodeCapabilities.maxQualityLevels) {
-        std::cerr << "Quality level " << encoderConfig->qualityLevel
+        LOG_S_ERROR << "Quality level " << encoderConfig->qualityLevel
                   << " is greater than the maximum supported quality level "
                   << (encoderConfig->videoEncodeCapabilities.maxQualityLevels - 1) << std::endl;
         return VK_ERROR_FEATURE_NOT_PRESENT;
@@ -855,7 +857,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     if (encoderConfig->rateControlMode != VK_VIDEO_ENCODE_RATE_CONTROL_MODE_DEFAULT_KHR &&
         encoderConfig->rateControlMode != VK_VIDEO_ENCODE_RATE_CONTROL_MODE_FLAG_BITS_MAX_ENUM_KHR &&
         (encoderConfig->videoEncodeCapabilities.rateControlModes & encoderConfig->rateControlMode) == 0) {
-        fprintf(stderr,
+        LOG_ERROR (
                 "\nInitEncoder Error: rate control mode 0x%x is not supported by the implementation "
                 "(advertised rateControlModes: 0x%x)\n",
                 encoderConfig->rateControlMode,
@@ -865,26 +867,26 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     if (encoderConfig->useDpbArray == false &&
         (encoderConfig->videoCapabilities.flags & VK_VIDEO_CAPABILITY_SEPARATE_REFERENCE_IMAGES_BIT_KHR) == 0) {
-        std::cout << "Separate DPB was requested, but the implementation does not support it!" << std::endl;
-        std::cout << "Fallback to layered DPB!" << std::endl;
+        LOG_S_WARN << "Separate DPB was requested, but the implementation does not support it!" << std::endl;
+        LOG_S_WARN<< "Fallback to layered DPB!" << std::endl;
         encoderConfig->useDpbArray = true;
     }
 
     if (m_encoderConfig->enableQpMap) {
         if (!VulkanVideoCapabilities::IsVideoEncodeQpMapSupported(m_vkDevCtx)) {
-            std::cout << "QP map was requested, but the driver does not expose "
+            LOG_S_ERROR << "QP map was requested, but the driver does not expose "
                       << VK_KHR_VIDEO_ENCODE_QUANTIZATION_MAP_EXTENSION_NAME
                       << "!" << std::endl;
             return VK_ERROR_FEATURE_NOT_PRESENT;
         }
         if ((m_encoderConfig->qpMapMode == EncoderConfig::DELTA_QP_MAP) &&
             ((m_encoderConfig->videoEncodeCapabilities.flags & VK_VIDEO_ENCODE_CAPABILITY_QUANTIZATION_DELTA_MAP_BIT_KHR) == 0)) {
-                std::cout << "Delta QP Map was requested, but the implementation does not support it!" << std::endl;
+                LOG_S_ERROR << "Delta QP Map was requested, but the implementation does not support it!" << std::endl;
                 return VK_ERROR_FEATURE_NOT_PRESENT;
         }
         if ((m_encoderConfig->qpMapMode == EncoderConfig::EMPHASIS_MAP) &&
             ((m_encoderConfig->videoEncodeCapabilities.flags & VK_VIDEO_ENCODE_CAPABILITY_EMPHASIS_MAP_BIT_KHR) == 0)) {
-                std::cout << "Emphasis Map was requested, but the implementation does not support it!" << std::endl;
+                LOG_S_ERROR << "Emphasis Map was requested, but the implementation does not support it!" << std::endl;
                 return VK_ERROR_FEATURE_NOT_PRESENT;
         }
     }
@@ -894,7 +896,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         const char* modeString = nullptr;
 
         if (!VulkanVideoCapabilities::IsVideoEncodeIntraRefreshSupported(m_vkDevCtx)) {
-            std::cout << "Intra-refresh has been requested, but the implementation does not support it." << std::endl;
+            LOG_S_ERROR << "Intra-refresh has been requested, but the implementation does not support it." << std::endl;
             return VK_ERROR_EXTENSION_NOT_PRESENT;
         }
 
@@ -920,13 +922,13 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         }
 
         if ((mode & m_encoderConfig->intraRefreshCapabilities.intraRefreshModes) == 0) {
-            std::cout << modeString << " intra-refresh was requested, but the implementation does not support it." << std::endl;
+            LOG_S_ERROR << modeString << " intra-refresh was requested, but the implementation does not support it." << std::endl;
             return VK_ERROR_FEATURE_NOT_PRESENT;
         }
 
         if (m_encoderConfig->intraRefreshCycleDuration >
             m_encoderConfig->intraRefreshCapabilities.maxIntraRefreshCycleDuration) {
-            std::cout << "The requested intra-refresh cycle duration is greater than the maximum ("
+            LOG_S_ERROR << "The requested intra-refresh cycle duration is greater than the maximum ("
                       << m_encoderConfig->intraRefreshCapabilities.maxIntraRefreshCycleDuration
                       << ") supported by the implementation" << std::endl;
             return VK_ERROR_FEATURE_NOT_PRESENT;
@@ -955,13 +957,13 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                         (m_encoderConfig->encodeHeight + partitionRowHeight - 1) / partitionRowHeight;
                 if (m_encoderConfig->intraRefreshCycleDuration > maxPicturePartitions) {
                     if (m_encoderConfig->verbose) {
-                        std::cout << "Clamping intra-refresh cycle duration from "
-                                  << m_encoderConfig->intraRefreshCycleDuration << " to "
-                                  << maxPicturePartitions
-                                  << " (rectangular partitions for "
-                                  << m_encoderConfig->encodeWidth << "x"
-                                  << m_encoderConfig->encodeHeight << ")" << std::endl;
-                    }
+                        LOG_S_DEBUG << "Clamping intra-refresh cycle duration from "
+                                    << m_encoderConfig->intraRefreshCycleDuration << " to "
+                                    << maxPicturePartitions
+                                    << " (rectangular partitions for "
+                                    << m_encoderConfig->encodeWidth << "x"
+                                    << m_encoderConfig->encodeHeight << ")" << std::endl;
+                     }
                     m_encoderConfig->intraRefreshCycleDuration = maxPicturePartitions;
                     m_encoderConfig->gopStructure.SetIntraRefreshCycleDuration(maxPicturePartitions);
                 }
@@ -975,8 +977,8 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     m_encoderConfig->gopStructure.Init(m_encoderConfig->numFrames);
     if (encoderConfig->GetMaxBFrameCount() < m_encoderConfig->gopStructure.GetConsecutiveBFrameCount()) {
         if (m_encoderConfig->verbose) {
-            std::cout << "Max consecutive B frames: " << (uint32_t)encoderConfig->GetMaxBFrameCount() << " lower than the configured one: " << (uint32_t)m_encoderConfig->gopStructure.GetConsecutiveBFrameCount() << std::endl;
-            std::cout << "Fallback to the max value: " << (uint32_t)m_encoderConfig->gopStructure.GetConsecutiveBFrameCount() << std::endl;
+            LOG_S_DEBUG << "Max consecutive B frames: " << (uint32_t)encoderConfig->GetMaxBFrameCount() << " lower than the configured one: " << (uint32_t)m_encoderConfig->gopStructure.GetConsecutiveBFrameCount() << std::endl;
+            LOG_S_DEBUG << "Fallback to the max value: " << (uint32_t)m_encoderConfig->gopStructure.GetConsecutiveBFrameCount() << std::endl;
         }
         m_encoderConfig->gopStructure.SetConsecutiveBFrameCount(encoderConfig->GetMaxBFrameCount());
     }
@@ -984,24 +986,23 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     if (m_encoderConfig->enableIntraRefresh) {
         if (!m_encoderConfig->IntraRefreshWithBFramesAllowed() &&
             (m_encoderConfig->gopStructure.GetConsecutiveBFrameCount() != 0)) {
-
             if (m_encoderConfig->verbose) {
-                std::cout << "Use of B-frames / compound prediction is not supported when intra-refresh is enabled" << std::endl;
-                std::cout << "Setting the count of Consecutive B-frames to 0" << std::endl;
+                LOG_S_DEBUG << "Use of B-frames / compound prediction is not supported when intra-refresh is enabled" << std::endl;
+                LOG_S_DEBUG << "Setting the count of Consecutive B-frames to 0" << std::endl;
             }
             m_encoderConfig->gopStructure.SetConsecutiveBFrameCount(0);
         }
     }
 
     if (m_encoderConfig->verbose) {
-        std::cout << std::endl << "GOP frame count: " << (uint32_t)m_encoderConfig->gopStructure.GetGopFrameCount();
-        std::cout << ", IDR period: " << (uint32_t)m_encoderConfig->gopStructure.GetIdrPeriod();
-        std::cout << ", Consecutive B frames: " << (uint32_t)m_encoderConfig->gopStructure.GetConsecutiveBFrameCount();
-        std::cout << std::endl;
-
+        LOG_S_DEBUG << std::endl << "GOP frame count: " << (uint32_t)m_encoderConfig->gopStructure.GetGopFrameCount();
+        LOG_S_DEBUG << ", IDR period: " << (uint32_t)m_encoderConfig->gopStructure.GetIdrPeriod();
+        LOG_S_DEBUG << ", Consecutive B frames: " << (uint32_t)m_encoderConfig->gopStructure.GetConsecutiveBFrameCount();
+        LOG_S_DEBUG << std::endl;
+    }
+    if (encoderConfig->verbose) {
         const uint64_t maxFramesToDump = std::min<uint32_t>(m_encoderConfig->numFrames, m_encoderConfig->gopStructure.GetGopFrameCount() + 19);
         m_encoderConfig->gopStructure.PrintGopStructure(maxFramesToDump);
-
         if (m_encoderConfig->verboseFrameStruct) {
             m_encoderConfig->gopStructure.DumpFramesGopStructure(0, maxFramesToDump);
         }
@@ -1039,7 +1040,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                                formatCount, supportedDpbFormats);
 
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to get desired video format for the DPB.\n");
+        LOG_ERROR("InitEncoder Error: Failed to get desired video format for the DPB.\n");
         return result;
     }
 
@@ -1048,7 +1049,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                       formatCount, supportedInFormats);
 
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to get desired video format for input images.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to get desired video format for input images." << std::endl;
         return result;
     }
 
@@ -1068,25 +1069,25 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                           true, supportedQpMapTexelSize);
 
         if(result != VK_SUCCESS) {
-            fprintf(stderr, "\nInitEncoder Error: Failed to get desired video format for qpMap images.\n");
+            LOG_ERROR("InitEncoder Error: Failed to get desired video format for qpMap images.");
             return result;
         }
 
         m_imageQpMapFormat = supportedQpMapFormats[0];
         m_qpMapTexelSize = supportedQpMapTexelSize[0];
         m_qpMapTiling = supportedQpMapTiling[0];
-
-        if (encoderConfig->verbose) {
-            printf("QP map: format=%d, texelSize=%ux%u, formatSize=%zu bytes\n",
-                   (int)m_imageQpMapFormat,
-                   m_qpMapTexelSize.width, m_qpMapTexelSize.height,
-                   getFormatTexelSize(m_imageQpMapFormat));
+        if (m_encoderConfig->verbose) {
+            LOG_DEBUG("QP map: format=%d, texelSize=%ux%u, formatSize=%zu bytes\n",
+                    (int)m_imageQpMapFormat,
+                    m_qpMapTexelSize.width, m_qpMapTexelSize.height,
+                    getFormatTexelSize(m_imageQpMapFormat));
         }
+
     }
 
     if (encoderConfig->encodeWidth < encoderConfig->videoCapabilities.minCodedExtent.width ||
         encoderConfig->encodeHeight < encoderConfig->videoCapabilities.minCodedExtent.height) {
-        fprintf(stderr, "\nInitEncoder Error: encode resolution %ux%u is below hardware minimum %ux%u\n",
+        LOG_ERROR("encode resolution %ux%u is below hardware minimum %ux%u\n",
                 encoderConfig->encodeWidth, encoderConfig->encodeHeight,
                 encoderConfig->videoCapabilities.minCodedExtent.width,
                 encoderConfig->videoCapabilities.minCodedExtent.height);
@@ -1094,7 +1095,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     }
     if (encoderConfig->encodeWidth > encoderConfig->videoCapabilities.maxCodedExtent.width ||
         encoderConfig->encodeHeight > encoderConfig->videoCapabilities.maxCodedExtent.height) {
-        fprintf(stderr, "\nInitEncoder Error: encode resolution %ux%u exceeds hardware maximum %ux%u\n",
+        LOG_ERROR("encode resolution %ux%u exceeds hardware maximum %ux%u\n",
                 encoderConfig->encodeWidth, encoderConfig->encodeHeight,
                 encoderConfig->videoCapabilities.maxCodedExtent.width,
                 encoderConfig->videoCapabilities.maxCodedExtent.height);
@@ -1194,7 +1195,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     // NOTE: Create linearInputImage
     result =  VulkanVideoImagePool::Create(m_vkDevCtx, m_linearInputImagePool);
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to create linearInputImagePool.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to create linearInputImagePool." << std::endl;
         return result;
     }
 
@@ -1214,7 +1215,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 #else
         m_imageInFormat;
     if (encoderConfig->input.vkFormat != m_imageInFormat) {
-        fprintf(stderr, "\nWarning: input format (%d) differs from encode format (%d) "
+        LOG_WARN("input format (%d) differs from encode format (%d) "
                 "but compute filter is not available (built without SHADERC_SUPPORT). "
                 "Output may be incorrect.\n",
                 encoderConfig->input.vkFormat, m_imageInFormat);
@@ -1238,13 +1239,13 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                 true     // useLinear
                                               );
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to Configure linearInputImagePool.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to Configure linearInputImagePool." << std::endl;
         return result;
     }
 
     result =  VulkanVideoImagePool::Create(m_vkDevCtx, m_inputImagePool);
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to create inputImagePool.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to create inputImagePool." << std::endl;
         return result;
     }
 
@@ -1266,7 +1267,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                           false    // useLinear
                                           );
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to Configure inputImagePool.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to Configure inputImagePool." << std::endl;
         return result;
     }
 
@@ -1287,7 +1288,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     if (encoderConfig->enableHwLoadBalancing) {
 
         if (m_vkDevCtx->GetVideoEncodeNumQueues() < 2) {
-            std::cout << "\t WARNING: Enabling HW Load Balancing for a device with only " <<
+            LOG_S_WARN << "Enabling HW Load Balancing for a device with only " <<
                     m_vkDevCtx->GetVideoEncodeNumQueues() << " queue!!!" << std::endl;
         }
 
@@ -1307,7 +1308,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         if (result == VK_SUCCESS) {
             m_currentVideoQueueIndx = 0; // start with index zero
         }
-        std::cout << "\t Enabling HW Load Balancing for device with "
+        LOG_S_INFO << "\t Enabling HW Load Balancing for device with "
                   << m_vkDevCtx->GetVideoEncodeNumQueues() << " queues" << std::endl;
     }
 
@@ -1318,7 +1319,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             // If the linear tiling is not supported, we need to stage the image
             result =  VulkanVideoImagePool::Create(m_vkDevCtx, m_linearQpMapImagePool);
             if(result != VK_SUCCESS) {
-                fprintf(stderr, "\nInitEncoder Error: Failed to create linearQpMapImagePool.\n");
+                LOG_ERROR("InitEncoder Error: Failed to create linearQpMapImagePool.");
                 return result;
             }
 
@@ -1342,13 +1343,13 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                         true     // useLinear
                                                       );
             if(result != VK_SUCCESS) {
-                fprintf(stderr, "\nInitEncoder Error: Failed to Configure linearQpMapImagePool.\n");
+                LOG_ERROR("InitEncoder Error: Failed to configure linearQpMapImagePool.");
                 return result;
             }
         }
         result =  VulkanVideoImagePool::Create(m_vkDevCtx, m_qpMapImagePool);
         if(result != VK_SUCCESS) {
-            fprintf(stderr, "\nInitEncoder Error: Failed to create inputImagePool.\n");
+            LOG_ERROR("InitEncoder Error: Failed to create inputImagePool.");
             return result;
         }
 
@@ -1380,14 +1381,14 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                               m_qpMapTiling == VK_IMAGE_TILING_LINEAR   // useLinear
                                             );
         if(result != VK_SUCCESS) {
-            fprintf(stderr, "\nInitEncoder Error: Failed to Configure qpMapImagePool.\n");
+            LOG_ERROR("InitEncoder Error: Failed to Configure qpMapImagePool.");
             return result;
         }
     }
 
     result =  VulkanVideoImagePool::Create(m_vkDevCtx, m_dpbImagePool);
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to create dpbImagePool.\n");
+        LOG_ERROR ("InitEncoder Error: Failed to create dpbImagePool.");
         return result;
     }
 
@@ -1405,7 +1406,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                        false    // useLinear
                                       );
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to Configure inputImagePool.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to Configure inputImagePool." << std::endl;
         return result;
     }
 
@@ -1433,7 +1434,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                     nullptr, 0, bitstreamBuffer);
             assert(result == VK_SUCCESS);
             if (result != VK_SUCCESS) {
-                fprintf(stderr, "\nERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
+                LOG_S_ERROR << "ERROR: VulkanBitstreamBufferImpl::Create() result: 0x" << result << std::endl;
                 break;
             }
 
@@ -1502,7 +1503,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
         result = VulkanCommandBufferPool::Create(m_vkDevCtx, m_inputCommandBufferPool);
         if(result != VK_SUCCESS) {
-            fprintf(stderr, "\nInitEncoder Error: Failed to create m_inputCommandBufferPool.\n");
+            LOG_ERROR("InitEncoder Error: Failed to create m_inputCommandBufferPool.\n");
             return result;
         }
 
@@ -1519,13 +1520,13 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     }
 
     if (result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to Configure m_inputCommandBufferPool.\n");
+        LOG_ERROR("InitEncoder Error: Failed to Configure m_inputCommandBufferPool.\n");
         return result;
     }
 
     result = VulkanCommandBufferPool::Create(m_vkDevCtx, m_encodeCommandBufferPool);
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to create m_encodeCommandBufferPool.\n");
+        LOG_ERROR("InitEncoder Error: Failed to create m_encodeCommandBufferPool.");
         return result;
     }
 
@@ -1551,7 +1552,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             const VkVideoEncodeFeedbackFlagsKHR unsupportedQpFlags =
                 qpFeedbackFlags & ~supportedFeedbackFlags;
             if (unsupportedQpFlags != 0) {
-                std::cout << "Warning: dropping unsupported picture feedback flags: 0x"
+                LOG_S_WARN << "Dropping unsupported picture feedback flags: 0x"
                           << std::hex << unsupportedQpFlags << std::dec << std::endl;
             }
             encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR;
@@ -1569,14 +1570,14 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             const VkVideoEncodeFeedback2CapabilitiesKHR& feedback2Caps =
                 encoderConfig->videoEncodeFeedback2Capabilities;
             if (feedback2Caps.maxPerPartitionFeedbackEntries == 0) {
-                std::cerr << "Per-partition encode feedback is not supported "
+                LOG_S_ERROR << "Per-partition encode feedback is not supported "
                              "by the implementation for this video profile." << std::endl;
                 return VK_ERROR_FEATURE_NOT_PRESENT;
             }
 
             uint32_t maxEntries = std::max(1u, av1Config->maxPerPartitionFeedbackEntries);
             if (maxEntries > feedback2Caps.maxPerPartitionFeedbackEntries) {
-                std::cout << "Warning: clamping maxPerPartitionFeedbackEntries from " << maxEntries
+                LOG_S_WARN << "Clamping maxPerPartitionFeedbackEntries from " << maxEntries
                           << " to the supported maximum of "
                           << feedback2Caps.maxPerPartitionFeedbackEntries << std::endl;
                 maxEntries = feedback2Caps.maxPerPartitionFeedbackEntries;
@@ -1589,12 +1590,12 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             const VkVideoEncodePerPartitionFeedbackFlagsKHR partitionFlags =
                 requestedPartitionFlags & feedback2Caps.supportedPerPartitionEncodeFeedbackFlags;
             if (partitionFlags != requestedPartitionFlags) {
-                std::cout << "Warning: dropping unsupported per-partition feedback flags: 0x"
+                LOG_S_WARN << "dropping unsupported per-partition feedback flags: 0x"
                           << std::hex << (requestedPartitionFlags & ~partitionFlags)
                           << std::dec << std::endl;
             }
             if (partitionFlags == 0) {
-                std::cerr << "None of the requested per-partition feedback flags "
+                LOG_S_ERROR << "None of the requested per-partition feedback flags "
                              "are supported by the implementation." << std::endl;
                 return VK_ERROR_FEATURE_NOT_PRESENT;
             }
@@ -1621,7 +1622,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
             if ((unsupportedFeedbackFlags & flagBit) == 0) {
                 continue;
             }
-            std::cerr << "Requested encode feedback '"
+            LOG_S_ERROR << "Requested encode feedback '"
                       << getEncodeFeedbackFlagName(
                              (VkVideoEncodeFeedbackFlagBitsKHR)flagBit)
                       << "' (0x" << std::hex << flagBit << std::dec
@@ -1648,13 +1649,13 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                                    true      // createFences
                                                   );
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to Configure m_encodeCommandBufferPool.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to Configure m_encodeCommandBufferPool." << std::endl;
         return result;
     }
 
     result = CreateFrameInfoBuffersQueue(encoderConfig->numInputImages);
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nInitEncoder Error: Failed to create FrameInfoBuffersQueue.\n");
+        LOG_S_ERROR << "InitEncoder Error: Failed to create FrameInfoBuffersQueue." << std::endl;
         return result;
     }
 
@@ -1692,11 +1693,11 @@ VkDeviceSize VkVideoEncoder::GetBitstreamBuffer(VkSharedBaseObj<VulkanBitstreamB
                 nullptr, 0, newBitstreamBuffer);
         assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
-            fprintf(stderr, "\nERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
+            LOG_S_ERROR << "VulkanBitstreamBufferImpl::Create() result: 0x" << result << std::endl;
             return 0;
         }
         if (debugBitstreamBufferDumpAlloc) {
-            std::cout << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
+            LOG_S_DEBUG << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
                              newSize/1024 << " KB, " << newSize/1024/1024 << " MB" << std::endl;
         }
         if (enablePool) {
@@ -1715,18 +1716,18 @@ VkDeviceSize VkVideoEncoder::GetBitstreamBuffer(VkSharedBaseObj<VulkanBitstreamB
         newBitstreamBuffer->MemsetData(0x0, copySize, newSize - copySize);
 #endif
         if (debugBitstreamBufferDumpAlloc) {
-            std::cout << "\t\tFrom bitstream buffer pool with size " << newSize << " B, " <<
+            LOG_S_DEBUG << "\t\tFrom bitstream buffer pool with size " << newSize << " B, " <<
                              newSize/1024 << " KB, " << newSize/1024/1024 << " MB" << std::endl;
 
-            std::cout << "\t\t\t FreeNodes " << m_bitstreamBuffersQueue.GetFreeNodesNumber();
-            std::cout << " of MaxNodes " << m_bitstreamBuffersQueue.GetMaxNodes();
-            std::cout << ", AvailableNodes " << m_bitstreamBuffersQueue.GetAvailableNodesNumber();
-            std::cout << std::endl;
+            LOG_S_DEBUG << "\t\t\t FreeNodes " << m_bitstreamBuffersQueue.GetFreeNodesNumber();
+            LOG_S_DEBUG << " of MaxNodes " << m_bitstreamBuffersQueue.GetMaxNodes();
+            LOG_S_DEBUG << ", AvailableNodes " << m_bitstreamBuffersQueue.GetAvailableNodesNumber();
+            LOG_S_DEBUG << std::endl;
         }
     }
     bitstreamBuffer = newBitstreamBuffer;
     if (newSize > m_streamBufferSize) {
-        std::cout << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
+        LOG_S_INFO << "\tAllocated bitstream buffer with size " << newSize << " B, " <<
                              newSize/1024 << " KB, " << newSize/1024/1024 << " MB" << std::endl;
         m_streamBufferSize = (size_t)newSize;
     }
@@ -2222,11 +2223,10 @@ VkResult VkVideoEncoder::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeFram
 
     if (m_hwLoadBalancingTimelineSemaphore != VK_NULL_HANDLE) {
 
-        if (m_verbose) {
-            uint64_t  currSemValue = 0;
-            VkResult semResult = m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, &currSemValue);
-            std::cout << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
-        }
+
+        uint64_t  currSemValue = 0;
+        VkResult semResult = m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, &currSemValue);
+        LOG_S_DEBUG << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
 
         waitSemaphoreInfos[waitSemaphoreCount].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].pNext = nullptr;
@@ -2275,21 +2275,21 @@ VkResult VkVideoEncoder::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeFram
         encodeFrameInfo->encodeCmdBuffer->SyncHostOnCmdBuffComplete(false, "encoderEncodeFence");
     }
 
-    if (m_verbose && (m_hwLoadBalancingTimelineSemaphore != VK_NULL_HANDLE)) { // For TL semaphore debug
+    if ( m_verbose && (m_hwLoadBalancingTimelineSemaphore != VK_NULL_HANDLE)) { // For TL semaphore debug
        uint64_t  currSemValue = 0;
        VkResult semResult = m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, &currSemValue);
-       std::cout << "\t TL semaphore value ater submit: " << currSemValue << ", status: " << semResult << std::endl;
+       LOG_S_DEBUG << "\t TL semaphore value ater submit: " << currSemValue << ", status: " << semResult << std::endl;
 
        const bool waitOnTlSemaphore = false;
        if (waitOnTlSemaphore) {
            uint64_t value = encodeFrameInfo->frameEncodeEncodeOrderNum + 1; // wait on the future frameEncodeEncodeOrderNum
            VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, nullptr, VK_SEMAPHORE_WAIT_ANY_BIT, 1,
                                         &m_hwLoadBalancingTimelineSemaphore, &value };
-           std::cout << "\t TL semaphore wait for value: " << value << std::endl;
+           LOG_S_DEBUG << "\t TL semaphore wait for value: " << value << std::endl;
            semResult = m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, 1000 * 1000 * 1000 /* 1000 mSec */);
 
            semResult = m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, m_hwLoadBalancingTimelineSemaphore, &currSemValue);
-           std::cout << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
+           LOG_S_DEBUG << "\t TL semaphore value: " << currSemValue << ", status: " << semResult << std::endl;
        }
     }
 
@@ -2349,10 +2349,8 @@ VkResult VkVideoEncoder::ProcessOrderedFrames(VkSharedBaseObj<VkVideoEncodeFrame
 
         uint32_t processedFramesCount = 0;
         result = VkVideoEncodeFrameInfo::ProcessFrames(this, frames, processedFramesCount, numFrames, callback);
-        if (m_encoderConfig->verbose) {
-            const std::string& description = pair.first;
-            std::cout << "====== Total number of frames processed by " << description << ": " << processedFramesCount << " : " << result << std::endl;
-        }
+        const std::string& description = pair.first;
+        LOG_S_DEBUG << "====== Total number of frames processed by " << description << ": " << processedFramesCount << " : " << result << std::endl;
 
         if (result != VK_SUCCESS) {
             break;
@@ -2399,7 +2397,7 @@ void VkVideoEncoder::DumpStateInfo(const char* stageName, uint32_t ident,
                                    VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo,
                                    int32_t frameIdx, uint32_t ofTotalFrames) const
 {
-    std::cout << std::string(ident, ' ') << "===> "
+    LOG_S_DEBUG << std::string(ident, ' ') << "===> "
               << VkVideoCoreProfile::CodecToName(m_encoderConfig->codec) << ": "
               << stageName << " [" <<  frameIdx << " of " << ofTotalFrames << "]"
               << " type " << VkVideoGopStructure::GetFrameTypeName(encodeFrameInfo->gopPosition.pictureType)
@@ -2457,12 +2455,12 @@ int32_t VkVideoEncoder::DeinitEncoder()
 
 void VkVideoEncoder::ConsumerThread()
 {
-   std::cout << "ConsumerThread is stating now.\n" << std::endl;
+   LOG_S_DEBUG << "ConsumerThread is stating now.\n" << std::endl;
    do {
        VkSharedBaseObj<VkVideoEncodeFrameInfo> encodeFrameInfo;
        bool success = m_encoderThreadQueue.WaitAndPop(encodeFrameInfo);
        if (success) { // 5 seconds in nanoseconds
-           std::cout << "==>>>> Consumed: " << (uint32_t)encodeFrameInfo->gopPosition.inputOrder
+           LOG_S_DEBUG << "==>>>> Consumed: " << (uint32_t)encodeFrameInfo->gopPosition.inputOrder
                       << ", Order: " << (uint32_t)encodeFrameInfo->gopPosition.encodeOrder << std::endl << std::flush;
 
            VkResult result;
@@ -2475,15 +2473,15 @@ void VkVideoEncoder::ConsumerThread()
            VkVideoEncodeFrameInfo::ReleaseChildrenFrames(encodeFrameInfo);
            assert(encodeFrameInfo == nullptr);
            if (result != VK_SUCCESS) {
-               std::cout << "Error processing frames from the frame thread!" << std::endl;
+               LOG_S_ERROR << "Error processing frames from the frame thread!" << std::endl;
                m_encoderThreadQueue.SetFlushAndExit();
            }
 
        } else {
            bool shouldExit = m_encoderThreadQueue.ExitQueue();
-           std::cout << "Thread should exit: " << (shouldExit ? "Yes" : "No") << std::endl;
+           LOG_S_DEBUG << "Thread should exit: " << (shouldExit ? "Yes" : "No") << std::endl;
        }
    } while (!m_encoderThreadQueue.ExitQueue());
 
-   std::cout << "ConsumerThread is exiting now.\n" << std::endl;
+   LOG_S_DEBUG << "ConsumerThread is exiting now.\n" << std::endl;
 }

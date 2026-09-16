@@ -27,13 +27,13 @@ static void DumpDecoderStreamInfo(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVid
 
     const VkExtent3D extent = vulkanVideoDecoder->GetVideoExtent();
 
-    std::cout << "Test Video Input Information" << std::endl
+    LOG_S_DEBUG << "Test Video Input Information" << std::endl
                << "\tCodec        : " << VkVideoCoreProfile::CodecToName(videoProfileInfo.videoCodecOperation) << std::endl
                << "\tCoded size   : [" << extent.width << ", " << extent.height << "]" << std::endl
                << "\tChroma Subsampling:";
 
     VkVideoCoreProfile::DumpFormatProfiles(&videoProfileInfo);
-    std::cout << std::endl;
+    LOG_S_DEBUG << std::endl;
 }
 
 static size_t init(std::vector<VulkanDecodedFrame>& frameDataQueue, uint32_t& curFrameDataQueueIndex,
@@ -50,7 +50,6 @@ static bool GetNextFrame(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder
 {
     bool continueLoop = true;
     bool gotFrame = false;
-    const bool dumpDebug = true;
 
     VulkanDecodedFrame& data = frameDataQueue[curFrameDataQueueIndex];
     VulkanDecodedFrame* pLastDecodedFrame = nullptr;
@@ -67,21 +66,19 @@ static bool GetNextFrame(VkSharedBaseObj<VulkanVideoDecoder>& vulkanVideoDecoder
         if (result == VkVideoQueueResult::EndOfStream || result == VkVideoQueueResult::Error) {
             continueLoop = false;
         } else if (result == VkVideoQueueResult::NoFrame) {
-            if (dumpDebug) {
-                std::cout << "No frame available, waiting for more data" << std::endl;
-            }
+            LOG_S_DEBUG << "No frame available, waiting for more data" << std::endl;
         } else {
             gotFrame = true;
         }
     }
 
     // wait for the last submission since we reuse frame data
-    if (dumpDebug && gotFrame && pLastDecodedFrame) {
+    if (gotFrame && pLastDecodedFrame) {
 
         VkSharedBaseObj<VkImageResourceView> imageResourceView;
         pLastDecodedFrame->imageViews[VulkanDecodedFrame::IMAGE_VIEW_TYPE_OPTIMAL_DISPLAY].GetImageResourceView(imageResourceView);
 
-        std::cout << "picIdx: " << pLastDecodedFrame->pictureIndex
+        LOG_S_DEBUG << "picIdx: " << pLastDecodedFrame->pictureIndex
                   << "\tdisplayWidth: " << pLastDecodedFrame->displayWidth
                   << "\tdisplayHeight: " << pLastDecodedFrame->displayHeight
                   << "\tdisplayOrder: " << pLastDecodedFrame->displayOrder
@@ -107,7 +104,7 @@ static void deinit(std::vector<VulkanDecodedFrame>& frameDataQueue,
 
 int main(int argc, const char** argv)
 {
-    std::cout << "Enter decoder test" << std::endl;
+    LOG_S_INFO << "Enter decoder test" << std::endl;
 
     DecoderConfig decoderConfig(argv[0]);
     decoderConfig.ParseArgs(argc, argv);
@@ -123,7 +120,7 @@ int main(int argc, const char** argv)
         case VK_VIDEO_CODEC_OPERATION_DECODE_VP9_BIT_KHR:
             break;
         default:
-            std::cout << "Simple decoder does not support demuxing "
+            LOG_S_ERROR << "Simple decoder does not support demuxing "
                       << "and the decoder type must be set with --codec <codec type>"
                       << std::endl;
             return EXIT_FAILURE;
@@ -139,7 +136,7 @@ int main(int argc, const char** argv)
                                                  videoStreamDemuxer);
 
     if (result != VK_SUCCESS) {
-        fprintf(stderr, "Error: Failed to initialize VideoStreamDemuxer for file: %s\n",
+        LOG_ERROR("Failed to initialize VideoStreamDemuxer for file: %s\n",
                 decoderConfig.videoFileName.c_str());
         return EXIT_FAILURE;
     }
@@ -156,7 +153,7 @@ int main(int argc, const char** argv)
                                       argc, argv,
                                       vulkanVideoDecoder);
     if (result != VK_SUCCESS) {
-        fprintf(stderr, "Error creating video decoder\n");
+        LOG_ERROR("Can't create video decoder\n");
         if (IsVideoUnsupportedResult(result)) {
             return VVS_EXIT_UNSUPPORTED;
         }
@@ -184,7 +181,7 @@ int main(int argc, const char** argv)
         return exitCode;
     }
 
-    std::cout << "Exit decoder test" << std::endl;
+    LOG_S_INFO << "Exit decoder test" << std::endl;
     return EXIT_SUCCESS;
 }
 

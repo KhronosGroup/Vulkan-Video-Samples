@@ -24,6 +24,7 @@
 #include "VkCodecUtils/Helpers.h"
 #include "VkCodecUtils/FrameProcessor.h"
 #include "ShellXcb.h"
+#include "Logger.h"
 
 namespace {
 
@@ -158,9 +159,8 @@ void ShellXcb::HandleEvent(const xcb_generic_event_t *ev) {
     switch (ev->response_type & 0x7f) {
         case XCB_CONFIGURE_NOTIFY: {
             const xcb_configure_notify_event_t *notify = reinterpret_cast<const xcb_configure_notify_event_t *>(ev);
-            if (m_settings.m_verbose) {
-                std::cout << "Notify display resize " << notify->width << " x " << notify->height << '\n';
-            }
+
+            LOG_S_DEBUG << "Notify display resize " << notify->width << " x " << notify->height << '\n';
 
             m_winWidth  = notify->width;
             m_winHeight = notify->height;

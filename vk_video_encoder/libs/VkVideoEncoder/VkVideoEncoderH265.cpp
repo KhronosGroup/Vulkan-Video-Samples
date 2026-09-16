@@ -47,14 +47,14 @@ VkResult VkVideoEncoderH265::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& en
 
     VkResult result = InitEncoder(encoderConfig);
     if (result != VK_SUCCESS) {
-        fprintf(stderr, "\nERROR: InitEncoder() failed with ret(%d)\n", result);
+        LOG_S_ERROR << "InitEncoder() failed with ret: " << result << std::endl;
         return result;
     }
 
     if (m_encoderConfig->enableIntraRefresh &&
         m_encoderConfig->intraRefreshMode == EncoderConfig::REFRESH_PER_PARTITION &&
         m_encoderConfig->intraRefreshCycleDuration > m_encoderConfig->h265EncodeCapabilities.maxSliceSegmentCount) {
-        std::cout << "Per-partition intra-refresh requires " << m_encoderConfig->intraRefreshCycleDuration
+        LOG_S_ERROR << "Per-partition intra-refresh requires " << m_encoderConfig->intraRefreshCycleDuration
                   << " slice segments but the implementation supports at most "
                   << m_encoderConfig->h265EncodeCapabilities.maxSliceSegmentCount << std::endl;
         return VK_ERROR_FEATURE_NOT_PRESENT;
@@ -64,7 +64,7 @@ VkResult VkVideoEncoderH265::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& en
     m_dpb.DpbSequenceStart(m_maxDpbPicturesCount, (m_encoderConfig->numRefL0 > 0) || (m_encoderConfig->numRefL1 > 0));
 
     if (m_encoderConfig->verbose) {
-        std::cout << ", numRefL0: "    << (uint32_t)m_encoderConfig->numRefL0
+        LOG_S_DEBUG << ", numRefL0: "    << (uint32_t)m_encoderConfig->numRefL0
                   << ", numRefL1: "    << (uint32_t)m_encoderConfig->numRefL1 << std::endl;
     }
 
@@ -92,14 +92,14 @@ VkResult VkVideoEncoderH265::InitEncoderCodec(VkSharedBaseObj<EncoderConfig>& en
                                                          nullptr,
                                                          &sessionParameters);
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nEncodeFrame Error: Failed to get create video session parameters.\n");
+        LOG_S_ERROR << "\nEncodeFrame: Failed to get create video session parameters" << std::endl;
         return result;
     }
 
     result = VulkanVideoSessionParameters::Create(m_vkDevCtx, m_videoSession,
                                                   sessionParameters, m_videoSessionParameters);
     if(result != VK_SUCCESS) {
-        fprintf(stderr, "\nEncodeFrame Error: Failed to get create video session object.\n");
+        LOG_S_ERROR << "EncodeFrame: Failed to get create video session object." << std::endl;
         return result;
     }
 
@@ -433,10 +433,10 @@ VkResult VkVideoEncoderH265::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
         DumpStateInfo("input", 1, encodeFrameInfo);
 
         if (encodeFrameInfo->lastFrame) {
-            std::cout << "#### It is the last frame: " << encodeFrameInfo->frameInputOrderNum
-                      << " of type " << VkVideoGopStructure::GetFrameTypeName(encodeFrameInfo->gopPosition.pictureType)
-                      << " ###"
-                      << std::endl << std::flush;
+            LOG_S_DEBUG << "#### It is the last frame: " << encodeFrameInfo->frameInputOrderNum
+                        << " of type " << VkVideoGopStructure::GetFrameTypeName(encodeFrameInfo->gopPosition.pictureType)
+                        << " ###"
+                        << std::endl << std::flush;
         }
     }
 

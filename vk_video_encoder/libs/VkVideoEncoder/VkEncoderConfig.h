@@ -33,6 +33,8 @@
 #else
 #   include "VkCodecUtils/VulkanFilter.h"
 #endif
+#include "Logger.h"
+
 struct EncoderConfigH264;
 struct EncoderConfigH265;
 struct EncoderConfigAV1;
@@ -116,13 +118,13 @@ public:
     bool VerifyInputs()
     {
         if ((width == 0) || (height == 0)) {
-            fprintf(stderr, "Invalid input width (%d) and/or height(%d) parameters!", width, height);
+            LOG_S_ERROR << "Invalid input width" << width << " and/or height" << height << " parameters!" << std::endl;
             return false;
         }
 
         uint32_t bytesPerPixel = (bpp + 7) / 8;
         if ((bytesPerPixel < 1) || (bytesPerPixel > 2)) {
-            fprintf(stderr, "Invalid input bpp (%d) parameter!", bpp);
+            LOG_S_ERROR << "Invalid input bpp parameter: " << bpp << std::endl;
             return false;
         }
 
@@ -173,7 +175,7 @@ public:
                                                         (numPlanes == 2));
 
         if (vkFormat == VK_FORMAT_UNDEFINED) {
-            fprintf(stderr, "Invalid input parameters!");
+            LOG_S_ERROR << "Invalid input parameters!" << std::endl;
             return false;
         }
 
@@ -204,8 +206,8 @@ public:
         m_memMapedFile.unmap();
 
         if (m_fileHandle != nullptr) {
-            if (fclose(m_fileHandle)) {
-                fprintf(stderr, "Failed to close input file %s", m_fileName);
+            if(fclose(m_fileHandle)) {
+                LOG_S_ERROR << "Failed to close input file " << m_fileName << std::endl;
             }
 
             m_fileHandle = nullptr;
@@ -262,7 +264,7 @@ public:
 
         const uint64_t mappedLength = (uint64_t)m_memMapedFile.mapped_length();
         if (mappedLength < offset) {
-            printf("File overflow at fileOffset %lld\n", (long long unsigned int)offset);
+            LOG_S_ERROR << "File overflow at fileOffset " << offset << std::endl;
             assert(!"Input file overflow");
             return nullptr;
         }
@@ -425,21 +427,20 @@ private:
     {
         m_fileHandle = fopen(m_fileName, "rb");
         if (m_fileHandle == nullptr) {
-            fprintf(stderr, "Failed to open input file %s", m_fileName);
+            LOG_S_ERROR << "Failed to open input file " << m_fileName << std::endl;
             return 0;
         }
 
         std::error_code error;
         m_memMapedFile.map(m_fileName, 0, mio::map_entire_file, error);
         if (error) {
-            fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
-            std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
+            LOG_S_ERROR << "Failed to map the input file: " << m_fileName << " with error msg: " << errmsg << std::endl;
             return error.value();
         }
 
         if (m_verbose) {
-            printf("Input file size is: %zd\n", m_memMapedFile.length());
+            LOG_DEBUG_CONFIG("Input file size is: %zd\n", m_memMapedFile.length());
         }
 
         return m_memMapedFile.length();
@@ -481,7 +482,7 @@ public:
 
         if (m_fileHandle != nullptr) {
             if(fclose(m_fileHandle)) {
-                fprintf(stderr, "Failed to close output file %s", m_fileName);
+                LOG_S_ERROR << "Failed to close output file " << m_fileName << std::endl;
             }
 
             m_fileHandle = nullptr;
@@ -498,7 +499,7 @@ public:
         Destroy();
         const size_t nameLength = strlen(inputFileName);
         if (nameLength >= sizeof(m_fileName)) {
-            fprintf(stderr, "Output file name is too long (max %zu characters): %s\n",
+            LOG_ERROR("Output file name is too long (max %zu characters): %s\n",
                     sizeof(m_fileName) - 1, inputFileName);
             return 0;
         }
@@ -533,7 +534,7 @@ private:
     {
         m_fileHandle = fopen(m_fileName, "wb");
         if (m_fileHandle == nullptr) {
-            fprintf(stderr, "Failed to open output file %s", m_fileName);
+            LOG_S_ERROR << "Failed to open output file " << m_fileName << std::endl;
             return 0;
         }
 
@@ -574,7 +575,7 @@ public:
 
         if (m_fileHandle != nullptr) {
             if(fclose(m_fileHandle)) {
-                fprintf(stderr, "Failed to close input file %s", m_fileName);
+                LOG_S_ERROR << "Failed to close input file " << m_fileName << std::endl;
             }
 
             m_fileHandle = nullptr;
@@ -615,7 +616,7 @@ public:
 
         const uint64_t mappedLength = (uint64_t)m_memMapedFile.mapped_length();
         if (mappedLength < fileOffset) {
-            fprintf(stderr,
+            LOG_ERROR(
                     "QP map file overflow: requested offset %llu exceeds file size %llu. "
                     "The file is too small for the driver's reported QP map texel size and format. "
                     "Regenerate it with the values printed by --verbose at encoder init time.\n",
@@ -631,21 +632,20 @@ private:
     {
         m_fileHandle = fopen(m_fileName, "rb");
         if (m_fileHandle == nullptr) {
-            fprintf(stderr, "Failed to open input file %s", m_fileName);
+            LOG_S_ERROR << "Failed to open input file " << m_fileName << std::endl;
             return 0;
         }
 
         std::error_code error;
         m_memMapedFile.map(m_fileName, 0, mio::map_entire_file, error);
         if (error) {
-            fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
-            std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
+            LOG_S_ERROR << "Failed to map input file " << m_fileName << " error: " << errmsg.c_str() << std::endl;
             return error.value();
         }
 
         if (m_verbose) {
-            printf("Input file size is: %zd\n", m_memMapedFile.length());
+            LOG_DEBUG_CONFIG("Input file size is: %zd\n", m_memMapedFile.length());
         }
 
         return m_memMapedFile.length();
@@ -962,7 +962,7 @@ public:
         // Defense-in-depth: also checked in ParseArguments for the CLI path,
         // but this guard covers programmatic callers that skip ParseArguments.
         if (encodeWidth > input.width || encodeHeight > input.height) {
-            fprintf(stderr, "Error: encode resolution %ux%u exceeds input resolution %ux%u\n",
+            LOG_ERROR("encode resolution %ux%u exceeds input resolution %ux%u\n",
                     encodeWidth, encodeHeight, input.width, input.height);
             return VK_ERROR_INVALID_VIDEO_STD_PARAMETERS_KHR;
         }

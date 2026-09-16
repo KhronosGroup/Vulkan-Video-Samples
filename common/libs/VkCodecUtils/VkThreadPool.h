@@ -47,7 +47,7 @@ public:
                     try {
                         task();
                     } catch (const std::exception& e) {
-                        std::cerr << "Task threw an exception: " << e.what() << std::endl;
+                        LOG_S_ERROR << "Task threw an exception: " << e.what() << std::endl;
                     }
                 }
             });

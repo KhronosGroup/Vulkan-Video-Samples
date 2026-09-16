@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "VkCodecUtils/VkVideoRefCountBase.h"
+#include "Logger.h"
 
 class Shell;
 
@@ -110,16 +111,17 @@ protected:
         , start_time (std::chrono::steady_clock::now())
         , m_verbose(verbose)
     {
+
         if (m_verbose) {
-            std::cout << "The clock resolution of high_resolution_clock is: "
+            LOG_S_DEBUG << "The clock resolution of high_resolution_clock is: "
                     << (double) std::chrono::high_resolution_clock::period::num /
-                                   std::chrono::high_resolution_clock::period::den << std::endl;
-            std::cout << "The clock resolution of steady_clock is: "
+                                    std::chrono::high_resolution_clock::period::den << std::endl;
+            LOG_S_DEBUG << "The clock resolution of steady_clock is: "
                     << (double) std::chrono::steady_clock::period::num /
-                                   std::chrono::steady_clock::period::den << std::endl;
-            std::cout << "The clock resolution of system_clock is: "
+                                    std::chrono::steady_clock::period::den << std::endl;
+            LOG_S_DEBUG << "The clock resolution of system_clock is: "
                     << (double) std::chrono::system_clock::period::num /
-                                   std::chrono::system_clock::period::den << std::endl;
+                                    std::chrono::system_clock::period::den << std::endl;
         }
     }
 

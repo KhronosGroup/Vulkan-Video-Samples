@@ -98,10 +98,9 @@ public:
     void Deinitialize()
     {
 
-        if (m_decoderConfig.verbose) {
-            std::cout << "Done processing " << 0UL << " input frames!" << std::endl
-                      << std::endl;
-        }
+
+        LOG_S_DEBUG << "Done processing " << 0UL << " input frames!" << std::endl
+                    << std::endl;
 
         m_decoder       = nullptr;
     }
@@ -156,7 +155,7 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
                                                           m_decoderConfig.verbose);
 
     if (result != VK_SUCCESS) {
-        printf("Could not initialize the Vulkan decoder device!\n");
+        LOG_ERROR("Could not initialize the Vulkan decoder device!\n");
         return result;
     }
 
@@ -199,7 +198,6 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
                                             m_decoderConfig.verbose);
 
     if (result != VK_SUCCESS) {
-
         assert(!"Can't initialize the Vulkan physical device!");
         return result;
     }
@@ -218,7 +216,6 @@ VkResult VulkanVideoDecoderImpl::Initialize(VkInstance vkInstance,
                                    );
 
     if (result != VK_SUCCESS) {
-
         assert(!"Failed to create Vulkan device!");
         return result;
     }

@@ -26,6 +26,7 @@
 #include <iomanip>
 #include <filesystem>
 #include "HelpersDispatchTable.h"
+#include "Logger.h"
 
 namespace vk {
 
@@ -245,7 +246,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
 
         result = vkIf->WaitForFences(device, 1, &fence, true, fenceWaitTimeout);
         if (result == VK_TIMEOUT) {
-            fprintf(stderr, "\t **** WARNING: fence  %s(%llu) is not done after %llu mSec with result 0x%x ****\n",
+            LOG_WARN("\t **** fence  %s(%llu) is not done after %llu mSec with result 0x%x ****\n",
                             fenceName, (long long unsigned int)fence, (long long unsigned int)fenceCurrentWaitTimeout/(1000ULL * 1000ULL), result);
         } else {
             break; // either success or an error occured
@@ -254,7 +255,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
     }
 
     if (result != VK_SUCCESS) {
-        fprintf(stderr, "\t **** ERROR: fence  %s(%llu) is not done after %llu mSec with result 0x%x ****\n",
+        LOG_ERROR("\t **** fence  %s(%llu) is not done after %llu mSec with result 0x%x ****\n",
                         fenceName, (long long unsigned int)fence, (long long unsigned int)fenceTotalWaitTimeout/(1000ULL * 1000ULL), vkIf->GetFenceStatus(device, fence));
         assert(!"Fence is not signaled yet after more than 100 mSec wait");
     }
@@ -262,7 +263,7 @@ inline VkResult WaitAndResetFence(const VkInterfaceFunctions* vkIf, VkDevice dev
     if (resetAfterWait) {
         result = vkIf->ResetFences(device, 1, &fence);
         if (result != VK_SUCCESS) {
-            fprintf(stderr, "\nERROR: ResetFences() result: 0x%x\n", result);
+            LOG_ERROR("ResetFences() result: 0x%x\n", result);
             assert(result == VK_SUCCESS);
         }
 
@@ -283,7 +284,7 @@ inline VkResult WaitAndGetStatus(const VkInterfaceFunctions* vkIf, VkDevice devi
     do {
         result = WaitAndResetFence(vkIf, device, fence, resetAfterWait, fenceName, fenceWaitTimeout, fenceTotalWaitTimeout);
         if (result != VK_SUCCESS) {
-            std::cout << "WaitForFences timeout " << fenceWaitTimeout
+            LOG_S_WARN << "WaitForFences timeout " << fenceWaitTimeout
                     << " result " << result << " retry " << retryCount << std::endl << std::flush;
 
             VkQueryResultStatusKHR decodeStatus = VK_QUERY_RESULT_STATUS_NOT_READY_KHR;
@@ -296,19 +297,19 @@ inline VkResult WaitAndGetStatus(const VkInterfaceFunctions* vkIf, VkDevice devi
                                                      sizeof(decodeStatus),
                                                      VK_QUERY_RESULT_WITH_STATUS_BIT_KHR);
 
-            printf("\nERROR: GetQueryPoolResults() result: 0x%x\n", queryResult);
-            std::cout << "\t +++++++++++++++++++++++++++< " << pictureIndex
+            LOG_ERROR("GetQueryPoolResults() result: 0x%x\n", queryResult);
+            LOG_S_WARN << "\t +++++++++++++++++++++++++++< " << pictureIndex
                     << " >++++++++++++++++++++++++++++++" << std::endl;
-            std::cout << "\t => Decode Status for CurrPicIdx: " << pictureIndex << std::endl
+            LOG_S_WARN << "\t => Decode Status for CurrPicIdx: " << pictureIndex << std::endl
                     << "\t\tdecodeStatus: " << decodeStatus << std::endl;
 
             if (queryResult == VK_ERROR_DEVICE_LOST) {
-                std::cout << "\t Dropping frame" << std::endl;
+                LOG_S_WARN << "\t Dropping frame" << std::endl;
                 break;
             }
 
             if ((queryResult == VK_SUCCESS) && (decodeStatus == VK_QUERY_RESULT_STATUS_ERROR_KHR)) {
-                std::cout << "\t Decoding of the frame failed." << std::endl;
+                LOG_S_ERROR << "\t Decoding of the frame failed." << std::endl;
                 break;
             }
         }
@@ -372,7 +373,7 @@ public:
 
         // Validate basic format: 36 characters (32 hex digits + 4 hyphens)
         if (strlen(uuidStr) != 36) {
-            std::cerr << "Error: UUID string must be 36 characters long" << std::endl;
+            LOG_S_ERROR << "Error: UUID string must be 36 characters long" << std::endl;
             return numHexDigits;
         }
 
@@ -447,7 +448,7 @@ private:
 // File validation helper
 inline bool IsValidFilePath(const char *pFilePath, bool checkExists = true) {
     if (!pFilePath || pFilePath[0] == '\0') {
-        std::cerr << "Error: File path is null or empty" << std::endl;
+        LOG_S_ERROR << "File path is null or empty" << std::endl;
         return false;
     }
 
@@ -456,31 +457,31 @@ inline bool IsValidFilePath(const char *pFilePath, bool checkExists = true) {
 
         if (checkExists) {
             if (!std::filesystem::exists(path)) {
-                std::cerr << "Error: File does not exist: " << pFilePath << std::endl;
+                LOG_S_ERROR << "File does not exist: " << pFilePath << std::endl;
                 return false;
             }
 
             if (std::filesystem::is_directory(path)) {
-                std::cerr << "Error: Path is a directory, not a file: " << pFilePath << std::endl;
+                LOG_S_ERROR << "Path is a directory, not a file: " << pFilePath << std::endl;
                 return false;
             }
 
             if (!std::filesystem::is_regular_file(path)) {
-                std::cerr << "Error: Path is not a regular file: " << pFilePath << std::endl;
+                LOG_S_ERROR << "Path is not a regular file: " << pFilePath << std::endl;
                 return false;
             }
         } else {
             // For output files, verify parent directory exists
             auto parent = path.parent_path();
             if (!parent.empty() && !std::filesystem::exists(parent)) {
-                std::cerr << "Error: Parent directory does not exist: " << parent << std::endl;
+                LOG_S_ERROR << "Parent directory does not exist: " << parent << std::endl;
                 return false;
             }
         }
 
         return true;
     } catch (const std::filesystem::filesystem_error& e) {
-        std::cerr << "Error: Invalid file path (" << e.what() << "): " << pFilePath << std::endl;
+        LOG_S_ERROR << "Invalid file path (" << e.what() << "): " << pFilePath << std::endl;
         return false;
     }
 }
