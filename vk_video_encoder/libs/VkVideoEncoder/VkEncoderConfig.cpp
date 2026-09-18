@@ -181,8 +181,8 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             if (!vk::IsValidFilePath(args[i].c_str(), true)) {
                 return -1;
             }
-            size_t fileSize = inputFileHandler.SetFileName(args[i].c_str());
-            if (fileSize <= 0) {
+            int64_t fileSize = inputFileHandler.SetFileName(args[i].c_str());
+            if (fileSize < 0) {
                 return (int)fileSize;
             }
             if (inputFileHandler.parseY4M(&input.width, &input.height, &frameRateNumerator, &frameRateDenominator)) {
@@ -518,8 +518,8 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
             if (!vk::IsValidFilePath(args[i].c_str(), true)) {
                 return -1;
             }
-            size_t fileSize = qpMapFileHandler.SetFileName(args[i].c_str());
-            if (fileSize <= 0) {
+            int64_t fileSize = qpMapFileHandler.SetFileName(args[i].c_str());
+            if (fileSize < 0) {
                 return (int)fileSize;
             }
             enableQpMap = true;
@@ -601,8 +601,8 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
     }
 
     if (!outputFileName.empty()) {
-        size_t fileSize = outputFileHandler.SetFileName(outputFileName.c_str());
-        if (fileSize <= 0) {
+        int64_t fileSize = outputFileHandler.SetFileName(outputFileName.c_str());
+        if (fileSize < 0) {
             return (int)fileSize;
         }
     }
@@ -613,8 +613,8 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
         if (verbose) {
             fprintf(stdout, "No output file name provided. Using %s.\n", defaultOutName);
         }
-        size_t fileSize = outputFileHandler.SetFileName(defaultOutName);
-        if (fileSize <= 0) {
+        int64_t fileSize = outputFileHandler.SetFileName(defaultOutName);
+        if (fileSize < 0) {
             return (int)fileSize;
         }
     }
@@ -774,6 +774,9 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, const char *argv[],
 
         VkSharedBaseObj<EncoderConfigH264> vkEncoderConfigh264(new EncoderConfigH264());
         int ret = vkEncoderConfigh264->ParseArguments(argc, argv);
+        if (ret == VKVS_FILE_ERROR_OUT_OF_MEMORY) {
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
         if (ret != 0) {
             assert(!"Invalid arguments");
             return VK_ERROR_INITIALIZATION_FAILED;
@@ -792,6 +795,9 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, const char *argv[],
 
         VkSharedBaseObj<EncoderConfigH265> vkEncoderConfigh265(new EncoderConfigH265());
         int ret = vkEncoderConfigh265->ParseArguments(argc, argv);
+        if (ret == VKVS_FILE_ERROR_OUT_OF_MEMORY) {
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
         if (ret != 0) {
             assert(!"Invalid arguments");
             return VK_ERROR_INITIALIZATION_FAILED;
@@ -810,6 +816,9 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, const char *argv[],
 
         VkSharedBaseObj<EncoderConfigAV1> vkEncoderConfigAV1(new EncoderConfigAV1());
         int ret = vkEncoderConfigAV1->ParseArguments(argc, argv);
+        if (ret == VKVS_FILE_ERROR_OUT_OF_MEMORY) {
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
+        }
         if (ret != 0) {
             assert(!"Invalid arguments");
             return VK_ERROR_INITIALIZATION_FAILED;

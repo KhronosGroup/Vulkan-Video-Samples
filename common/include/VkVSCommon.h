@@ -37,6 +37,14 @@ extern "C" {
 // This is used when video codec features are not supported by hardware/driver
 #define VVS_EXIT_UNSUPPORTED  EX_UNAVAILABLE
 
+// Negative sentinels returned in place of a file size by the file handlers.
+enum VkVSFileError {
+    VKVS_FILE_ERROR_OPEN          = -1,
+    VKVS_FILE_ERROR_OUT_OF_MEMORY = -2,
+    VKVS_FILE_ERROR_EMPTY         = -3,
+    VKVS_FILE_ERROR_NAME_TOO_LONG = -4,
+};
+
 #ifdef __cplusplus
 } // extern "C"
 

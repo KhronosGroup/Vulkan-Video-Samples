@@ -217,9 +217,15 @@ public:
         return m_fileName[0] != 0;
     }
 
-    size_t SetFileName(const char* inputFileName)
+    int64_t SetFileName(const char* inputFileName)
     {
         Destroy();
+        const size_t nameLength = strlen(inputFileName);
+        if (nameLength >= sizeof(m_fileName)) {
+            fprintf(stderr, "Input file name is too long (max %zu characters): %s\n",
+                    sizeof(m_fileName) - 1, inputFileName);
+            return VKVS_FILE_ERROR_NAME_TOO_LONG;
+        }
         strcpy(m_fileName, inputFileName);
         return OpenFile();
     }
@@ -421,12 +427,12 @@ beach:
     }
 
 private:
-    size_t OpenFile()
+    int64_t OpenFile()
     {
         m_fileHandle = fopen(m_fileName, "rb");
         if (m_fileHandle == nullptr) {
             fprintf(stderr, "Failed to open input file %s", m_fileName);
-            return 0;
+            return VKVS_FILE_ERROR_OPEN;
         }
 
         std::error_code error;
@@ -435,14 +441,18 @@ private:
             fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
             std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
-            return error.value();
+
+            if (error == std::errc::not_enough_memory) {
+                return VKVS_FILE_ERROR_OUT_OF_MEMORY;
+            }
+            return VKVS_FILE_ERROR_OPEN;
         }
 
         if (m_verbose) {
             printf("Input file size is: %zd\n", m_memMapedFile.length());
         }
 
-        return m_memMapedFile.length();
+        return (int64_t)m_memMapedFile.length();
     }
 
     size_t GetFileSize() const {
@@ -462,8 +472,7 @@ class EncoderOutputFileHandler
 public:
     EncoderOutputFileHandler()
     : m_fileName{},
-      m_fileHandle(),
-      m_memMapedFile()
+      m_fileHandle()
     {
 
     }
@@ -475,10 +484,6 @@ public:
 
     void Destroy()
     {
-        std::error_code ec;
-        m_memMapedFile.sync(ec);
-        m_memMapedFile.unmap();
-
         if (m_fileHandle != nullptr) {
             if(fclose(m_fileHandle)) {
                 fprintf(stderr, "Failed to close output file %s", m_fileName);
@@ -493,14 +498,14 @@ public:
         return m_fileName[0] != 0;
     }
 
-    size_t SetFileName(const char* inputFileName)
+    int64_t SetFileName(const char* inputFileName)
     {
         Destroy();
         const size_t nameLength = strlen(inputFileName);
         if (nameLength >= sizeof(m_fileName)) {
             fprintf(stderr, "Output file name is too long (max %zu characters): %s\n",
                     sizeof(m_fileName) - 1, inputFileName);
-            return 0;
+            return VKVS_FILE_ERROR_NAME_TOO_LONG;
         }
         strcpy(m_fileName, inputFileName);
         return OpenFile();
@@ -529,25 +534,21 @@ public:
 
 
 private:
-    size_t OpenFile()
+    int64_t OpenFile()
     {
         m_fileHandle = fopen(m_fileName, "wb");
         if (m_fileHandle == nullptr) {
             fprintf(stderr, "Failed to open output file %s", m_fileName);
-            return 0;
+            return VKVS_FILE_ERROR_OPEN;
         }
 
-        return 1;
-    }
-
-    size_t GetFileSize() const {
-        return m_memMapedFile.length();
+        // The file is opened for writing, so it is empty at this point.
+        return 0;
     }
 
 private:
     char  m_fileName[256];
     FILE* m_fileHandle;
-    mio::basic_mmap<mio::access_mode::write, uint8_t> m_memMapedFile;
 };
 
 
@@ -586,9 +587,15 @@ public:
         return m_fileName[0] != 0;
     }
 
-    size_t SetFileName(const char* inputFileName)
+    int64_t SetFileName(const char* inputFileName)
     {
         Destroy();
+        const size_t nameLength = strlen(inputFileName);
+        if (nameLength >= sizeof(m_fileName)) {
+            fprintf(stderr, "Input file name is too long (max %zu characters): %s\n",
+                    sizeof(m_fileName) - 1, inputFileName);
+            return VKVS_FILE_ERROR_NAME_TOO_LONG;
+        }
         strcpy(m_fileName, inputFileName);
         return OpenFile();
     }
@@ -627,28 +634,34 @@ public:
     }
 
 private:
-    size_t OpenFile()
+    int64_t OpenFile()
     {
         m_fileHandle = fopen(m_fileName, "rb");
         if (m_fileHandle == nullptr) {
             fprintf(stderr, "Failed to open input file %s", m_fileName);
-            return 0;
+            return VKVS_FILE_ERROR_OPEN;
         }
 
+        // An empty file cannot be mapped either, so rule it out here to keep it distinct
+        // from a mapping failure caused by the address space.
         std::error_code error;
         m_memMapedFile.map(m_fileName, 0, mio::map_entire_file, error);
         if (error) {
             fprintf(stderr, "Failed to map the input file %s", m_fileName);
             const auto& errmsg = error.message();
             std::printf("error mapping file: %s, exiting...\n", errmsg.c_str());
-            return error.value();
+
+            if (error == std::errc::not_enough_memory) {
+                return VKVS_FILE_ERROR_OUT_OF_MEMORY;
+            }
+            return VKVS_FILE_ERROR_OPEN;
         }
 
         if (m_verbose) {
             printf("Input file size is: %zd\n", m_memMapedFile.length());
         }
 
-        return m_memMapedFile.length();
+        return (int64_t)m_memMapedFile.length();
     }
 
     size_t GetFileSize() const {
