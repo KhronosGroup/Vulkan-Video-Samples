@@ -1205,8 +1205,8 @@ VkResult VkVideoEncoderAV1::Feedback2TextOutput::Init(const EncoderConfigAV1& co
         m_path = "encoder.feedback.txt";
     }
 
-    size_t fileSize = m_file.SetFileName(m_path.c_str());
-    if (fileSize == 0) {
+    int64_t fileSize = m_file.SetFileName(m_path.c_str());
+    if (fileSize < 0) {
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
