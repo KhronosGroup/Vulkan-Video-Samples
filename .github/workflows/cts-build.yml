@@ -78,8 +78,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install lxml
-        run: pip install lxml
+      - name: Install Python dependencies
+        run: pip install lxml pyparsing
 
       - name: Clone VK-GL-CTS
         run: |
