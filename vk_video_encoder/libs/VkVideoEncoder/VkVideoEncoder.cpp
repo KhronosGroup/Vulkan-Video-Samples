@@ -1431,15 +1431,14 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                     encoderConfig->videoCapabilities.minBitstreamBufferOffsetAlignment,
                     encoderConfig->videoCapabilities.minBitstreamBufferSizeAlignment,
                     nullptr, 0, bitstreamBuffer);
-            assert(result == VK_SUCCESS);
             if (result != VK_SUCCESS) {
                 fprintf(stderr, "\nERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
-                break;
+                return result;
             }
 
             int32_t nodeAddedWithIndex = m_bitstreamBuffersQueue.AddNodeToPool(bitstreamBuffer, false);
             if (nodeAddedWithIndex < 0) {
-                assert("Could not add the new node to the pool");
+                assert(!"Could not add the new node to the pool");
                 break;
             }
         }
@@ -1690,7 +1689,6 @@ VkDeviceSize VkVideoEncoder::GetBitstreamBuffer(VkSharedBaseObj<VulkanBitstreamB
                 m_encoderConfig->videoCapabilities.minBitstreamBufferOffsetAlignment,
                 m_encoderConfig->videoCapabilities.minBitstreamBufferSizeAlignment,
                 nullptr, 0, newBitstreamBuffer);
-        assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             fprintf(stderr, "\nERROR: VulkanBitstreamBufferImpl::Create() result: 0x%x\n", result);
             return 0;
@@ -1702,7 +1700,7 @@ VkDeviceSize VkVideoEncoder::GetBitstreamBuffer(VkSharedBaseObj<VulkanBitstreamB
         if (enablePool) {
             int32_t nodeAddedWithIndex = m_bitstreamBuffersQueue.AddNodeToPool(newBitstreamBuffer, true);
             if (nodeAddedWithIndex < 0) {
-                assert("Could not add the new node to the pool");
+                assert(!"Could not add the new node to the pool");
             }
         }
 
