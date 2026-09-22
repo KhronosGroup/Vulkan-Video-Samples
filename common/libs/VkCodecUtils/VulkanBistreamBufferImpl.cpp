@@ -102,7 +102,8 @@ VkResult VulkanBitstreamBufferImpl::CreateBuffer(const VulkanDeviceContext* vkDe
 
     VkResult result = vkDevCtx->CreateBuffer(*vkDevCtx, &createBufferInfo, nullptr, &buffer);
     if (result != VK_SUCCESS) {
-        assert(!"Create Buffer failed!");
+        buffer = VK_NULL_HANDLE;
+        fprintf(stderr, "\nERROR: Create Buffer failed! result: 0x%x\n", result);
         return result;
     }
 
@@ -124,14 +125,16 @@ VkResult VulkanBitstreamBufferImpl::CreateBuffer(const VulkanDeviceContext* vkDe
                                             vkDeviceMemory);
     if (result != VK_SUCCESS) {
         vkDevCtx->DestroyBuffer(*vkDevCtx, buffer, nullptr);
-        assert(!"Create Memory Failed!");
+        buffer = VK_NULL_HANDLE;
+        fprintf(stderr, "\nERROR: VulkanDeviceMemoryImpl::Create() result: 0x%x\n", result);
         return result;
     }
 
     result = vkDevCtx->BindBufferMemory(*vkDevCtx, buffer, *vkDeviceMemory, bufferOffset);
     if (result != VK_SUCCESS) {
         vkDevCtx->DestroyBuffer(*vkDevCtx, buffer, nullptr);
-        assert(!"Bind buffer memory failed!");
+        buffer = VK_NULL_HANDLE;
+        fprintf(stderr, "\nERROR: BindBufferMemory() result: 0x%x\n", result);
         return result;
     }
 
