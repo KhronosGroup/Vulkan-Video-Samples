@@ -14,6 +14,69 @@ env:
   BUILD_JOBS: 16
 
 jobs:
+  check-coding-style:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Install clang-format
+        run: |
+          sudo apt update
+          sudo apt install --assume-yes clang-format
+
+      - name: Run pre-commit
+        run: |
+          # Determine the base reference for comparison
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+          else
+            BASE_REF="origin/main"
+          fi
+
+          echo "Running pre-commit from $BASE_REF to HEAD"
+          pre-commit run --from-ref $BASE_REF --to-ref HEAD
+
+  check-commit-messages:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install gitlint
+        run: pip install gitlint
+
+      - name: Run gitlint
+        run: |
+          # Determine the base reference for comparison
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_REF="origin/${{ github.event.pull_request.base.ref }}"
+          else
+            BASE_REF="origin/main"
+          fi
+
+          echo "Running gitlint from $BASE_REF to HEAD"
+          gitlint --commits $BASE_REF..HEAD
+
   Vulkan-Video-Samples-linux:
     strategy:
       matrix:
