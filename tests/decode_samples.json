@@ -327,6 +327,15 @@
       "source_filepath": "video/av1/av1-frames_refs_short_signaling_golden.ivf"
     },
     {
+      "name": "av1-bbb-720p",
+      "codec": "av1",
+      "description": "Short av1 main clip",
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/av1/various/av1-bbb-1280x720-60f.mp4",
+      "source_checksum": "869a094d775f35dc317957c9af45c3e1ed1b42d0a94d6df13553e931b3b25344",
+      "source_filepath": "video/av1/av1-bbb-1280x720-60f.mp4",
+      "expected_output_md5": "8a2f16173f2e9fb90271ae7166acdf76"
+    },
+    {
       "name": "vp9_key_10",
       "codec": "vp9",
       "description": "Test VP9 decoding with key frame 10-bit sample",
