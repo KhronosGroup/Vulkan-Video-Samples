@@ -173,6 +173,20 @@
       "devices": [
         "56a1"
       ]
+    },
+    {
+      "name": "av1_bbb_720p",
+      "format": "vvs",
+      "drivers": [
+        "amd"
+      ],
+      "platforms": [
+        "windows"
+      ],
+      "reproduction": "always",
+      "reason": "MD5 file mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/251",
+      "date_added": "2026-09-29"
     }
   ],
   "encode": [
