@@ -156,6 +156,23 @@
       "devices": [
         "26bb"
       ]
+    },
+    {
+      "name": "vp90-2-02-size-64x34",
+      "format": "vvs",
+      "drivers": [
+        "anv"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "reproduction": "always",
+      "reason": "MD5 mismatch",
+      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/249",
+      "date_added": "2026-09-25",
+      "devices": [
+        "56a1"
+      ]
     }
   ],
   "encode": [
