@@ -457,39 +457,39 @@ public:
         {
             StdVideoDecodeH264ReferenceInfoFlags picFlags = StdVideoDecodeH264ReferenceInfoFlags();
             if (m_dumpParserData)
-                std::cout << "\t\t Flags: ";
+                LOG_S_DEBUG << "\t\t Flags: ";
 
             if (used_for_reference) {
                 if (m_dumpParserData)
-                    std::cout << "FRAME_IS_REFERENCE ";
+                    LOG_S_DEBUG << "FRAME_IS_REFERENCE ";
                 // picFlags.is_reference = true;
             }
 
             if (is_long_term) {
                 if (m_dumpParserData)
-                    std::cout << "IS_LONG_TERM ";
+                    LOG_S_DEBUG << "IS_LONG_TERM ";
                 picFlags.used_for_long_term_reference = true;
             }
             if (is_non_existing) {
                 if (m_dumpParserData)
-                    std::cout << "IS_NON_EXISTING ";
+                    LOG_S_DEBUG << "IS_NON_EXISTING ";
                 picFlags.is_non_existing = true;
             }
 
             if (is_field_ref) {
                 if (m_dumpParserData)
-                    std::cout << "IS_FIELD ";
+                    LOG_S_DEBUG << "IS_FIELD ";
                 // picFlags.field_pic_flag = true;
             }
 
             if (!currentPictureIsProgressive && (used_for_reference & topFieldMask)) {
                 if (m_dumpParserData)
-                    std::cout << "TOP_FIELD_IS_REF ";
+                    LOG_S_DEBUG << "TOP_FIELD_IS_REF ";
                 picFlags.top_field_flag = true;
             }
             if (!currentPictureIsProgressive && (used_for_reference & bottomFieldMask)) {
                 if (m_dumpParserData)
-                    std::cout << "BOTTOM_FIELD_IS_REF ";
+                    LOG_S_DEBUG << "BOTTOM_FIELD_IS_REF ";
                 picFlags.bottom_field_flag = true;
             }
 
@@ -512,7 +512,7 @@ public:
             StdVideoDecodeH264ReferenceInfo* pRefPicInfo = &pDpbRefList[dpbEntryIdx].stdReferenceInfo;
             pRefPicInfo->FrameNum = FrameIdx;
             if (m_dumpParserData) {
-                std::cout << "\tdpbEntryIdx: " << dpbEntryIdx
+                LOG_S_DEBUG << "\tdpbEntryIdx: " << dpbEntryIdx
                           << "dpbSlotIndex: " << dpbSlotIndex
                           << " FrameIdx: " << (int32_t)FrameIdx;
             }
@@ -520,7 +520,7 @@ public:
             pRefPicInfo->PicOrderCnt[0] = FieldOrderCnt[0];
             pRefPicInfo->PicOrderCnt[1] = FieldOrderCnt[1];
             if (m_dumpParserData)
-                std::cout << " fieldOrderCnt[0]: " << pRefPicInfo->PicOrderCnt[0]
+                LOG_S_DEBUG << " fieldOrderCnt[0]: " << pRefPicInfo->PicOrderCnt[0]
                           << " fieldOrderCnt[1]: " << pRefPicInfo->PicOrderCnt[1]
                           << std::endl;
         }
@@ -543,15 +543,15 @@ public:
             pRefPicInfo->flags.used_for_long_term_reference = is_long_term;
 
             if (m_dumpParserData) {
-                std::cout << "\tdpbIndex: " << dpbSlotIndex
+                LOG_S_DEBUG << "\tdpbIndex: " << dpbSlotIndex
                           << " picOrderCntValList: " << PicOrderCnt;
 
-                std::cout << "\t\t Flags: ";
-                std::cout << "FRAME IS REFERENCE ";
+                LOG_S_DEBUG << "\t\t Flags: ";
+                LOG_S_DEBUG << "FRAME IS REFERENCE ";
                 if (pRefPicInfo->flags.used_for_long_term_reference) {
-                    std::cout << "IS LONG TERM ";
+                    LOG_S_DEBUG << "IS LONG TERM ";
                 }
-                std::cout << std::endl;
+                LOG_S_DEBUG << std::endl;
             }
         }
 
@@ -587,15 +587,15 @@ public:
 #endif
 
             if (m_dumpParserData) {
-                std::cout << "\tdpbIndex: " << dpbSlotIndex
+                LOG_S_DEBUG << "\tdpbIndex: " << dpbSlotIndex
                           << " picOrderCntValList: " << PicOrderCnt;
 
-                std::cout << "\t\t Flags: ";
-                std::cout << "FRAME IS REFERENCE ";
+                LOG_S_DEBUG << "\t\t Flags: ";
+                LOG_S_DEBUG << "FRAME IS REFERENCE ";
                 //if (pRefPicInfo->flags.used_for_long_term_reference) {
-                //    std::cout << "IS LONG TERM ";
+                //    LOG_S_DEBUG << "IS LONG TERM ";
                 //}
-                std::cout << std::endl;
+                LOG_S_DEBUG << std::endl;
             }
         }
 
@@ -777,7 +777,7 @@ bool VulkanVideoParser::DecodePicture(VkParserPictureData* pd)
     }
 
     if (m_dumpParserData) {
-        std::cout
+        LOG_S_DEBUG
             << "\t ==> VulkanVideoParser::DecodePicture " << picIdx << std::endl
             << "\t\t progressive: " << (bool)pd->progressive_frame
             << // Frame is progressive
@@ -838,9 +838,9 @@ bool VulkanVideoParser::DisplayPicture(VkPicIf* pPicBuff, int64_t timestamp)
     int32_t picIdx = pVkPicBuff ? pVkPicBuff->m_picIdx : -1;
 
     if (m_dumpParserData) {
-        std::cout << "\t ======================< " << picIdx
+        LOG_S_DEBUG << "\t ======================< " << picIdx
                   << " >============================" << std::endl;
-        std::cout << "\t ==> VulkanVideoParser::DisplayPicture " << picIdx
+        LOG_S_DEBUG << "\t ==> VulkanVideoParser::DisplayPicture " << picIdx
                   << std::endl;
     }
     assert(picIdx != -1);
@@ -860,9 +860,9 @@ bool VulkanVideoParser::DisplayPicture(VkPicIf* pPicBuff, int64_t timestamp)
     }
 
     if (m_dumpParserData) {
-        std::cout << "\t <== VulkanVideoParser::DisplayPicture " << picIdx
+        LOG_S_DEBUG << "\t <== VulkanVideoParser::DisplayPicture " << picIdx
                   << std::endl;
-        std::cout << "\t ======================< " << picIdx
+        LOG_S_DEBUG << "\t ======================< " << picIdx
                   << " >============================" << std::endl;
     }
     return result;
@@ -1121,7 +1121,7 @@ uint32_t VulkanVideoParser::ResetPicDpbSlots(uint32_t picIndexSlotValidMask)
             if (resetSlotsMask & (1 << picIdx)) {
                 resetSlotsMask &= ~(1 << picIdx);
                 if (m_dumpDpbData) {
-                    printf(";;; Resetting picIdx %d, was using dpb slot %d\n", picIdx, m_pictureToDpbSlotMap[picIdx]);
+                    LOG_DEBUG(";;; Resetting picIdx %d, was using dpb slot %d\n", picIdx, m_pictureToDpbSlotMap[picIdx]);
                 }
                 SetPicDpbSlot(picIdx, -1);
             }
@@ -1348,35 +1348,35 @@ uint32_t VulkanVideoParser::FillDpbH264State(
     assert(numUsedRef <= num_ref_frames);
 
     if (m_dumpDpbData) {
-        std::cout << " =>>> ********************* picIdx: "
+        LOG_S_DEBUG << " =>>> ********************* picIdx: "
                   << (int32_t)GetPicIdx(pd->pCurrPic)
                   << " *************************" << std::endl;
-        std::cout << "\tRef frames data in for picIdx: "
+        LOG_S_DEBUG << "\tRef frames data in for picIdx: "
                   << (int32_t)GetPicIdx(pd->pCurrPic) << std::endl
                   << "\tSlot Index:\t\t";
         for (uint32_t slot = 0; slot < numUsedRef; slot++) {
             if (!refOnlyDpbIn[slot].is_non_existing) {
-                std::cout << slot << ",\t";
+                LOG_S_DEBUG << slot << ",\t";
             } else {
-                std::cout << 'X' << ",\t";
+                LOG_S_DEBUG << 'X' << ",\t";
             }
         }
-        std::cout << std::endl
+        LOG_S_DEBUG << std::endl
                   << "\tPict Index:\t\t";
         for (uint32_t slot = 0; slot < numUsedRef; slot++) {
             if (!refOnlyDpbIn[slot].is_non_existing) {
-                std::cout << refOnlyDpbIn[slot].m_picBuff->m_picIdx << ",\t";
+                LOG_S_DEBUG << refOnlyDpbIn[slot].m_picBuff->m_picIdx << ",\t";
             } else {
-                std::cout << 'X' << ",\t";
+                LOG_S_DEBUG << 'X' << ",\t";
             }
         }
-        std::cout << "\n\tTotal Ref frames for picIdx: "
+        LOG_S_DEBUG << "\n\tTotal Ref frames for picIdx: "
                   << (int32_t)GetPicIdx(pd->pCurrPic) << " : " << numUsedRef
                   << " out of " << num_ref_frames << " MAX(" << m_maxNumDpbSlots
                   << ")" << std::endl
                   << std::endl;
 
-        std::cout << std::flush;
+        LOG_S_DEBUG << std::flush;
     }
 
     // Map all frames not present in DPB as non-reference, and generate a mask of
@@ -1486,42 +1486,42 @@ uint32_t VulkanVideoParser::FillDpbH264State(
     if (m_dumpDpbData) {
         uint32_t slotInUseMask = m_dpb.getSlotInUseMask();
         uint32_t slotsInUseCount = 0;
-        std::cout << "\tAllocated Ref slot " << (int32_t)currPicDpbSlot << " for "
+        LOG_S_DEBUG << "\tAllocated Ref slot " << (int32_t)currPicDpbSlot << " for "
                   << (pd->ref_pic_flag ? "REFERENCE" : "NON-REFERENCE")
                   << " picIdx: " << (int32_t)currPicIdx << std::endl;
-        std::cout << "\tRef frames map for picIdx: " << (int32_t)currPicIdx
+        LOG_S_DEBUG << "\tRef frames map for picIdx: " << (int32_t)currPicIdx
                   << std::endl
                   << "\tSlot Index:\t\t";
         for (uint32_t slot = 0; slot < m_dpb.getMaxSize(); slot++) {
             if (slotInUseMask & (1 << slot)) {
-                std::cout << slot << ",\t";
+                LOG_S_DEBUG << slot << ",\t";
                 slotsInUseCount++;
             } else {
-                std::cout << 'X' << ",\t";
+                LOG_S_DEBUG << 'X' << ",\t";
             }
         }
-        std::cout << std::endl
+        LOG_S_DEBUG << std::endl
                   << "\tPict Index:\t\t";
         for (uint32_t slot = 0; slot < m_dpb.getMaxSize(); slot++) {
             if (slotInUseMask & (1 << slot)) {
                 if (m_dpb[slot].getPictureResource()) {
-                    std::cout << m_dpb[slot].getPictureResource()->m_picIdx << ",\t";
+                    LOG_S_DEBUG << m_dpb[slot].getPictureResource()->m_picIdx << ",\t";
                 } else {
-                    std::cout << "non existent"
+                    LOG_S_DEBUG << "non existent"
                               << ",\t";
                 }
             } else {
-                std::cout << 'X' << ",\t";
+                LOG_S_DEBUG << 'X' << ",\t";
             }
         }
-        std::cout << "\n\tTotal slots in use for picIdx: " << (int32_t)currPicIdx
+        LOG_S_DEBUG << "\n\tTotal slots in use for picIdx: " << (int32_t)currPicIdx
                   << " : " << slotsInUseCount << " out of " << m_dpb.getMaxSize()
                   << std::endl;
-        std::cout << " <<<= ********************* picIdx: "
+        LOG_S_DEBUG << " <<<= ********************* picIdx: "
                   << (int32_t)GetPicIdx(pd->pCurrPic)
                   << " *************************" << std::endl
                   << std::endl;
-        std::cout << std::flush;
+        LOG_S_DEBUG << std::flush;
     }
     return refDpbUsedAndValidMask ? numUsedRef : 0;
 }
@@ -1543,7 +1543,7 @@ uint32_t VulkanVideoParser::FillDpbH265State(
     uint32_t refDpbUsedAndValidMask = 0;
     uint32_t numUsedRef = 0;
     if (m_dumpParserData)
-        std::cout << "Ref frames data: " << std::endl;
+        LOG_S_DEBUG << "Ref frames data: " << std::endl;
     for (int32_t inIdx = 0; inIdx < HEVC_MAX_DPB_SLOTS; inIdx++) {
         // used_for_reference: 0 = unused, 1 = top_field, 2 = bottom_field, 3 =
         // both_fields
@@ -1565,7 +1565,7 @@ uint32_t VulkanVideoParser::FillDpbH265State(
     }
 
     if (m_dumpParserData)
-        std::cout << "Total Ref frames: " << numUsedRef << std::endl;
+        LOG_S_DEBUG << "Total Ref frames: " << numUsedRef << std::endl;
 
     assert(numUsedRef <= m_maxNumDpbSlots);
     assert(numUsedRef <= HEVC_MAX_DPB_SLOTS);
@@ -1616,7 +1616,7 @@ uint32_t VulkanVideoParser::FillDpbH265State(
                 frmListToDpb[originalDpbIndex] = dpbSlot;
             } else {
                 // This should never happen
-                printf("DPB mapping logic broken!\n");
+                LOG_ERROR("DPB mapping logic broken!\n");
                 assert(0);
             }
         }
@@ -1649,9 +1649,9 @@ uint32_t VulkanVideoParser::FillDpbH265State(
     }
 
     if (m_dumpParserData) {
-        std::cout << "frmListToDpb:" << std::endl;
+        LOG_S_DEBUG << "frmListToDpb:" << std::endl;
         for (int8_t dpbResIdx = 0; dpbResIdx < HEVC_MAX_DPB_SLOTS; dpbResIdx++) {
-            std::cout << "\tfrmListToDpb[" << (int32_t)dpbResIdx << "] is "
+            LOG_S_DEBUG << "\tfrmListToDpb[" << (int32_t)dpbResIdx << "] is "
                       << (int32_t)frmListToDpb[dpbResIdx] << std::endl;
         }
     }
@@ -1661,13 +1661,13 @@ uint32_t VulkanVideoParser::FillDpbH265State(
     const size_t maxNumPocStCurrBefore = ARRAYSIZE(pStdPictureInfo->RefPicSetStCurrBefore);
     assert((size_t)pin->NumPocStCurrBefore <= maxNumPocStCurrBefore);
     if ((size_t)pin->NumPocStCurrBefore > maxNumPocStCurrBefore) {
-        fprintf(stderr, "\nERROR: FillDpbH265State() pin->NumPocStCurrBefore(%d) must be smaller than maxNumPocStCurrBefore(%zd)\n", pin->NumPocStCurrBefore, maxNumPocStCurrBefore);
+        LOG_ERROR("ERROR: FillDpbH265State() pin->NumPocStCurrBefore(%d) must be smaller than maxNumPocStCurrBefore(%zd)", pin->NumPocStCurrBefore, maxNumPocStCurrBefore);
     }
     for (int32_t i = 0; i < pin->NumPocStCurrBefore; i++) {
         uint8_t idx = (uint8_t)pin->RefPicSetStCurrBefore[i];
         if (idx < HEVC_MAX_DPB_SLOTS) {
             if (m_dumpParserData)
-                std::cout << "\trefPicSetStCurrBefore[" << i << "] is " << (int32_t)idx
+                LOG_S_DEBUG << "\trefPicSetStCurrBefore[" << i << "] is " << (int32_t)idx
                           << " -> " << (int32_t)frmListToDpb[idx] << std::endl;
             pStdPictureInfo->RefPicSetStCurrBefore[numPocStCurrBefore++] = frmListToDpb[idx] & 0xf;
             numPocTotalCurr++;
@@ -1681,13 +1681,13 @@ uint32_t VulkanVideoParser::FillDpbH265State(
     const size_t maxNumPocStCurrAfter = ARRAYSIZE(pStdPictureInfo->RefPicSetStCurrAfter);
     assert((size_t)pin->NumPocStCurrAfter <= maxNumPocStCurrAfter);
     if ((size_t)pin->NumPocStCurrAfter > maxNumPocStCurrAfter) {
-        fprintf(stderr, "\nERROR: FillDpbH265State() pin->NumPocStCurrAfter(%d) must be smaller than maxNumPocStCurrAfter(%zd)\n", pin->NumPocStCurrAfter, maxNumPocStCurrAfter);
+        LOG_ERROR("ERROR: FillDpbH265State() pin->NumPocStCurrAfter(%d) must be smaller than maxNumPocStCurrAfter(%zd)", pin->NumPocStCurrAfter, maxNumPocStCurrAfter);
     }
     for (int32_t i = 0; i < pin->NumPocStCurrAfter; i++) {
         uint8_t idx = (uint8_t)pin->RefPicSetStCurrAfter[i];
         if (idx < HEVC_MAX_DPB_SLOTS) {
             if (m_dumpParserData)
-                std::cout << "\trefPicSetStCurrAfter[" << i << "] is " << (int32_t)idx
+                LOG_S_DEBUG << "\trefPicSetStCurrAfter[" << i << "] is " << (int32_t)idx
                           << " -> " << (int32_t)frmListToDpb[idx] << std::endl;
             pStdPictureInfo->RefPicSetStCurrAfter[numPocStCurrAfter++] = frmListToDpb[idx] & 0xf;
             numPocTotalCurr++;
@@ -1701,13 +1701,13 @@ uint32_t VulkanVideoParser::FillDpbH265State(
     const size_t maxNumPocLtCurr = ARRAYSIZE(pStdPictureInfo->RefPicSetLtCurr);
     assert((size_t)pin->NumPocLtCurr <= maxNumPocLtCurr);
     if ((size_t)pin->NumPocLtCurr > maxNumPocLtCurr) {
-        fprintf(stderr, "\nERROR: FillDpbH265State() pin->NumPocLtCurr(%d) must be smaller than maxNumPocLtCurr(%zd)\n", pin->NumPocLtCurr, maxNumPocLtCurr);
+        LOG_ERROR("ERROR: FillDpbH265State() pin->NumPocLtCurr(%d) must be smaller than maxNumPocLtCurr(%zd)", pin->NumPocLtCurr, maxNumPocLtCurr);
     }
     for (int32_t i = 0; i < pin->NumPocLtCurr; i++) {
         uint8_t idx = (uint8_t)pin->RefPicSetLtCurr[i];
         if (idx < HEVC_MAX_DPB_SLOTS) {
             if (m_dumpParserData)
-                std::cout << "\trefPicSetLtCurr[" << i << "] is " << (int32_t)idx
+                LOG_S_DEBUG << "\trefPicSetLtCurr[" << i << "] is " << (int32_t)idx
                           << " -> " << (int32_t)frmListToDpb[idx] << std::endl;
             pStdPictureInfo->RefPicSetLtCurr[numPocLtCurr++] = frmListToDpb[idx] & 0xf;
             numPocTotalCurr++;
@@ -1721,13 +1721,13 @@ uint32_t VulkanVideoParser::FillDpbH265State(
 
     for (int32_t i = 0; i < 8; i++) {
         if (m_dumpParserData)
-            std::cout << "\tlist indx " << i << ": "
-                      << " refPicSetStCurrBefore: "
-                      << (int32_t)pStdPictureInfo->RefPicSetStCurrBefore[i]
-                      << " refPicSetStCurrAfter: "
-                      << (int32_t)pStdPictureInfo->RefPicSetStCurrAfter[i]
-                      << " refPicSetLtCurr: "
-                      << (int32_t)pStdPictureInfo->RefPicSetLtCurr[i] << std::endl;
+            LOG_S_DEBUG << "\tlist indx " << i << ": "
+                        << " refPicSetStCurrBefore: "
+                        << (int32_t)pStdPictureInfo->RefPicSetStCurrBefore[i]
+                        << " refPicSetStCurrAfter: "
+                        << (int32_t)pStdPictureInfo->RefPicSetStCurrAfter[i]
+                        << " refPicSetLtCurr: "
+                        << (int32_t)pStdPictureInfo->RefPicSetLtCurr[i] << std::endl;
     }
 
     int8_t dpbSlot = AllocateDpbSlotForCurrentH265(GetPic(pd->pCurrPic),
@@ -1757,14 +1757,14 @@ uint32_t VulkanVideoParser::FillDpbAV1State(
     uint32_t referenceIndex = 0;
 
     if (m_dumpParserData)
-        std::cout << "Ref frames data: " << std::endl;
+        LOG_DEBUG("Ref frames data:");
 
     if (m_dumpDpbData) {
-        printf(";;;; ======= AV1 DPB fill begin %d =======\n", m_nCurrentPictureID);
+        printf(";;;; ======= AV1 DPB fill begin %d =======", m_nCurrentPictureID);
         printf("ref_frame_idx: ");
         for (int i = 0 ; i < 7; i++)
             printf("%02d ", i);
-        printf("\nref_frame_idx: ");
+        printf("ref_frame_idx: ");
         for (int i = 0 ; i < 7; i++)
             printf("%02d ", pin->ref_frame_idx[i]);
         printf("\n");
@@ -1904,7 +1904,7 @@ uint32_t VulkanVideoParser::FillDpbVP9State(
     uint32_t referenceIndex = 0;
 
     if (m_dumpParserData) {
-        std::cout << "Ref frames data: " << std::endl;
+        LOG_S_DEBUG << "Ref frames data: " << std::endl;
     }
 
     if (m_dumpDpbData) {
@@ -2131,13 +2131,13 @@ bool VulkanVideoParser::UpdatePictureParameters(
         VkSharedBaseObj<VkVideoRefCountBase>& client)
 {
     if (false) {
-        std::cout << "################################################# " << std::endl;
-        std::cout << "Update Picture parameters "
+        LOG_S_DEBUG << "################################################# " << std::endl;
+        LOG_S_DEBUG << "Update Picture parameters "
                 << PictureParametersTypeToName(pictureParametersObject->GetStdType()) << ": "
                 << pictureParametersObject.Get()
                 << ", count: " << (uint32_t)pictureParametersObject->GetUpdateSequenceCount()
                 << std::endl << std::flush;
-        std::cout << "################################################# " << std::endl;
+        LOG_S_DEBUG << "################################################# " << std::endl;
     }
 
     if (m_decoderHandler == NULL) {
@@ -2215,9 +2215,9 @@ bool VulkanVideoParser::DecodePicture(
         pCurrFrameDecParams->pStdSps = pin->pStdSps;
         pCurrFrameDecParams->pStdVps = nullptr;
         if (false) {
-            std::cout << "\n\tCurrent h.264 Picture SPS update : "
+            LOG_S_DEBUG << "\n\tCurrent h.264 Picture SPS update : "
                     << pin->pStdSps->GetUpdateSequenceCount() << std::endl;
-            std::cout << "\tCurrent h.264 Picture PPS update : "
+            LOG_S_DEBUG << "\tCurrent h.264 Picture PPS update : "
                     << pin->pStdPps->GetUpdateSequenceCount() << std::endl;
         }
 
@@ -2330,11 +2330,11 @@ bool VulkanVideoParser::DecodePicture(
         pCurrFrameDecParams->pStdSps = pin->pStdSps;
         pCurrFrameDecParams->pStdVps = pin->pStdVps;
         if (false) {
-            std::cout << "\n\tCurrent h.265 Picture VPS update : "
+            LOG_S_DEBUG << "\n\tCurrent h.265 Picture VPS update : "
                     << pin->pStdVps->GetUpdateSequenceCount() << std::endl;
-            std::cout << "\n\tCurrent h.265 Picture SPS update : "
+            LOG_S_DEBUG << "\n\tCurrent h.265 Picture SPS update : "
                     << pin->pStdSps->GetUpdateSequenceCount() << std::endl;
-            std::cout << "\tCurrent h.265 Picture PPS update : "
+            LOG_S_DEBUG << "\tCurrent h.265 Picture PPS update : "
                     << pin->pStdPps->GetUpdateSequenceCount() << std::endl;
         }
 
@@ -2397,7 +2397,7 @@ bool VulkanVideoParser::DecodePicture(
         pStdPictureInfo->PicOrderCntVal = pin->CurrPicOrderCntVal;
 
         if (m_dumpParserData)
-            std::cout << "\tnumPocStCurrBefore: " << (int32_t)pin->NumPocStCurrBefore
+            LOG_S_DEBUG << "\tnumPocStCurrBefore: " << (int32_t)pin->NumPocStCurrBefore
                       << " numPocStCurrAfter: " << (int32_t)pin->NumPocStCurrAfter
                       << " numPocLtCurr: " << (int32_t)pin->NumPocLtCurr << std::endl;
 
@@ -2435,24 +2435,24 @@ bool VulkanVideoParser::DecodePicture(
 
         if (m_dumpParserData) {
             for (int32_t i = 0; i < HEVC_MAX_DPB_SLOTS; i++) {
-                std::cout << "\tdpbIndex: " << i;
+                LOG_S_DEBUG << "\tdpbIndex: " << i;
                 if (pDpbRefList[i]) {
-                    std::cout << " REFERENCE FRAME";
+                    LOG_S_DEBUG << " REFERENCE FRAME";
 
-                    std::cout << " picOrderCntValList: "
+                    LOG_S_DEBUG << " picOrderCntValList: "
                               << (int32_t)pDpbRefList[i]
                                      .dpbSlotInfo.pStdReferenceInfo->PicOrderCntVal;
 
-                    std::cout << "\t\t Flags: ";
+                    LOG_S_DEBUG << "\t\t Flags: ";
                     if (pDpbRefList[i]
                             .dpbSlotInfo.pStdReferenceInfo->flags.used_for_long_term_reference) {
-                        std::cout << "IS LONG TERM ";
+                        LOG_S_DEBUG << "IS LONG TERM ";
                     }
 
                 } else {
-                    std::cout << " NOT A REFERENCE ";
+                    LOG_S_DEBUG << " NOT A REFERENCE ";
                 }
-                std::cout << std::endl;
+                LOG_S_DEBUG << std::endl;
             }
         }
 
@@ -2470,7 +2470,7 @@ bool VulkanVideoParser::DecodePicture(
         pCurrFrameDecParams->pStdVps = nullptr;
 
         if (false) {
-            std::cout << "\n\tCurrent AV1 Picture SPS update : "
+            LOG_S_DEBUG << "\n\tCurrent AV1 Picture SPS update : "
                       << pin->pStdSps->GetUpdateSequenceCount() << std::endl;
         }
 
@@ -2652,7 +2652,7 @@ bool VulkanVideoParser::DecodePicture(
     bRet = (m_decoderHandler->DecodePictureWithParameters(pCurrFrameDecParams, pDecodePictureInfo) >= 0);
 
     if (m_dumpParserData) {
-        std::cout << "\t <== VulkanVideoParser::DecodePicture " << PicIdx << std::endl;
+        LOG_S_DEBUG << "\t <== VulkanVideoParser::DecodePicture " << PicIdx << std::endl;
     }
     m_nCurrentPictureID++;
     return bRet;

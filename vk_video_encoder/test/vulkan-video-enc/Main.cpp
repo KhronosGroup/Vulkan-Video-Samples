@@ -17,16 +17,17 @@
 #include <iostream>
 #include "vulkan_video_encoder.h"
 #include "VkVSCommon.h"
+#include "Logger.h"
 
 int main(int argc, const char** argv)
 {
-    std::cout << "Enter encoder test" << std::endl;
+    LOG_S_INFO << "Enter encoder test" << std::endl;
     VkSharedBaseObj<VulkanVideoEncoder> vulkanVideoEncoder;
     VkResult result = CreateVulkanVideoEncoder(VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR,
                                   argc, argv, vulkanVideoEncoder);
 
     if (result != VK_SUCCESS) {
-        std::cerr << "Error creating the encoder instance: " << result << std::endl;
+        LOG_S_ERROR << "Can't create the encoder instance: " << result << std::endl;
         if (IsVideoUnsupportedResult(result)) {
             return VVS_EXIT_UNSUPPORTED;
         }
@@ -34,23 +35,23 @@ int main(int argc, const char** argv)
     }
 
     int64_t numFrames = vulkanVideoEncoder->GetNumberOfFrames();
-    std::cout << "Number of frames to encode: " << numFrames << std::endl;
+    LOG_S_INFO << "Number of frames to encode: " << numFrames << std::endl;
 
     for (int64_t frameNum = 0; frameNum < numFrames; frameNum++) {
         int64_t frameNumEncoded = -1;
         result = vulkanVideoEncoder->EncodeNextFrame(frameNumEncoded);
         if (result != VK_SUCCESS) {
-            std::cerr << "Error encoding frame: "  << frameNum  << ", error: " << result << std::endl;
+            LOG_S_ERROR << "Unable to encode frame: "  << frameNum  << ", error: " << result << std::endl;
         }
     }
 
     result = vulkanVideoEncoder->GetBitstream();
     if (result != VK_SUCCESS) {
-        std::cerr << "Error obtaining the encoded bitstream file: " << result << std::endl;
+        LOG_S_ERROR << "Can't obtain the encoded bitstream file: " << result << std::endl;
         return EXIT_FAILURE;
     }
 
-    std::cout << "Exit encoder test" << std::endl;
+    LOG_S_INFO << "Exit encoder test" << std::endl;
     return EXIT_SUCCESS;
 }
 

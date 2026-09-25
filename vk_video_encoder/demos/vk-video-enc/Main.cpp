@@ -20,6 +20,7 @@
 #include "VkCodecUtils/VulkanVideoEncodeDisplayQueue.h"
 #include "VkCodecUtils/VulkanEncoderFrameProcessor.h"
 #include "VkShell/Shell.h"
+#include "Logger.h"
 
 int main(int argc, const char* argv[])
 {
@@ -115,10 +116,10 @@ int main(int argc, const char* argv[])
                                                  encoderConfig->verbose);
     if (result != VK_SUCCESS) {
         if (IsVideoUnsupportedResult(result)) {
-            fprintf(stderr, "Could not initialize Vulkan device: incompatible driver\n");
+           LOG_ERROR ("Could not initialize Vulkan device: incompatible driver\n");
             return VVS_EXIT_UNSUPPORTED;
         }
-        fprintf(stderr, "Could not initialize the Vulkan device %d!\n", result);
+       LOG_ERROR ("Could not initialize the Vulkan device %d!\n", result);
         return EXIT_FAILURE;
     }
 
@@ -160,6 +161,7 @@ int main(int argc, const char* argv[])
     VkSharedBaseObj<FrameProcessor> frameProcessor;
     result = CreateEncoderFrameProcessor(&vkDevCtxt, frameProcessor);
     if (result != VK_SUCCESS) {
+        LOG_ERROR("Could not create the encoder frame processor!\n");
         return EXIT_FAILURE;
     }
 
@@ -172,7 +174,7 @@ int main(int argc, const char* argv[])
                                                  encoderConfig->enableFrameDirectModePresent);
         result = Shell::Create(&vkDevCtxt, configuration, displayShell);
         if (result != VK_SUCCESS) {
-            fprintf(stderr, "Can't allocate display shell! Out of memory!");
+           LOG_ERROR ("Can't allocate display shell! Out of memory!");
             return EXIT_FAILURE;
         }
 
@@ -193,10 +195,10 @@ int main(int argc, const char* argv[])
         if (result != VK_SUCCESS) {
             if (IsVideoUnsupportedResult(result)) {
                 // Special exit code for missing video queue family support
-                fprintf(stderr, "Video encode queue family not supported by hardware/driver\n");
+               LOG_ERROR ("Video encode queue family not supported by hardware/driver\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            fprintf(stderr, "Can't initialize the Vulkan physical device!\n");
+           LOG_ERROR ("Can't initialize the Vulkan physical device!\n");
             return EXIT_FAILURE;
         }
         assert(displayShell->PhysDeviceCanPresent(vkDevCtxt.getPhysicalDevice(),
@@ -213,20 +215,20 @@ int main(int argc, const char* argv[])
                                               );
         if (result != VK_SUCCESS) {
             if (IsVideoUnsupportedResult(result)) {
-                fprintf(stderr, "Could not initialize the Vulkan device: unsupported feature!\n");
+               LOG_ERROR ("Could not initialize the Vulkan device: unsupported feature!\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            fprintf(stderr, "Could not initialize the Vulkan device %d!\n", result);
+           LOG_ERROR ("Could not initialize the Vulkan device %d!\n", result);
             return EXIT_FAILURE;
         }
 
         result = VkVideoEncoder::CreateVideoEncoder(&vkDevCtxt, encoderConfig, encoder);
         if (result != VK_SUCCESS) {
             if (IsVideoUnsupportedResult(result)) {
-                fprintf(stderr, "Can't create the video encoder: unsupported feature!\n");
+               LOG_ERROR ("Can't create the video encoder: unsupported feature!\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            fprintf(stderr, "Can't create the video encoder! %d\n", result);
+           LOG_ERROR ("Can't create the video encoder! %d\n", result);
             return EXIT_FAILURE;
         }
 
@@ -257,10 +259,10 @@ int main(int argc, const char* argv[])
         if (result != VK_SUCCESS) {
             if (IsVideoUnsupportedResult(result)) {
                 // Special exit code for missing video queue family support
-                fprintf(stderr, "Video encode queue family not supported by hardware/driver\n");
+               LOG_ERROR ("Video encode queue family not supported by hardware/driver\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            fprintf(stderr, "Can't initialize the Vulkan physical device!\n");
+            LOG_ERROR ("Can't initialize the Vulkan physical device!\n");
             return EXIT_FAILURE;
         }
 
@@ -278,20 +280,20 @@ int main(int argc, const char* argv[])
                                               );
         if (result != VK_SUCCESS) {
             if (IsVideoUnsupportedResult(result)) {
-                fprintf(stderr, "Failed to create Vulkan device: unsupported feature\n");
+               LOG_ERROR ("Failed to create Vulkan device: unsupported feature\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            fprintf(stderr, "Failed to create Vulkan device!\n");
+           LOG_ERROR ("Failed to create Vulkan device!\n");
             return EXIT_FAILURE;
         }
 
         result = VkVideoEncoder::CreateVideoEncoder(&vkDevCtxt, encoderConfig, encoder);
         if (result != VK_SUCCESS) {
             if (IsVideoUnsupportedResult(result)) {
-                fprintf(stderr, "Can't create the video encoder: unsupported feature\n");
+               LOG_ERROR ("Can't create the video encoder: unsupported feature\n");
                 return VVS_EXIT_UNSUPPORTED;
             }
-            fprintf(stderr, "Can't create the video encoder!\n");
+           LOG_ERROR ("Can't create the video encoder!\n");
             return EXIT_FAILURE;
         }
     }
@@ -301,7 +303,7 @@ int main(int argc, const char* argv[])
         // the capabilities are validated against the requested profile and the
         // video session exists. Report and stop before touching any input frame.
         encoder->WaitForThreadsToComplete();
-        std::cout << "Dry run: encoder initialized successfully, no frame encoded."
+        LOG_S_INFO << "Dry run: encoder initialized successfully, no frame encoded."
                   << std::endl;
         return EXIT_SUCCESS;
     }
@@ -311,7 +313,7 @@ int main(int argc, const char* argv[])
     for(; curFrameIndex < encoderConfig->numFrames; curFrameIndex++) {
 
         if (encoderConfig->verboseFrameStruct) {
-            std::cout << "####################################################################################" << std::endl
+            LOG_S_DEBUG << "####################################################################################" << std::endl
                       << "Start processing current input frame index: " << curFrameIndex << std::endl;
         }
 
@@ -321,18 +323,18 @@ int main(int argc, const char* argv[])
         // load frame data from the file
         result = encoder->LoadNextFrame(encodeFrameInfo);
         if (result != VK_SUCCESS) {
-            std::cout << "ERROR processing input frame index: " << curFrameIndex << std::endl;
+            LOG_S_ERROR << "ERROR processing input frame index: " << curFrameIndex << std::endl;
             break;
         }
 
         if (encoderConfig->verboseFrameStruct) {
-            std::cout << "End processing current input frame index: " << curFrameIndex << std::endl;
+            LOG_S_DEBUG << "End processing current input frame index: " << curFrameIndex << std::endl;
         }
     }
 
     encoder->WaitForThreadsToComplete();
 
-    std::cout << "Done processing " << curFrameIndex << " input frames!" << std::endl
+    LOG_S_INFO << "Done processing " << curFrameIndex << " input frames!" << std::endl
               << "Encoded file's location is at " << encoderConfig->outputFileHandler.GetFileName()
               << std::endl;
     return EXIT_SUCCESS;

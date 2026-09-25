@@ -133,7 +133,7 @@ public:
         }
 
         if (!IsFileStreamValid()) {
-            std::cerr << "ERROR: Output file stream is not valid\n";
+            LOG_S_ERROR << "Output file stream is not valid\n";
             return false;
         }
 
@@ -162,7 +162,7 @@ public:
         size_t usedBufferSize = ConvertFrameToNv12(vkDevCtx, pFrame->displayWidth, pFrame->displayHeight,
                                                   imageResource, pOutputBuffer, mpInfo);
         if (usedBufferSize == 0) {
-            std::cerr << "ERROR: Failed to convert frame to NV12. Output size is 0\n";
+            LOG_S_ERROR << "Failed to convert frame to NV12. Output size is 0\n";
             return false;
         }
 
@@ -212,19 +212,19 @@ public:
         // Check if the file does not have a y4m extension,
         // but y4m format is requested.
         if (y4mFormat && !hasExtension(fileName, ".y4m")) {
-            std::cout << std::endl << "y4m output format is requested, ";
-            std::cout << "but the output file's (" << fileName << ") extension isn't .y4m!"
+            LOG_S_INFO << std::endl << "y4m output format is requested, "
+                      << "but the output file's (" << fileName << ") extension isn't .y4m!"
                       << std::endl;
         } else if ((y4mFormat == false) && !hasExtension(fileName, ".yuv")) {
-            std::cout << std::endl << "Raw yuv output format is requested, ";
-            std::cout << "but the output file's (" << fileName << ") extension isn't .yuv!"
-                      << std::endl;
+            LOG_S_INFO << std::endl << "Raw yuv output format is requested, "
+                       << "but the output file's (" << fileName << ") extension isn't .yuv!"
+                       << std::endl;
         }
 
         if (fileName != nullptr) {
             m_outputFile = fopen(fileName, "wb");
             if (m_outputFile) {
-                std::cout << "Output file name is: " << fileName << std::endl;
+                LOG_S_INFO << "Output file name is: " << fileName << std::endl;
                 return m_outputFile;
             }
         }
@@ -246,7 +246,7 @@ public:
             size_t remainingBytes = size - totalBytesWritten;
             size_t written = fwrite(m_pLinearMemory + offset + totalBytesWritten, 1, remainingBytes, m_outputFile);
             if (ferror(m_outputFile)) {
-                fprintf(stderr, "ERROR: fwrite failed (wrote %zu of %zu bytes)\n",
+                LOG_ERROR("fwrite failed (wrote %zu of %zu bytes)\n",
                         totalBytesWritten + written, size);
                 if (bytesWritten) {
                     *bytesWritten = totalBytesWritten + written;
@@ -254,7 +254,7 @@ public:
                 return false;
             }
             if (written == 0) {
-                fprintf(stderr, "ERROR: fwrite wrote 0 bytes unexpectedly (wrote %zu of %zu bytes)\n",
+                LOG_ERROR("fwrite wrote 0 bytes unexpectedly (wrote %zu of %zu bytes)\n",
                         totalBytesWritten, size);
                 if (bytesWritten) {
                     *bytesWritten = totalBytesWritten;
@@ -284,7 +284,7 @@ public:
         };
 
         if (mpInfo == nullptr) {
-            fprintf(stderr, "ERROR: mpInfo is required for Y4M output\n");
+            LOG_ERROR("mpInfo is required for Y4M output\n");
             return setErrorAndReturn();;
         }
 
@@ -298,21 +298,21 @@ public:
 
             if (fprintf(m_outputFile, "YUV4MPEG2 W%i H%i F24:1 Ip A1:1 %s%s\n",
                         (int)width, (int)height, chromaFormat, bitDepth) < 0) {
-                fprintf(stderr, "ERROR: fprintf failed writing Y4M header\n");
+                LOG_ERROR("fprintf failed writing Y4M header\n");
                 return setErrorAndReturn();
             }
         }
 
         if ((m_width != width) || (m_height != height)) {
             if (fprintf(m_outputFile, "FRAME W%i H%i\n", (int)width, (int)height) < 0) {
-                fprintf(stderr, "ERROR: fprintf failed writing Y4M frame header\n");
+                LOG_ERROR("fprintf failed writing Y4M frame header\n");
                 return setErrorAndReturn();
             }
             m_height = height;
             m_width = width;
         } else {
             if (fprintf(m_outputFile, "FRAME\n") < 0) {
-                fprintf(stderr, "ERROR: fprintf failed writing Y4M frame marker\n");
+                LOG_ERROR("fprintf failed writing Y4M frame marker\n");
                 return setErrorAndReturn();
             }
         }
@@ -324,7 +324,7 @@ public:
                              VkSharedBaseObj<VkImageResource>& imageResource,
                              uint8_t* pOutBuffer, const VkMpFormatInfo* mpInfo) {
         if (mpInfo == nullptr) {
-            fprintf(stderr, "ERROR: mpInfo is required for NV12 conversion. Unable to convert frame, return 0.\n");
+            LOG_ERROR ("mpInfo is required for NV12 conversion. Unable to convert frame, return 0.\n");
             return 0;
         }
         size_t outputBufferSize = 0;
