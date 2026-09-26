@@ -95,6 +95,35 @@ const uint8_t* VkVideoEncoder::setPlaneOffset(const uint8_t* pFrameData, size_t 
     return buf;
 }
 
+// Record a whole-image layout transition with explicit stage/access masks.
+// Used around the input compute filter, whose storage-image descriptors require
+// VK_IMAGE_LAYOUT_GENERAL; without it the images are UNDEFINED on the GPU
+// timeline, tripping VUID-vkCmdDraw-None-09600. Unlike TransitionImageLayout(),
+// this accepts any layout pair and runs on the compute queue the filter uses.
+static void RecordComputeImageBarrier(const VulkanDeviceContext* vkDevCtx,
+                                      VkCommandBuffer cmdBuf, VkImage image,
+                                      VkImageLayout oldLayout, VkImageLayout newLayout,
+                                      VkPipelineStageFlags2KHR srcStage, VkAccessFlags2KHR srcAccess,
+                                      VkPipelineStageFlags2KHR dstStage, VkAccessFlags2KHR dstAccess)
+{
+    VkImageMemoryBarrier2KHR barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR };
+    barrier.srcStageMask  = srcStage;
+    barrier.srcAccessMask = srcAccess;
+    barrier.dstStageMask  = dstStage;
+    barrier.dstAccessMask = dstAccess;
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+    VkDependencyInfoKHR dependencyInfo = { VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR };
+    dependencyInfo.imageMemoryBarrierCount = 1;
+    dependencyInfo.pImageMemoryBarriers = &barrier;
+    vkDevCtx->CmdPipelineBarrier2KHR(cmdBuf, &dependencyInfo);
+}
+
 VkResult VkVideoEncoder::LoadNextQpMapFrameFromFile(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo)
 {
     if ((m_encoderConfig->enableQpMap == VK_FALSE) || (!m_encoderConfig->qpMapFileHandler.HandleIsValid()))  {
@@ -435,12 +464,36 @@ VkResult VkVideoEncoder::StageInputFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
             // row and column replication is disabled. Don't touch the image padding area.
             dstPictureResourceInfo.codedExtent = copyImageExtent;
         }
+        // The compute filter binds both images as storage descriptors, which
+        // require VK_IMAGE_LAYOUT_GENERAL. Transition them before the dispatch
+        // (otherwise they are UNDEFINED at submit -> VUID-vkCmdDraw-None-09600).
+        const VkImage linearInImage = linearInputImageView->GetImageResource()->GetImage();
+        const VkImage srcEncImage   = srcEncodeImageView->GetImageResource()->GetImage();
+        RecordComputeImageBarrier(m_vkDevCtx, cmdBuf, linearInImage,
+                                  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                                  VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT_KHR, 0,
+                                  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, VK_ACCESS_2_SHADER_READ_BIT_KHR);
+        RecordComputeImageBarrier(m_vkDevCtx, cmdBuf, srcEncImage,
+                                  VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                                  VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT_KHR, 0,
+                                  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, VK_ACCESS_2_SHADER_WRITE_BIT_KHR);
+
         result = m_inputComputeFilter->RecordCommandBuffer(cmdBuf,
                                                            linearInputImageView,
                                                            &srcPictureResourceInfo,
                                                            srcEncodeImageView,
                                                            &dstPictureResourceInfo,
                                                            encodeFrameInfo->inputCmdBuffer->GetNodePoolIndex());
+
+        // Restore the encode source image to VIDEO_ENCODE_SRC_KHR (the layout
+        // the encoder acquired it in) for the subsequent encode. The encode
+        // queue performs its own acquire barrier, so the destination side uses
+        // a generic stage (this command buffer is on the compute queue).
+        RecordComputeImageBarrier(m_vkDevCtx, cmdBuf, srcEncImage,
+                                  VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_VIDEO_ENCODE_SRC_KHR,
+                                  VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, VK_ACCESS_2_SHADER_WRITE_BIT_KHR,
+                                  VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT_KHR, 0);
+
         if (result != VK_SUCCESS) {
             return result;
         }
