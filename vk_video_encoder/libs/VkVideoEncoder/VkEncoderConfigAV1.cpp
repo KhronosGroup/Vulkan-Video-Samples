@@ -181,6 +181,43 @@ bool EncoderConfigAV1::InitSequenceHeader(StdVideoAV1SequenceHeader *seqHdr,
 {
     memset(seqHdr, 0, sizeof(StdVideoAV1SequenceHeader));
 
+    // The color config carries the bit depth and chroma subsampling of the
+    // sequence header. Without it, some drivers fall back to the AV1 defaults
+    // (8-bit 4:2:0), which mislabels high bit-depth streams.
+    memset(&colorConfig, 0, sizeof(colorConfig));
+    colorConfig.BitDepth = encodeBitDepthLuma;
+    switch (encodeChromaSubsampling) {
+        case VK_VIDEO_CHROMA_SUBSAMPLING_MONOCHROME_BIT_KHR:
+            colorConfig.flags.mono_chrome = 1;
+            colorConfig.subsampling_x = 1;
+            colorConfig.subsampling_y = 1;
+            break;
+        case VK_VIDEO_CHROMA_SUBSAMPLING_422_BIT_KHR:
+            colorConfig.flags.mono_chrome = 0;
+            colorConfig.subsampling_x = 1;
+            colorConfig.subsampling_y = 0;
+            break;
+        case VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR:
+            colorConfig.flags.mono_chrome = 0;
+            colorConfig.subsampling_x = 0;
+            colorConfig.subsampling_y = 0;
+            break;
+        case VK_VIDEO_CHROMA_SUBSAMPLING_420_BIT_KHR:
+        default:
+            colorConfig.flags.mono_chrome = 0;
+            colorConfig.subsampling_x = 1;
+            colorConfig.subsampling_y = 1;
+            break;
+    }
+    colorConfig.flags.color_range = 0;
+    colorConfig.flags.color_description_present_flag = 0;
+    colorConfig.flags.separate_uv_delta_q = 0;
+    colorConfig.chroma_sample_position = STD_VIDEO_AV1_CHROMA_SAMPLE_POSITION_UNKNOWN;
+    colorConfig.color_primaries = STD_VIDEO_AV1_COLOR_PRIMARIES_UNSPECIFIED;
+    colorConfig.transfer_characteristics = STD_VIDEO_AV1_TRANSFER_CHARACTERISTICS_UNSPECIFIED;
+    colorConfig.matrix_coefficients = STD_VIDEO_AV1_MATRIX_COEFFICIENTS_UNSPECIFIED;
+    seqHdr->pColorConfig = &colorConfig;
+
     seqHdr->max_frame_width_minus_1 = (uint16_t)(encodeWidth - 1);
     seqHdr->max_frame_height_minus_1 = (uint16_t)(encodeHeight - 1);
     seqHdr->frame_width_bits_minus_1 = (uint8_t)(std::max((int)FastIntLog2(encodeWidth) - 1, 0));

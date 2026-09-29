@@ -185,6 +185,7 @@ struct EncoderConfigAV1 : public EncoderConfig {
 
     StdVideoAV1Profile                      profile{ STD_VIDEO_AV1_PROFILE_INVALID };
     StdVideoAV1Level                        level{ STD_VIDEO_AV1_LEVEL_INVALID };
+    StdVideoAV1ColorConfig                  colorConfig{};
     uint8_t                                 tier{};
     VkVideoEncodeAV1CapabilitiesKHR         av1EncodeCapabilities{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_CAPABILITIES_KHR };
     VkVideoEncodeAV1QualityLevelPropertiesKHR av1QualityLevelProperties{ VK_STRUCTURE_TYPE_VIDEO_ENCODE_AV1_QUALITY_LEVEL_PROPERTIES_KHR };
