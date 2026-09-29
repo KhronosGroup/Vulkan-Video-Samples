@@ -38,7 +38,7 @@ static void printHelp(VkVideoCodecOperationFlagBitsKHR codec)
     --inputChromaSubsampling        <string>  : Chromat subsapling to use, default 420 \n\
     --inputLumaPlanePitch           <integer> : Pitch for Luma plane \n\
     --inputBpp                      <integer> : Bits per pixel, default 8 \n\
-    --msbShift                      <integer> : Shift the input plane pixels to the left when bpp > 8, default: 16 - inputBpp  \n\
+    --msbShift                      <integer> : Shift the input plane pixels to the left when bpp > 8, default: 16 - inputBpp for planar (3-plane) input, 0 for semi-planar (2-plane) input  \n\
     --startFrame                    <integer> : Start Frame Number to be Encoded \n\
     --numFrames                     <integer> : End Frame Number to be Encoded \n\
     --encodeOffsetX                 <integer> : Encoded offset X \n\
@@ -289,10 +289,13 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
                 return -1;
             }
         }  else if (args[i] == "--msbShift") {
-            if ((++i >= argc) || (sscanf(args[i].c_str(), "%hhu", &input.msbShift) != 1)) {
+            int msbShift = 0;
+            if ((++i >= argc) || (sscanf(args[i].c_str(), "%d", &msbShift) != 1) ||
+                (msbShift < 0) || (msbShift > 15)) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
                 return -1;
             }
+            input.msbShift = static_cast<int8_t>(msbShift);
         } else if (args[i] == "--startFrame") {
             if (++i >= argc || sscanf(args[i].c_str(), "%u", &startFrame) != 1) {
                 fprintf(stderr, "invalid parameter for %s\n", args[i - 1].c_str());
@@ -678,10 +681,6 @@ int EncoderConfig::ParseArguments(int argc, const char *argv[])
     if (enableQpMap && !qpMapFileHandler.HasFileName()) {
         fprintf(stderr, "No qpMap file was provided.");
         return -1;
-    }
-
-    if (input.msbShift < 0 && input.bpp > 8) {
-        input.msbShift = static_cast<int8_t>(16 - input.bpp);
     }
 
     frameCount = inputFileHandler.GetFrameCount(input.width, input.height, input.bpp, input.chromaSubsampling);

@@ -183,6 +183,17 @@ public:
             return false;
         }
 
+        if (bpp > 8) {
+            const int8_t maxMsbShift = static_cast<int8_t>(16 - bpp);
+            if (msbShift < 0) {
+                msbShift = (numPlanes == 2) ? 0 : maxMsbShift;
+            } else if (msbShift > maxMsbShift) {
+                fprintf(stderr, "Invalid input msbShift (%d) parameter for %d bpp, must be between 0 and %d!",
+                        msbShift, bpp, maxMsbShift);
+                return false;
+            }
+        }
+
         return true;
     }
 };
