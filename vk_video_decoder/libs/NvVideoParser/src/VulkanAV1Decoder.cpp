@@ -2471,8 +2471,12 @@ bool VulkanAV1Decoder::ParseByteStream(const VkParserBitstreamPacket* pck, size_
                 return false;
             }
             m_bitstreamDataLen = m_bitstreamData.SetBitstreamBuffer(bitstreamBuffer);
-            if (m_bitstreamData.GetBitstreamPtr() == nullptr ||
-                m_bitstreamDataLen < (VkDeviceSize)frame_size) {
+            if (m_bitstreamData.GetBitstreamPtr() == nullptr) {
+                return false;
+            }
+            // Pooled buffers are handed out regardless of the requested size.
+            if (((VkDeviceSize)frame_size > m_bitstreamDataLen) &&
+                !resizeBitstreamBuffer(frame_size - m_bitstreamDataLen)) {
                 return false;
             }
 
