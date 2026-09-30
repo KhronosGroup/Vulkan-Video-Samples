@@ -69,20 +69,6 @@
       "date_added": "2025-01-27"
     },
     {
-      "name": "vp9_intra_only",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "md5 mismatch",
-      "bug_url": "",
-      "date_added": "2026-01-19"
-    },
-    {
       "name": "h265_itu_slist_b",
       "format": "vvs",
       "drivers": [
@@ -219,20 +205,6 @@
       "date_added": "2026-01-19"
     },
     {
-      "name": "h265_main10_profile",
-      "format": "vvs",
-      "drivers": [
-        "radv"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "VulkanVideoCapabilities assert",
-      "bug_url": "",
-      "date_added": "2026-01-19"
-    },
-    {
       "name": "h265_ip_gop",
       "format": "vvs",
       "drivers": [
@@ -244,20 +216,6 @@
       "reproduction": "always",
       "reason": "fence timeout",
       "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/151",
-      "date_added": "2026-01-19"
-    },
-    {
-      "name": "h265_main10_profile",
-      "format": "vvs",
-      "drivers": [
-        "nvidia"
-      ],
-      "platforms": [
-        "all"
-      ],
-      "reproduction": "always",
-      "reason": "VideoCapability issue",
-      "bug_url": "",
       "date_added": "2026-01-19"
     },
     {
@@ -326,40 +284,9 @@
         "linux"
       ],
       "reproduction": "always",
-      "reason": "Bad negociation of profile",
+      "reason": "Bad negotiation of profile",
       "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/231",
       "date_added": "2026-08-27"
-    },
-    {
-      "name": "h265_main10_profile",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "linux"
-      ],
-      "reproduction": "always",
-      "reason": "assert in debug mode",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/237",
-      "date_added": "2026-08-27"
-    },
-    {
-      "name": "av1_main_profile_10bit",
-      "format": "vvs",
-      "drivers": [
-        "anv"
-      ],
-      "platforms": [
-        "linux"
-      ],
-      "reproduction": "always",
-      "reason": "assert in debug mode",
-      "bug_url": "https://github.com/KhronosGroup/Vulkan-Video-Samples/issues/237",
-      "date_added": "2026-08-28",
-      "devices": [
-        "56a1"
-      ]
     }
   ]
 }
