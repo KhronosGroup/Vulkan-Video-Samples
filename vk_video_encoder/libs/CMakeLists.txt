@@ -96,7 +96,7 @@ set(LIBVKVIDEOENCODER_SHARED_DEFINITIONS
 # not declare the USE_ENCODER_SHADERC option, default it from shaderc availability so the
 # GPU compute filter is enabled whenever shaderc was found
 if(NOT DEFINED USE_ENCODER_SHADERC)
-    if(SHADERC_SHARED_LIBRARY OR SHADERC_LIB)
+    if(SHADERC_LIBRARY)
         set(USE_ENCODER_SHADERC ON)
     else()
         set(USE_ENCODER_SHADERC OFF)
@@ -125,7 +125,7 @@ add_library(${VULKAN_VIDEO_ENCODER_LIB} SHARED ${LIBVKVIDEOENCODER_SRC})
 
 if(USE_ENCODER_SHADERC)
     # Link the libraries
-    target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${SHADERC_SHARED_LIBRARY})
+    target_link_libraries(${VULKAN_VIDEO_ENCODER_LIB} PUBLIC ${SHADERC_LIBRARY})
     # Ensure the library depends on the generation of these files
     list(APPEND LIBVKVIDEOENCODER_DEPENDENCIES ${SHADERC_LIB})
 endif()
@@ -155,7 +155,7 @@ endif()
 add_library(${VULKAN_VIDEO_ENCODER_STATIC_LIB} STATIC ${LIBVKVIDEOENCODER_SRC})
 if(USE_ENCODER_SHADERC)
     # Link the libraries
-    target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_SHARED_LIBRARY})
+    target_link_libraries(${VULKAN_VIDEO_ENCODER_STATIC_LIB} PUBLIC ${SHADERC_LIBRARY})
 endif()
 
 # LIBVKVIDEOENCODER_DEFINITIONS may be empty when shaderc is off

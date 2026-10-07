@@ -1,5 +1,6 @@
 # Now check if we need to build shaderc and its dependencies
-option(USE_SYSTEM_SHADERC "Use system installed shaderc" ON)
+option(USE_SYSTEM_SHADERC "Use the Vulkan SDK or system shaderc_shared library instead of building shaderc from source" ON)
+option(USE_STATIC_SHADERC "Build shaderc from source and link it as a static library, ignoring USE_SYSTEM_SHADERC" OFF)
 
 include(FetchContent)
 
@@ -11,7 +12,7 @@ macro(download_shaderc_and_dependencies)
         message(STATUS "VVS: CMAKE_BUILD_TYPE not set, defaulting to Release")
     endif()
 
-    set(SHADERC_VERSION v2024.4)
+    set(SHADERC_VERSION v2026.1)
 
     # Define minimum version requirements for shaderc v2024.4 compatibility
     # These versions are based on shaderc v2024.4's known dependencies
@@ -222,11 +223,9 @@ macro(download_shaderc_and_dependencies)
     # Ensure the linker knows where to find these libraries
     link_directories(${SHADERC_LIBRARY_DIR})
 
-    set(SHADERC_SHARED_LIBRARY ${SHADERC_LIB})
-
     # Set explicit dependencies - shaderc depends on existing targets
-    if(TARGET shaderc_shared)
-        add_dependencies(shaderc_shared glslang SPIRV-Tools)
+    if(TARGET ${SHADERC_LIB})
+        add_dependencies(${SHADERC_LIB} glslang SPIRV-Tools)
     endif()
 
     find_path(SHADERC_INCLUDE_DIR NAMES shaderc/shaderc.h PATHS "${CMAKE_BINARY_DIR}/_deps/shaderc-src/libshaderc/include" NO_DEFAULT_PATH)
@@ -252,7 +251,9 @@ macro(download_shaderc_and_dependencies)
     endif()
 endmacro()
 
-if(USE_SYSTEM_SHADERC)
+if(USE_SYSTEM_SHADERC AND USE_STATIC_SHADERC)
+    message(STATUS "VVS: USE_STATIC_SHADERC is ON, ignoring USE_SYSTEM_SHADERC and building shaderc from source")
+elseif(USE_SYSTEM_SHADERC)
     if(WIN32)
         # Try to find shaderc in Vulkan SDK directory
         if(DEFINED ENV{VULKAN_SDK})
@@ -331,17 +332,28 @@ endif()
 if(USE_SYSTEM_SHADERC AND shaderc_FOUND)
     message(STATUS "VVS: Using system shaderc")
     set(SHADERC_LIB "")
+    if(SHADERC_LIBRARY MATCHES "shaderc_combined")
+        set(SHADERC_LINKAGE "static")
+    else()
+        set(SHADERC_LINKAGE "shared")
+    endif()
 else()
-    set(SHADERC_LIB "shaderc_shared" CACHE PATH "The name of the shaderc library target decoder/encoder are using." FORCE)
+    if(USE_STATIC_SHADERC)
+        set(SHADERC_LIB "shaderc" CACHE STRING "The name of the shaderc library target decoder/encoder are using." FORCE)
+        set(SHADERC_LINKAGE "static")
+    else()
+        set(SHADERC_LIB "shaderc_shared" CACHE STRING "The name of the shaderc library target decoder/encoder are using." FORCE)
+        set(SHADERC_LINKAGE "shared")
+    endif()
     message(STATUS "VVS: Building shaderc from source using existing dependencies")
     download_shaderc_and_dependencies()
     # Set SHADERC_LIBRARY to the built target
     set(SHADERC_INCLUDE_DIR ${shaderc_SOURCE_DIR}/libshaderc/include)
-    set(SHADERC_LIBRARY shaderc)
+    set(SHADERC_LIBRARY ${SHADERC_LIB})
 endif()
 
 if(SHADERC_INCLUDE_DIR AND SHADERC_LIBRARY)
-    message(STATUS "VVS: Found Shaderc: ${SHADERC_LIBRARY}")
+    message(STATUS "VVS: Found Shaderc: ${SHADERC_LIBRARY} (${SHADERC_LINKAGE} library)")
     message(STATUS "VVS: Shaderc include: ${SHADERC_INCLUDE_DIR}")
 else()
     message(FATAL_ERROR "VVS: Could not find or build Shaderc")

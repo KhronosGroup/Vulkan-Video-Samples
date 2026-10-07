@@ -34,6 +34,16 @@ The project supports the following main build options:
 - `BUILD_DECODER` (Default: ON) - Build the Vulkan video decoder components
 - `BUILD_ENCODER` (Default: ON) - Build the Vulkan video encoder components
 - `BUILD_VIDEO_PARSER` (Default: ON) - Build the video parser library used by both encoder and decoder
+- `USE_SYSTEM_SHADERC` (Default: ON) - Select where shaderc comes from:
+  - `ON`: link the shared `shaderc_shared` library from the Vulkan SDK (`VULKAN_SDK`), or from
+    the system library paths. On non-Windows platforms, the SDK's static `shaderc_combined` is
+    used if it has no `shaderc_shared`. If shaderc is not found, it falls back to building from
+    source.
+  - `OFF`: shaderc, glslang and SPIRV-Tools are fetched and built from source, and
+    `shaderc_shared` is linked.
+- `USE_STATIC_SHADERC` (Default: OFF) - When `ON`, shaderc is always built from source and the
+  static `shaderc` library is linked, so no shaderc shared library is needed at runtime.
+  `USE_SYSTEM_SHADERC` is ignored.
 
 These options can be specified during CMake configuration. For example:
 ```bash
