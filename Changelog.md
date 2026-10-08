@@ -1,3 +1,23 @@
+v0.5.1:
+  - Build: add USE_STATIC_SHADERC to build and link shaderc statically
+  - Decoder: allocate a fresh AV1 bitstream buffer per frame so in-flight
+    decodes keep stable bitstream data, and resize it when a larger frame
+    requires it
+  - Encoder: move codec profile auto-selection into
+    InitVideoProfileCapabilities and probe device-supported H.264 profiles
+  - Encoder: determine level/tier in a dedicated step after device
+    capabilities are known, add the H.265 MaxLumaSr level check and fix
+    the H.264 B-frame count used for profile selection
+  - Encoder: report input file mapping failures as out of memory and
+    handle failed bitstream buffer allocation and partial initialization
+    without crashing
+  - Apps: add --dryRun to the decoder and encoder to report support
+    without decoding or encoding
+  - Build: download FFmpeg for Windows from CMake (-DDOWNLOAD_FFMPEG)
+  - Tests: probe hardware via --dryRun before running, add results
+    comparison against stored runs, device-specific skip list entries,
+    and do not fail encode tests the decoder cannot validate
+
 v0.5.0:
   - Encoder: add VK_KHR_video_encode_feedback2 support for AV1
     (--pictureFeedback, --pixelCountFeedback, --skippedPixelCountFeedback,
