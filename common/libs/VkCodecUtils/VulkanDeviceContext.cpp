@@ -1123,6 +1123,7 @@ VkResult VulkanDeviceContext::InitVulkanDecoderDevice(const char * pAppName,
                                                       bool enableValidation,
                                                       bool enableVerboseValidation,
                                                       bool enbaleVerboseDump,
+                                                      bool enableInlineSessionParameters,
                                                       const char * pCustomLoader)
 {
     static const char* const requiredInstanceLayers[] = {
@@ -1183,6 +1184,10 @@ VkResult VulkanDeviceContext::InitVulkanDecoderDevice(const char * pAppName,
     // Add the Vulkan video required device extensions
     AddReqDeviceExtensions(requiredDeviceExtension);
     AddOptDeviceExtensions(optinalDeviceExtension);
+
+    if (enableInlineSessionParameters) {
+        AddReqDeviceExtension("VK_KHR_video_maintenance2");
+    }
 
 #ifdef VIDEO_DISPLAY_QUEUE_SUPPORT
     /********** Start WSI instance extensions support *******************************************/
