@@ -19,7 +19,7 @@ jobs:
     needs: build-release
     strategy:
       matrix:
-        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, windows-x64, windows-x64-ffmpeg, win-arm64]
+        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, windows-x64, windows-x64-without-ffmpeg, win-arm64]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v8
@@ -64,7 +64,7 @@ jobs:
     needs: create-release
     strategy:
       matrix:
-        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, windows-x64, windows-x64-ffmpeg, win-arm64]
+        platform: [linux-x86_64, linux-x86_64-ffmpeg, linux-x86, windows-x64, windows-x64-without-ffmpeg, win-arm64]
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v8
