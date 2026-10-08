@@ -21,6 +21,8 @@
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 #include "VkCodecUtils/VulkanDeviceMemoryImpl.h"
 
+class VulkanSamplerYcbcrConversion;
+
 class VkImageResource : public VkVideoRefCountBase
 {
 public:
@@ -162,15 +164,19 @@ private:
     VkImageSubresourceRange          m_imageSubresourceRange;
     uint32_t                         m_numViews;
     uint32_t                         m_numPlanes;
+    // Owned; must outlive m_imageViews that reference it via pNext.
+    VulkanSamplerYcbcrConversion*    m_samplerYcbcrConversion;
 
 
     VkImageResourceView(const VulkanDeviceContext* vkDevCtx,
                         VkSharedBaseObj<VkImageResource>& imageResource,
                         uint32_t numViews, uint32_t numPlanes,
-                        VkImageView imageViews[4], VkImageSubresourceRange &imageSubresourceRange)
+                        VkImageView imageViews[4], VkImageSubresourceRange &imageSubresourceRange,
+                        VulkanSamplerYcbcrConversion* samplerYcbcrConversion = nullptr)
        : m_refCount(0), m_vkDevCtx(vkDevCtx), m_imageResource(imageResource),
          m_imageViews{VK_NULL_HANDLE}, m_imageSubresourceRange(imageSubresourceRange),
-         m_numViews(numViews), m_numPlanes(numPlanes)
+         m_numViews(numViews), m_numPlanes(numPlanes),
+         m_samplerYcbcrConversion(samplerYcbcrConversion)
     {
         for (uint32_t imageViewIndx = 0; imageViewIndx < m_numViews; imageViewIndx++) {
             m_imageViews[imageViewIndx] = imageViews[imageViewIndx];

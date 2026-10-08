@@ -60,6 +60,10 @@ public:
       return m_sampler;
     }
 
+    VkSamplerYcbcrConversion GetSamplerYcbcrConversion() {
+        return m_samplerYcbcrConversion;
+    }
+
     const VkSamplerYcbcrConversionCreateInfo& GetSamplerYcbcrConversionCreateInfo() const
     {
         return m_samplerYcbcrConversionCreateInfo;
