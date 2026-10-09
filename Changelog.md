@@ -1,3 +1,7 @@
+v0.5.2:
+  - Logger: add a log system with a --logLevel option
+  - Helpers: use the log system instead of printf or cout
+
 v0.5.1:
   - Build: add USE_STATIC_SHADERC to build and link shaderc statically
   - Decoder: allocate a fresh AV1 bitstream buffer per frame so in-flight
