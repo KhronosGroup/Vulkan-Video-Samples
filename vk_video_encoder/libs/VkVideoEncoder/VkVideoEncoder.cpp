@@ -214,75 +214,95 @@ VkResult VkVideoEncoder::LoadNextFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& 
                 m_encoderConfig->input.numPlanes,                          // Number of planes
                 m_encoderConfig->input.vkFormat);                          // Format for subsampling detection
     } else {
-        // No compute filter: CPU conversion from 3-plane to 2-plane format
-        int yCbCrConvResult = 0;
-        if (m_encoderConfig->input.bpp == 8) {
-            if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
-                yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I444ToP444(
-                        pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,
-                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
-                        pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,
-                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
-                        pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,
-                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
-                        writeImagePtr + dstSubresourceLayout[0].offset,
-                        (int)dstSubresourceLayout[0].rowPitch,
-                        writeImagePtr + dstSubresourceLayout[1].offset,
-                        (int)dstSubresourceLayout[1].rowPitch,
-                        width, height);
-            } else {
-                yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I420ToNV12(
-                        pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,
-                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
-                        pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,
-                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
-                        pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,
-                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
-                        writeImagePtr + dstSubresourceLayout[0].offset,
-                        (int)dstSubresourceLayout[0].rowPitch,
-                        writeImagePtr + dstSubresourceLayout[1].offset,
-                        (int)dstSubresourceLayout[1].rowPitch,
-                        width, height);
-            }
-        } else if (m_encoderConfig->input.bpp == 10 || m_encoderConfig->input.bpp == 12) {
-            // msbShift is normalized to a non-negative value for bpp > 8 during
-            // argument parsing
-            int shiftBits = m_encoderConfig->input.msbShift;
-
-            if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
-                yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I444ToP444(
-                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset),
-                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
-                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset),
-                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
-                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset),
-                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
-                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),
-                        (int)dstSubresourceLayout[0].rowPitch,
-                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
-                        (int)dstSubresourceLayout[1].rowPitch,
-                        width, height, shiftBits);
-            } else {
-                yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I420ToNV12(
-                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset),
-                        (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
-                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset),
-                        (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
-                        (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset),
-                        (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
-                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),
-                        (int)dstSubresourceLayout[0].rowPitch,
-                        (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
-                        (int)dstSubresourceLayout[1].rowPitch,
-                        width, height, shiftBits);
-            }
+        // No compute filter: the CPU must fill the staging image with
+        // encode-format data
+        if (m_encoderConfig->input.vkFormat == m_imageInFormat) {
+            // Input already matches the encode format
+            const uint32_t shiftBits = (m_encoderConfig->input.bpp > 8) ?
+                    (uint32_t)m_encoderConfig->input.msbShift : 0;
+            CopyYCbCrPlanesDirectCPU(
+                    pInputFrameData,                                           // Source buffer
+                    m_encoderConfig->input.planeLayouts,                       // Source layouts
+                    writeImagePtr,                                             // Destination buffer
+                    dstSubresourceLayout,                                      // Destination layouts
+                    width, height,
+                    m_encoderConfig->input.numPlanes,                          // Number of planes
+                    m_encoderConfig->input.vkFormat,                           // Format for subsampling detection
+                    shiftBits);                                                // CPU msbShift
         } else {
-            assert(!"Requested bit-depth is not supported!");
-            return VK_ERROR_INITIALIZATION_FAILED;
-        }
+            // CPU conversion from 3-plane to 2-plane format. A semi-planar
+            // input that differs from the encode format is rejected in
+            // InitEncoder.
+            assert(m_encoderConfig->input.numPlanes == 3);
+            int yCbCrConvResult = 0;
+            if (m_encoderConfig->input.bpp == 8) {
+                if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
+                    yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I444ToP444(
+                            pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,
+                            (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                            pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,
+                            (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                            pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,
+                            (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                            writeImagePtr + dstSubresourceLayout[0].offset,
+                            (int)dstSubresourceLayout[0].rowPitch,
+                            writeImagePtr + dstSubresourceLayout[1].offset,
+                            (int)dstSubresourceLayout[1].rowPitch,
+                            width, height);
+                } else {
+                    yCbCrConvResult = YCbCrConvUtilsCpu<uint8_t>::I420ToNV12(
+                            pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset,
+                            (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                            pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset,
+                            (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                            pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset,
+                            (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                            writeImagePtr + dstSubresourceLayout[0].offset,
+                            (int)dstSubresourceLayout[0].rowPitch,
+                            writeImagePtr + dstSubresourceLayout[1].offset,
+                            (int)dstSubresourceLayout[1].rowPitch,
+                            width, height);
+                }
+            } else if (m_encoderConfig->input.bpp == 10 || m_encoderConfig->input.bpp == 12) {
+                // msbShift is normalized to a non-negative value for bpp > 8 during
+                // argument parsing
+                int shiftBits = m_encoderConfig->input.msbShift;
 
-        if (yCbCrConvResult != 0) {
-            return VK_ERROR_INITIALIZATION_FAILED;
+                if (m_encoderConfig->encodeChromaSubsampling == VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR) {
+                    yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I444ToP444(
+                            (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset),
+                            (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                            (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset),
+                            (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                            (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset),
+                            (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                            (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),
+                            (int)dstSubresourceLayout[0].rowPitch,
+                            (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
+                            (int)dstSubresourceLayout[1].rowPitch,
+                            width, height, shiftBits);
+                } else {
+                    yCbCrConvResult = YCbCrConvUtilsCpu<uint16_t>::I420ToNV12(
+                            (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[0].offset),
+                            (int)m_encoderConfig->input.planeLayouts[0].rowPitch,
+                            (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[1].offset),
+                            (int)m_encoderConfig->input.planeLayouts[1].rowPitch,
+                            (const uint16_t*)(pInputFrameData + m_encoderConfig->input.planeLayouts[2].offset),
+                            (int)m_encoderConfig->input.planeLayouts[2].rowPitch,
+                            (uint16_t*)(writeImagePtr + dstSubresourceLayout[0].offset),
+                            (int)dstSubresourceLayout[0].rowPitch,
+                            (uint16_t*)(writeImagePtr + dstSubresourceLayout[1].offset),
+                            (int)dstSubresourceLayout[1].rowPitch,
+                            width, height, shiftBits);
+                }
+            } else {
+                assert(!"Requested bit-depth is not supported!");
+                return VK_ERROR_INITIALIZATION_FAILED;
+            }
+
+            if (yCbCrConvResult != 0) {
+                return VK_ERROR_INITIALIZATION_FAILED;
+            }
         }
     }
 
@@ -529,6 +549,9 @@ VkResult VkVideoEncoder::SubmitStagedQpMap(VkSharedBaseObj<VkVideoEncodeFrameInf
  * @param height Height of the image in pixels
  * @param numPlanes Number of planes in the format (1, 2, or 3)
  * @param format The VkFormat of the image for proper subsampling and bit depth detection
+ * @param shiftBits Left-shift applied to each sample during the copy (high bit-depth
+ *                  formats only). Pass 0 when the samples are already MSB-aligned or
+ *                  when the compute filter applies the shift on the GPU.
  */
 void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
     const uint8_t* pInputFrameData,
@@ -538,7 +561,8 @@ void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
     uint32_t width,
     uint32_t height,
     uint32_t numPlanes,
-    VkFormat format)
+    VkFormat format,
+    uint32_t shiftBits)
 {
     // Get format information
     const VkMpFormatInfo* formatInfo = YcbcrVkFormatInfo(format);
@@ -589,16 +613,22 @@ void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
         const size_t srcStride = (size_t)inputPlaneLayouts[plane].rowPitch;
         const size_t dstStride = (size_t)dstSubresourceLayout[plane].rowPitch;
 
+        // Semi-planar formats interleave Cb and Cr in the second plane:
+        // 2 samples per chroma pixel
+        const uint32_t samplesPerPixel = ((plane > 0) && (numPlanes == 2)) ? 2 : 1;
+
         // Line width in bytes
-        const size_t lineBytes = planeWidth * bytesPerPixel;
+        const size_t lineBytes = planeWidth * samplesPerPixel * bytesPerPixel;
 
         // Get the starting pointers for this plane
         const uint8_t* srcRow = srcPlane;
         uint8_t* dstRow = dstPlane;
 
-        if (false && (bitDepth > 8)) {
+        if ((shiftBits > 0) && (bitDepth > 8)) {
 
-            const int shiftBits = 16 - bitDepth;
+            // Number of 16-bit samples per line, including the interleaved
+            // chroma samples of semi-planar formats
+            const size_t lineSamples = lineBytes / bytesPerPixel;
 
             // Copy each line, incrementing pointers by stride amounts
             for (uint32_t y = 0; y < planeHeight; y++) {
@@ -607,8 +637,8 @@ void VkVideoEncoder::CopyYCbCrPlanesDirectCPU(
                 const uint16_t* srcRow16 = (const uint16_t*)srcRow;
                 uint16_t* dstRow16 = (uint16_t*)dstRow;
 
-                for (uint32_t i = 0; i < planeWidth; i++) {
-                    *dstRow16++ = (*srcRow16++ << shiftBits);
+                for (size_t i = 0; i < lineSamples; i++) {
+                    *dstRow16++ = (uint16_t)(*srcRow16++ << shiftBits);
                 }
 
                 // Advance to the next line using pointer arithmetic
@@ -793,6 +823,25 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
                   << ", Encode  Order: " << encodeFrameInfo->gopPosition.encodeOrder << std::endl << std::flush;
     }
     return result;
+}
+
+static VkResult ProbeLinearImageFormat(const VulkanDeviceContext* vkDevCtx,
+                                       VkFormat format,
+                                       VkImageUsageFlags usage)
+{
+    VkPhysicalDeviceImageFormatInfo2 imageFormatInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2 };
+    imageFormatInfo.format = format;
+    imageFormatInfo.type   = VK_IMAGE_TYPE_2D;
+    imageFormatInfo.tiling = VK_IMAGE_TILING_LINEAR;
+    imageFormatInfo.usage  = usage;
+    // Must match the flags VulkanVideoImagePool::Configure creates its images with
+    imageFormatInfo.flags  = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+
+    VkImageFormatProperties2 imageFormatProperties = { VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2 };
+
+    return vkDevCtx->GetPhysicalDeviceImageFormatProperties2(vkDevCtx->getPhysicalDevice(),
+                                                             &imageFormatInfo,
+                                                             &imageFormatProperties);
 }
 
 VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConfig)
@@ -1033,19 +1082,20 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
 
     VkFormat supportedDpbFormats[8];
     VkFormat supportedInFormats[8];
-    uint32_t formatCount = sizeof(supportedDpbFormats) / sizeof(supportedDpbFormats[0]);
+    uint32_t dpbFormatCount = sizeof(supportedDpbFormats) / sizeof(supportedDpbFormats[0]);
     result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
                                                                VK_IMAGE_USAGE_VIDEO_ENCODE_DPB_BIT_KHR,
-                                                               formatCount, supportedDpbFormats);
+                                                               dpbFormatCount, supportedDpbFormats);
 
     if(result != VK_SUCCESS) {
         fprintf(stderr, "\nInitEncoder Error: Failed to get desired video format for the DPB.\n");
         return result;
     }
 
+    uint32_t inFormatCount = sizeof(supportedInFormats) / sizeof(supportedInFormats[0]);
     result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
                                                       VK_IMAGE_USAGE_VIDEO_ENCODE_SRC_BIT_KHR,
-                                                      formatCount, supportedInFormats);
+                                                      inFormatCount, supportedInFormats);
 
     if(result != VK_SUCCESS) {
         fprintf(stderr, "\nInitEncoder Error: Failed to get desired video format for input images.\n");
@@ -1062,9 +1112,10 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         VkImageUsageFlagBits imageUsageFlag = (encoderConfig->qpMapMode == EncoderConfig::DELTA_QP_MAP) ? VK_IMAGE_USAGE_VIDEO_ENCODE_QUANTIZATION_DELTA_MAP_BIT_KHR
                                                                                                         : VK_IMAGE_USAGE_VIDEO_ENCODE_EMPHASIS_MAP_BIT_KHR;
 
+        uint32_t qpMapFormatCount = sizeof(supportedQpMapFormats) / sizeof(supportedQpMapFormats[0]);
         result = VulkanVideoCapabilities::GetVideoFormats(m_vkDevCtx, encoderConfig->videoCoreProfile,
                                                           imageUsageFlag,
-                                                          formatCount, supportedQpMapFormats, supportedQpMapTiling,
+                                                          qpMapFormatCount, supportedQpMapFormats, supportedQpMapTiling,
                                                           true, supportedQpMapTexelSize);
 
         if(result != VK_SUCCESS) {
@@ -1203,16 +1254,37 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         std::max(m_maxCodedExtent.height, encoderConfig->input.height)
     };
 
+    // STORAGE is not probed: most drivers do not advertise it on multi-planar formats
+    const VkImageUsageFlags probeLinearImageUsage = ( VK_IMAGE_USAGE_SAMPLED_BIT |
+                                                      VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
     // When compute filter is available, the linear image stores raw input format
     // and the filter handles conversion. Without it, the linear image must match
     // the encode source format since CopyLinearToOptimalImage does no conversion.
-    const VkFormat linearImageFormat =
 #ifdef SHADERC_SUPPORT
-        encoderConfig->enablePreprocessComputeFilter
-            ? encoderConfig->input.vkFormat
-            : m_imageInFormat;
+    if (encoderConfig->enablePreprocessComputeFilter) {
+        result = ProbeLinearImageFormat(m_vkDevCtx, encoderConfig->input.vkFormat, probeLinearImageUsage);
+        if (result == VK_ERROR_FORMAT_NOT_SUPPORTED) {
+            fprintf(stderr, "\nWarning: input format %s (%d) is not supported by the device "
+                    "for linear staging images. Disabling the preprocess compute filter "
+                    "and falling back to CPU conversion to the encode format %s (%d).\n",
+                    VkVideoCoreProfile::VkFormatToName(encoderConfig->input.vkFormat), encoderConfig->input.vkFormat,
+                    VkVideoCoreProfile::VkFormatToName(m_imageInFormat), m_imageInFormat);
+            encoderConfig->enablePreprocessComputeFilter = false;
+        } else if (result != VK_SUCCESS) {
+            fprintf(stderr, "\nInitEncoder Error: failed to query linear image format "
+                    "properties for input format %s (%d): %d.\n",
+                    VkVideoCoreProfile::VkFormatToName(encoderConfig->input.vkFormat),
+                    encoderConfig->input.vkFormat, result);
+            return result;
+        }
+    }
+    const bool useComputeFilter = (encoderConfig->enablePreprocessComputeFilter != 0);
+    const VkFormat linearImageFormat = useComputeFilter ? encoderConfig->input.vkFormat
+                                                        : m_imageInFormat;
 #else
-        m_imageInFormat;
+    const bool useComputeFilter = false;
+    const VkFormat linearImageFormat = m_imageInFormat;
     if (encoderConfig->input.vkFormat != m_imageInFormat) {
         fprintf(stderr, "\nWarning: input format (%d) differs from encode format (%d) "
                 "but compute filter is not available (built without SHADERC_SUPPORT). "
@@ -1221,13 +1293,34 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     }
 #endif
 
+    // The compute filter samples the staging image and reads it through
+    // per-plane storage views; the CPU path only copies from it.
+    const VkImageUsageFlags linearImageUsage =
+        useComputeFilter ? VkImageUsageFlags( VK_IMAGE_USAGE_SAMPLED_BIT |
+                                              VK_IMAGE_USAGE_STORAGE_BIT |
+                                              VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+                         : VkImageUsageFlags(VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
+    result = ProbeLinearImageFormat(m_vkDevCtx, linearImageFormat,
+                                    useComputeFilter ? probeLinearImageUsage
+                                                     : linearImageUsage);
+    if (result == VK_ERROR_FORMAT_NOT_SUPPORTED) {
+        fprintf(stderr, "\nInitEncoder Error: linear staging image format %s (%d) "
+                "is not supported by the device.\n",
+                VkVideoCoreProfile::VkFormatToName(linearImageFormat), linearImageFormat);
+        return result;
+    } else if (result != VK_SUCCESS) {
+        fprintf(stderr, "\nInitEncoder Error: failed to query linear image format "
+                "properties for format %s (%d): %d.\n",
+                VkVideoCoreProfile::VkFormatToName(linearImageFormat), linearImageFormat, result);
+        return result;
+    }
+
     result = m_linearInputImagePool->Configure( m_vkDevCtx,
                                                 encoderConfig->numInputImages,
                                                 linearImageFormat,
                                                 linearInputImageExtent,
-                                                  ( VK_IMAGE_USAGE_SAMPLED_BIT |
-                                                    VK_IMAGE_USAGE_STORAGE_BIT |
-                                                    VK_IMAGE_USAGE_TRANSFER_SRC_BIT),
+                                                linearImageUsage,
                                                 m_vkDevCtx->GetVideoEncodeQueueFamilyIdx(),
                                                   ( VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
@@ -1498,6 +1591,18 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
         m_inputCommandBufferPool = m_inputComputeFilter;
 
     } else {
+
+        // Without the compute filter the CPU fills the staging image with
+        // encode-format data, and no CPU conversion exists for semi-planar input.
+        if ((encoderConfig->input.numPlanes == 2) &&
+            (encoderConfig->input.vkFormat != m_imageInFormat)) {
+            fprintf(stderr, "\nInitEncoder Error: semi-planar input format %s (%d) "
+                    "does not match the encoder input format %s (%d) and no CPU "
+                    "conversion path is available without the compute filter.\n",
+                    VkVideoCoreProfile::VkFormatToName(encoderConfig->input.vkFormat), encoderConfig->input.vkFormat,
+                    VkVideoCoreProfile::VkFormatToName(m_imageInFormat), m_imageInFormat);
+            return VK_ERROR_FORMAT_NOT_SUPPORTED;
+        }
 
         result = VulkanCommandBufferPool::Create(m_vkDevCtx, m_inputCommandBufferPool);
         if(result != VK_SUCCESS) {

@@ -129,27 +129,38 @@ public:
         VkDeviceSize offset = 0;
         for(uint32_t plane = 0; plane < numPlanes; plane++) {
 
-            uint32_t planeStride = bytesPerPixel * width;
+            // Plane dimensions in samples. The chroma width is rounded up
+            // before converting to bytes so that an odd luma width yields a
+            // full extra chroma sample for high bit-depth input.
+            uint32_t planeWidth  = width;
             uint32_t planeHeight = height;
 
             if (plane > 0) {
                 switch (chromaSubsampling) {
                     case VK_VIDEO_CHROMA_SUBSAMPLING_MONOCHROME_BIT_KHR:
-                        planeStride = 0;
+                        planeWidth = 0;
                         planeHeight = 0;
                         break;
                     case VK_VIDEO_CHROMA_SUBSAMPLING_420_BIT_KHR:
-                        planeStride = (planeStride + 1) / 2;
+                        planeWidth = (planeWidth + 1) / 2;
                         planeHeight = (planeHeight + 1) / 2;
                         break;
                     case VK_VIDEO_CHROMA_SUBSAMPLING_422_BIT_KHR:
-                        planeStride = (planeStride + 1) / 2;
+                        planeWidth = (planeWidth + 1) / 2;
                         break;
                     case VK_VIDEO_CHROMA_SUBSAMPLING_444_BIT_KHR:
                     default:
                         break;
                 }
+
+                if (numPlanes == 2) {
+                    // Semi-planar input: Cb and Cr are interleaved in a single
+                    // plane, so the plane stride covers both components.
+                    planeWidth *= 2;
+                }
             }
+
+            const uint32_t planeStride = bytesPerPixel * planeWidth;
 
             if (planeLayouts[plane].rowPitch < (planeStride)) {
                 planeLayouts[plane].rowPitch = planeStride;
@@ -175,6 +186,17 @@ public:
         if (vkFormat == VK_FORMAT_UNDEFINED) {
             fprintf(stderr, "Invalid input parameters!");
             return false;
+        }
+
+        if (bpp > 8) {
+            const int8_t maxMsbShift = static_cast<int8_t>(16 - bpp);
+            if (msbShift < 0) {
+                msbShift = (numPlanes == 2) ? 0 : maxMsbShift;
+            } else if (msbShift > maxMsbShift) {
+                fprintf(stderr, "Invalid input msbShift (%d) parameter for %d bpp, must be between 0 and %d!",
+                        msbShift, bpp, maxMsbShift);
+                return false;
+            }
         }
 
         return true;
