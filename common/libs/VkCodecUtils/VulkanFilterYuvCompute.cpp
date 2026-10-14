@@ -2361,15 +2361,27 @@ uint32_t VulkanFilterYuvCompute::UpdateImageDescriptorSets(
             writeDescriptorSets[descrIndex].dstSet = VK_NULL_HANDLE;
             writeDescriptorSets[descrIndex].dstBinding = dstBinding;
             writeDescriptorSets[descrIndex].descriptorCount = 1;
-            writeDescriptorSets[descrIndex].descriptorType = (ccSampler != VK_NULL_HANDLE) ?
-                                                              VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER :
-                                                              descriptorType;
+            const VkDescriptorType resolvedType = (ccSampler != VK_NULL_HANDLE) ?
+                                                   VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER :
+                                                   descriptorType;
+            writeDescriptorSets[descrIndex].descriptorType = resolvedType;
             imageDescriptors[descrIndex].sampler = ccSampler;
             imageDescriptors[descrIndex].imageView = (curImageAspect == 0) ?
                                                       imageView->GetImageView() :
                                                       imageView->GetPlaneImageView(planeNum);
             assert(imageDescriptors[descrIndex].imageView);
-            imageDescriptors[descrIndex].imageLayout = imageLayout;
+            // A STORAGE_IMAGE descriptor must be in GENERAL layout (VUID-04152);
+            // only sampled descriptors may use SHADER_READ_ONLY_OPTIMAL.
+            //
+            // NOTE: minimal local fix. nvpro upstream decides the layout at the
+            // call site instead (storage -> GENERAL, sampled -> READ_ONLY) in
+            // commit 4845b69 ("Add VulkanFilterYuvCompute RGBA2YCBCR filter and
+            // comprehensive test suite", ~10.8k lines). That commit is the hard
+            // dependency for the c76f219 view fix and is impractical to
+            // cherry-pick here; this override is equivalent until it is ported.
+            imageDescriptors[descrIndex].imageLayout =
+                    (resolvedType == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) ?
+                            VK_IMAGE_LAYOUT_GENERAL : imageLayout;
             writeDescriptorSets[descrIndex].pImageInfo = &imageDescriptors[descrIndex]; // Y (0) plane
             descrIndex++;
             validImageAspects &= ~(VK_IMAGE_ASPECT_COLOR_BIT << curImageAspect);
