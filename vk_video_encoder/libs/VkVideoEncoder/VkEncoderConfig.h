@@ -266,8 +266,13 @@ public:
             offset += frameSize;
         }
 
+        // Skip the requested frame's own "FRAME" header to reach its pixel data.
+        if (m_Y4MHeaderOffset) {
+            offset += skipY4MFrameHeader(offset);
+        }
+
         const uint64_t mappedLength = (uint64_t)m_memMapedFile.mapped_length();
-        if (mappedLength < offset) {
+        if (mappedLength < offset + frameSize) {
             printf("File overflow at fileOffset %lld\n", (long long unsigned int)offset);
             assert(!"Input file overflow");
             return nullptr;
