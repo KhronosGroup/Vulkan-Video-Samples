@@ -476,6 +476,45 @@
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
       "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
       "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h264_default_y4m",
+      "codec": "h264",
+      "profile": null,
+      "extra_args": null,
+      "description": "Test H.264 encoding from a Y4M input file",
+      "source_format": "y4m",
+      "width": 1920,
+      "height": 1080,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/y4m/1920x1080_15_i420.y4m",
+      "source_checksum": "a1366b83b3eeb71a2d4baf7ac4229d042d9fb00dade8057a73e14f71043e6e3f",
+      "source_filepath": "video/y4m/1920x1080_15_i420.y4m"
+    },
+    {
+      "name": "h265_default_y4m",
+      "codec": "h265",
+      "profile": null,
+      "extra_args": null,
+      "description": "Test H.265 encoding from a Y4M input file",
+      "source_format": "y4m",
+      "width": 1920,
+      "height": 1080,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/y4m/1920x1080_15_i420.y4m",
+      "source_checksum": "a1366b83b3eeb71a2d4baf7ac4229d042d9fb00dade8057a73e14f71043e6e3f",
+      "source_filepath": "video/y4m/1920x1080_15_i420.y4m"
+    },
+    {
+      "name": "av1_default_y4m",
+      "codec": "av1",
+      "profile": null,
+      "extra_args": null,
+      "description": "Test AV1 encoding from a Y4M input file",
+      "source_format": "y4m",
+      "width": 1920,
+      "height": 1080,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/y4m/1920x1080_15_i420.y4m",
+      "source_checksum": "a1366b83b3eeb71a2d4baf7ac4229d042d9fb00dade8057a73e14f71043e6e3f",
+      "source_filepath": "video/y4m/1920x1080_15_i420.y4m"
     }
   ]
 }
