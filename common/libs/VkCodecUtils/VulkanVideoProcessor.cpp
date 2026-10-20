@@ -119,7 +119,8 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     const uint32_t defaultMinBufferSize = 2 * 1024 * 1024; // 2MB
     result = CreateParser(nullptr,
                           m_videoStreamDemuxer->GetVideoCodec(),
-                          defaultMinBufferSize);
+                          defaultMinBufferSize,
+                          programConfig.inlineSessionParameters != 0);
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nERROR: CreateParser() result: 0x%x\n", result);
         return result;
@@ -546,7 +547,8 @@ int32_t VulkanVideoProcessor::ReleaseFrame(VulkanDecodedFrame* pDisplayedFrame)
 
 VkResult VulkanVideoProcessor::CreateParser(const char*,
                                             VkVideoCodecOperationFlagBitsKHR vkCodecType,
-                                            uint32_t defaultMinBufferSize)
+                                            uint32_t defaultMinBufferSize,
+                                            bool inlineSessionParameters)
 {
     static const VkExtensionProperties h264StdExtensionVersion = { VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_EXTENSION_NAME, VK_STD_VULKAN_VIDEO_CODEC_H264_DECODE_SPEC_VERSION };
     static const VkExtensionProperties h265StdExtensionVersion = { VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_EXTENSION_NAME, VK_STD_VULKAN_VIDEO_CODEC_H265_DECODE_SPEC_VERSION };
@@ -569,6 +571,7 @@ VkResult VulkanVideoProcessor::CreateParser(const char*,
 
     VkSharedBaseObj<IVulkanVideoDecoderHandler> decoderHandler(m_vkVideoDecoder);
     VkSharedBaseObj<IVulkanVideoFrameBufferParserCb> videoFrameBufferCb(m_vkVideoFrameBuffer);
+
     return vulkanCreateVideoParser(decoderHandler,
                                    videoFrameBufferCb,
                                    vkCodecType,
@@ -577,6 +580,7 @@ VkResult VulkanVideoProcessor::CreateParser(const char*,
                                    1, // maxNumDpbSurfaces - currently ignored
                                    defaultMinBufferSize,
                                    0, // clockRate - default 0 = 10Mhz
+                                   inlineSessionParameters,
                                    m_vkParser);
 }
 
