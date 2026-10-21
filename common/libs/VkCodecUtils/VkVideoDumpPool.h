@@ -207,12 +207,9 @@ private:
                             (unsigned long long)frame.forwardWaitValue,
                             (unsigned long long)currentValue,
                             semResult, waitMs);
-                    // Signal release even on failure to prevent deadlock
-                    signalRelease(frame);
-                    if (frame.releaseCallback) frame.releaseCallback(frame);
-                    m_framesWritten++;
-                    m_flushCV.notify_all();
-                    continue;
+                    // Skip the write but still take our turn in display order, otherwise
+                    // every later frame blocks forever on m_nextWriteOrder.
+                    frame.writeCallback = nullptr;
                 }
             }
 
@@ -232,15 +229,16 @@ private:
                 }
             }
 
+            // Signal before handing over the turn: host signals on a timeline
+            // semaphore must be strictly increasing.
+            signalRelease(frame);
+
             // 4. Advance the write order and notify other waiting threads
             {
                 std::lock_guard<std::mutex> orderLock(m_orderMutex);
                 m_nextWriteOrder = frame.displayOrder + 1;
             }
             m_orderCV.notify_all();
-
-            // 3. Signal consumer-done (backward TL semaphore)
-            signalRelease(frame);
 
             // 4. Release frame back to decoder
             if (frame.releaseCallback) {
