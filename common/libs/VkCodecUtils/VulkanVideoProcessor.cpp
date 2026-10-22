@@ -103,6 +103,17 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     }
 
     if (enableExternalConsumerExport) {
+        static const char* const exportDeviceExtensions[] = {
+            VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME,
+            VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME,
+            VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
+        };
+        for (const char* ext : exportDeviceExtensions) {
+            if (vkDevCtx->FindRequiredDeviceExtension(ext) == nullptr) {
+                fprintf(stderr, "ERROR: external consumer export requires %s\n", ext);
+                return VK_ERROR_EXTENSION_NOT_PRESENT;
+            }
+        }
         enableDecoderFeatures |= VkVideoDecoder::ENABLE_EXTERNAL_CONSUMER_EXPORT;
     }
 
