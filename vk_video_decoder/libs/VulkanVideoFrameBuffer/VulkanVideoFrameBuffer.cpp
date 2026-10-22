@@ -1032,6 +1032,15 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
     // Only create if not already created - on reconfigure, we MUST reuse the existing
     // semaphores to avoid corrupting in-flight synchronization.
     if (m_frameCompleteSemaphore == VK_NULL_HANDLE) {
+        // Only make the semaphores exportable when an external consumer will import them.
+        bool exportSemaphores = false;
+        for (uint32_t imageTypeIdx = 0; imageTypeIdx < maxNumImageTypeIdx; imageTypeIdx++) {
+            if (imageSpecs[imageTypeIdx].exportHandleTypes != 0) {
+                exportSemaphores = true;
+                break;
+            }
+        }
+
         VkExportSemaphoreCreateInfo exportInfo = {};
         exportInfo.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
         exportInfo.pNext = nullptr;
@@ -1043,7 +1052,7 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
 
         VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
         timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-        timelineCreateInfo.pNext = &exportInfo;
+        timelineCreateInfo.pNext = exportSemaphores ? &exportInfo : nullptr;
         timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
         timelineCreateInfo.initialValue = 0ULL;
 
