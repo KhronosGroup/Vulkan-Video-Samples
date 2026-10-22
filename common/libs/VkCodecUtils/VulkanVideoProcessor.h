@@ -103,6 +103,7 @@ private:
         , m_vkVideoDecoder()
         , m_vkParser()
         , m_frameToFile()
+        , m_outputResult(VK_SUCCESS)
         , m_currentBitstreamOffset(0)
         , m_videoFrameNum(0)
         , m_videoStreamsCompleted(false)
@@ -128,6 +129,8 @@ private:
 
     bool StreamCompleted();
 
+    VkVideoQueueResult FinishStream();
+
 private:
     std::atomic<int32_t>       m_refCount;
     const VulkanDeviceContext* m_vkDevCtx;
@@ -137,6 +140,7 @@ private:
     VkSharedBaseObj<IVulkanVideoParser> m_vkParser;
     VkSharedBaseObj<VkVideoFrameOutput> m_frameToFile;
     VkVideoDumpPool m_dumpPool;
+    VkResult m_outputResult;
     int64_t  m_currentBitstreamOffset;
     uint32_t m_videoFrameNum;
     uint32_t m_videoStreamsCompleted : 1;

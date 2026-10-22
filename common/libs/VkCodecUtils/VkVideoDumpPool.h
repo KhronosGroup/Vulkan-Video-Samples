@@ -85,6 +85,7 @@ public:
         m_shutdown = false;
         m_framesQueued = 0;
         m_framesWritten = 0;
+        m_writeError = false;
 
         // Create a dedicated timeline semaphore for the dump consumer
         VkSemaphoreTypeCreateInfo timelineInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -159,6 +160,7 @@ public:
 
     uint64_t getFramesWritten() const { return m_framesWritten.load(); }
     uint64_t getFramesQueued() const { return m_framesQueued.load(); }
+    bool hasWriteError() const { return m_writeError.load(); }
     bool isInitialized() const { return m_initialized; }
 
 private:
@@ -210,6 +212,7 @@ private:
                     // Skip the write but still take our turn in display order, otherwise
                     // every later frame blocks forever on m_nextWriteOrder.
                     frame.writeCallback = nullptr;
+                    m_writeError = true;
                 }
             }
 
@@ -225,7 +228,9 @@ private:
             if (frame.writeCallback) {
                 int64_t bytesWritten = frame.writeCallback(frame);
                 if (bytesWritten <= 0LL) {
-                    printf("frame.writeCallback return invalid value %lld\n", (long long int)bytesWritten);
+                    fprintf(stderr, "[DumpPool] T%d: failed to write frame displayOrder=%lld\n",
+                            threadId, (long long)frame.displayOrder);
+                    m_writeError = true;
                 }
             }
 
@@ -267,6 +272,7 @@ private:
     std::atomic<bool>           m_shutdown{false};
     std::atomic<uint64_t>       m_framesQueued{0};
     std::atomic<uint64_t>       m_framesWritten{0};
+    std::atomic<bool>           m_writeError{false};
 
     std::vector<std::thread>    m_threads;
     std::queue<VkVideoDumpFrame> m_frameQueue;

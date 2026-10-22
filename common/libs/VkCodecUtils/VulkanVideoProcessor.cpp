@@ -63,6 +63,7 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     }
 
     Deinit();
+    m_outputResult = VK_SUCCESS;
 
     assert(vkDevCtx);
     m_vkDevCtx = vkDevCtx;
@@ -423,6 +424,9 @@ bool VulkanVideoProcessor::OutputFrameToFile(VulkanDecodedFrame* pFrame, size_t*
 
     // If the dump pool is initialized, queue async — return immediately
     if (m_dumpPool.isInitialized()) {
+        if (m_dumpPool.hasWriteError()) {
+            return false;
+        }
 
         VkVideoDumpFrame dumpFrame;
         dumpFrame.pictureIndex = pFrame->pictureIndex;
@@ -591,6 +595,7 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
         if (m_frameToFile) {
             if (!OutputFrameToFile(pFrame)) {
                 fprintf(stderr, "ERROR: Failed to output frame %u to file\n", m_videoFrameNum);
+                m_outputResult = VK_ERROR_UNKNOWN;
                 return VkVideoQueueResult::Error;
             }
         }
@@ -603,18 +608,32 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
         std::cout << "Number of video frames " << m_videoFrameNum
                   << " of max frame number " << m_maxFrameCount << std::endl;
         m_videoStreamsCompleted = StreamCompleted();
-        return VkVideoQueueResult::EndOfStream;
+        return FinishStream();
     }
 
     if (framesInQueue == 0) {
         if (m_videoStreamsCompleted) {
-            return VkVideoQueueResult::EndOfStream;
+            return FinishStream();
         } else {
             return VkVideoQueueResult::NoFrame;
         }
     }
 
     return VkVideoQueueResult::NewFrame;
+}
+
+VkVideoQueueResult VulkanVideoProcessor::FinishStream()
+{
+    // Writes are asynchronous: their failures are only known once the pool drains.
+    if (m_dumpPool.isInitialized()) {
+        m_dumpPool.flush();
+        if (m_dumpPool.hasWriteError()) {
+            fprintf(stderr, "ERROR: Failed to write decoded frames to file\n");
+            m_outputResult = VK_ERROR_UNKNOWN;
+            return VkVideoQueueResult::Error;
+        }
+    }
+    return VkVideoQueueResult::EndOfStream;
 }
 
 int32_t VulkanVideoProcessor::ReleaseFrame(VulkanDecodedFrame* pDisplayedFrame)
@@ -677,7 +696,9 @@ VkResult VulkanVideoProcessor::CreateParser(const char*,
 VkResult VulkanVideoProcessor::GetDecoderLastResult() const
 {
     if (m_vkVideoDecoder) {
-        return m_vkVideoDecoder->GetLastResult();
+        const VkResult decoderResult = m_vkVideoDecoder->GetLastResult();
+        // Decode errors take precedence; otherwise report a failed file write.
+        return (decoderResult != VK_SUCCESS) ? decoderResult : m_outputResult;
     }
     return VK_ERROR_INITIALIZATION_FAILED;
 }
