@@ -1265,7 +1265,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                                &referencedObjectsInfo,
                                                                &frameSynchronizationInfo);
     if (currPicIdx != retVal) {
-        assert(!"QueuePictureForDecode has failed");
+        FAIL_WITH_RESULT(VK_TIMEOUT, "QueuePictureForDecode failed");
     }
 
     assert(VK_NOT_READY == m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, frameSynchronizationInfo.frameCompleteFence));

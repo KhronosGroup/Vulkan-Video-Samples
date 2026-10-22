@@ -421,6 +421,39 @@ public:
     {
         assert((uint32_t)picId < m_perFrameDecodeImageSet.size());
 
+        // Wait for all external consumers (cross-process) to release this slot.
+        // Done before the fence waits below, so a timeout leaves this slot's fences untouched.
+        // Snapshot under the lock: consumers can be registered from another thread.
+        VkSemaphore consumerSemaphores[NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS] = {};
+        uint64_t consumerWaitValues[NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS] = {};
+        uint32_t numConsumers = 0;
+        {
+            std::lock_guard<std::mutex> lock(m_displayQueueMutex);
+            numConsumers = m_perFrameDecodeImageSet.m_numExternalConsumers;
+            for (uint32_t c = 0; c < numConsumers; c++) {
+                consumerSemaphores[c] = m_perFrameDecodeImageSet.m_externalConsumerSemaphores[c];
+                consumerWaitValues[c] = m_perFrameDecodeImageSet[picId].m_externalConsumerDoneValues[c];
+            }
+        }
+        // Bounded, so a consumer that died or stopped releasing frames fails the picture
+        // instead of hanging the decoder.
+        const uint64_t consumerTimeoutNs = 10ULL * 1000ULL * 1000ULL * 1000ULL; // 10s
+        for (uint32_t c = 0; c < numConsumers; c++) {
+            if ((consumerSemaphores[c] == VK_NULL_HANDLE) || (consumerWaitValues[c] == 0)) {
+                continue;
+            }
+            VkSemaphoreWaitInfo waitInfo{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+            waitInfo.semaphoreCount = 1;
+            waitInfo.pSemaphores = &consumerSemaphores[c];
+            waitInfo.pValues = &consumerWaitValues[c];
+            VkResult waitResult = m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, consumerTimeoutNs);
+            if (waitResult != VK_SUCCESS) {
+                fprintf(stderr, "ERROR: external consumer %u did not release picture %d (VkResult %d)\n",
+                        c, picId, waitResult);
+                return -1;
+            }
+        }
+
         if (pFrameSynchronizationInfo->syncOnFrameCompleteFence == 1) {
             // Check here that the frame for this entry (for this command buffer) has already completed decoding.
             // Otherwise we may step over a hot command buffer by starting a new recording.
@@ -445,20 +478,6 @@ public:
         // single-threaded headless path. The dump now waits on the forward TL
         // semaphore (not the fence), so the fence reset here is harmless.
         // For multi-threaded dump (Phase 2), add consumer TL wait here.
-
-        // Wait for all external consumers (cross-process) to release this slot
-        for (uint32_t c = 0; c < m_perFrameDecodeImageSet.m_numExternalConsumers; c++) {
-            if (m_perFrameDecodeImageSet.m_externalConsumerSemaphores[c] != VK_NULL_HANDLE) {
-                uint64_t waitValue = m_perFrameDecodeImageSet[picId].m_externalConsumerDoneValues[c];
-                if (waitValue > 0) {
-                    VkSemaphoreWaitInfo waitInfo{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
-                    waitInfo.semaphoreCount = 1;
-                    waitInfo.pSemaphores = &m_perFrameDecodeImageSet.m_externalConsumerSemaphores[c];
-                    waitInfo.pValues = &waitValue;
-                    m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, UINT64_MAX);
-                }
-            }
-        }
 
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         m_perFrameDecodeImageSet[picId].m_picDispInfo = *pDecodePictureInfo;
@@ -656,6 +675,7 @@ public:
     virtual int32_t AddExternalConsumer(VkSemaphore importedReleaseSemaphore,
                                         DecodeFrameBufferIf::SemSyncTypeIdx consumerType) override
     {
+        std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         uint32_t idx = m_perFrameDecodeImageSet.m_numExternalConsumers;
         if (idx >= NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS) {
             return -1;
