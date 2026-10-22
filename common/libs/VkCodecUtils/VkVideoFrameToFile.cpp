@@ -72,6 +72,9 @@ public:
         , m_firstFrame(true)
         , m_height(0)
         , m_width(0)
+        , m_frameRateNum(30)
+        , m_frameRateDen(1)
+        , m_frameRateSet(false)
         , m_outputy4m(outputy4m)
         , m_outputcrcPerFrame(outputcrcPerFrame)
         , m_crcOutputFile(nullptr)
@@ -125,6 +128,19 @@ public:
             delete this;
         }
         return ret;
+    }
+
+    virtual void SetFrameRate(uint32_t frameRateNum, uint32_t frameRateDen) override {
+        if (frameRateNum == 0 || frameRateDen == 0) {
+            return;
+        }
+        // Only the first valid call counts: later ones come from the decode thread while
+        // dump-pool workers may be reading these to write the Y4M header.
+        if (m_frameRateSet.exchange(true)) {
+            return;
+        }
+        m_frameRateNum = frameRateNum;
+        m_frameRateDen = frameRateDen;
     }
 
     virtual bool OutputFrame(VulkanDecodedFrame* pFrame, const VulkanDeviceContext* vkDevCtx, size_t* bytesWritten = nullptr) override {
@@ -337,8 +353,9 @@ public:
             const char* chromaFormat = mpInfo->planesLayout.secondaryPlaneSubsampledX ? "C420" : "C444";
             const char* bitDepth = (mpInfo->planesLayout.bpp != YCBCRA_8BPP) ? "p16" : "";
 
-            if (fprintf(m_outputFile, "YUV4MPEG2 W%i H%i F24:1 Ip A1:1 %s%s\n",
-                        (int)width, (int)height, chromaFormat, bitDepth) < 0) {
+            if (fprintf(m_outputFile, "YUV4MPEG2 W%i H%i F%u:%u Ip A1:1 %s%s\n",
+                        (int)width, (int)height, m_frameRateNum, m_frameRateDen,
+                        chromaFormat, bitDepth) < 0) {
                 fprintf(stderr, "ERROR: fprintf failed writing Y4M header\n");
                 return setErrorAndReturn();
             }
@@ -547,6 +564,9 @@ private:
     bool     m_firstFrame;
     size_t   m_height;
     size_t   m_width;
+    uint32_t m_frameRateNum;
+    uint32_t m_frameRateDen;
+    std::atomic<bool> m_frameRateSet;
     bool     m_outputy4m;
     bool     m_outputcrcPerFrame;
     FILE*    m_crcOutputFile;
