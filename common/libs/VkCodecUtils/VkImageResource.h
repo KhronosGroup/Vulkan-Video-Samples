@@ -51,6 +51,20 @@ public:
                                      uint64_t drmFormatModifier,
                                      VkSharedBaseObj<VkImageResource>& imageResource);
 
+    /**
+     * @brief Pick a DRM format modifier the driver can export an image with
+     *
+     * createInfo must be the final create info (pNext, e.g. the video profile list, and flags)
+     * so the driver checks the modifier for that exact image. Non-linear modifiers are
+     * preferred, LINEAR is the fallback.
+     *
+     * @return false if no modifier supports the image with this handle type
+     */
+    static bool SelectExportDrmModifier(const VulkanDeviceContext* vkDevCtx,
+                                        const VkImageCreateInfo& createInfo,
+                                        VkExternalMemoryHandleTypeFlagBits handleType,
+                                        uint64_t& drmFormatModifier);
+
     bool IsCompatible ( VkDevice,
                         const VkImageCreateInfo* pImageCreateInfo)
     {

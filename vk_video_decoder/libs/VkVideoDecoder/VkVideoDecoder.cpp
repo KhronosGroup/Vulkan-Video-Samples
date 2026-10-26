@@ -512,44 +512,9 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         extraImageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
 
-    // Select DRM modifier for external consumer export (used below when setting image specs)
-    uint64_t exportDrmModifier = 0;
-    VkExternalMemoryHandleTypeFlags exportHandleTypes = 0;
-    if (m_enableExternalConsumerExport == VK_TRUE) {
-        exportHandleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
-        // Query supported DRM modifiers for the output format
-        VkDrmFormatModifierPropertiesListEXT modList{
-            VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT};
-        VkFormatProperties2 fmtProps{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
-        fmtProps.pNext = &modList;
-        m_vkDevCtx->GetPhysicalDeviceFormatProperties2(
-            m_vkDevCtx->getPhysicalDevice(), outImageFormat, &fmtProps);
-        if (modList.drmFormatModifierCount > 0) {
-            std::vector<VkDrmFormatModifierPropertiesEXT> mods(modList.drmFormatModifierCount);
-            modList.pDrmFormatModifierProperties = mods.data();
-            m_vkDevCtx->GetPhysicalDeviceFormatProperties2(
-                m_vkDevCtx->getPhysicalDevice(), outImageFormat, &fmtProps);
-            const VkFormatFeatureFlags required =
-                VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-            // Prefer non-linear (block-linear)
-            for (const auto& m : mods) {
-                if (m.drmFormatModifier != 0 &&
-                    (m.drmFormatModifierTilingFeatures & required) == required) {
-                    exportDrmModifier = m.drmFormatModifier;
-                    break;
-                }
-            }
-            // Fallback to any with required features
-            if (exportDrmModifier == 0) {
-                for (const auto& m : mods) {
-                    if ((m.drmFormatModifierTilingFeatures & required) == required) {
-                        exportDrmModifier = m.drmFormatModifier;
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    // The DRM format modifier is picked per exported image once its create info is final.
+    const VkExternalMemoryHandleTypeFlags exportHandleTypes =
+        (m_enableExternalConsumerExport == VK_TRUE) ? VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT : 0;
 
     if (m_dpbAndOutputCoincide == VK_TRUE) {
 
@@ -604,7 +569,6 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     // External consumer export: set on DPB in coincide mode (DPB IS the output)
     if (m_enableExternalConsumerExport == VK_TRUE && m_dpbAndOutputCoincide == VK_TRUE) {
         imageSpecDpb.exportHandleTypes = exportHandleTypes;
-        imageSpecDpb.exportDrmModifier = exportDrmModifier;
     }
     assert(imageSpecDpb.imageTypeIdx == m_imageSpecsIndex.decodeDpb);
 
@@ -630,7 +594,6 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         // External consumer export: set on output image (distinct mode + film grain)
         if (m_enableExternalConsumerExport == VK_TRUE) {
             imageSpecOut.exportHandleTypes = exportHandleTypes;
-            imageSpecOut.exportDrmModifier = exportDrmModifier;
         }
         if (m_useSeparateOutputImages == VK_TRUE) {
             // Add one more image for the separate output image used for platforms
@@ -687,6 +650,35 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     }
 
     assert(imageSpecsIndex < DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES);
+
+    if (m_enableExternalConsumerExport == VK_TRUE) {
+        // Pick a modifier per exported image with the create info the frame buffer will use,
+        // so the driver confirms it for this video profile, usage and format.
+        for (uint8_t idx = 0; idx < imageSpecsIndex; idx++) {
+            VulkanVideoFrameBuffer::ImageSpec& spec = imageSpecs[idx];
+            if (spec.exportHandleTypes == 0) {
+                continue;
+            }
+            if (spec.usesImageArray) {
+                FAIL_WITH_RESULT(VK_ERROR_FEATURE_NOT_PRESENT,
+                                 "external consumer export of DPB image arrays is not supported");
+            }
+            if (spec.createInfo.tiling == VK_IMAGE_TILING_LINEAR) {
+                FAIL_WITH_RESULT(VK_ERROR_FEATURE_NOT_PRESENT,
+                                 "external consumer export of the linear output image is not supported");
+            }
+            VkImageCreateInfo createInfo = spec.createInfo;
+            // Mirrors what VulkanVideoFrameBuffer::InitImagePool sets before creating the image.
+            createInfo.pNext = videoProfile.GetProfileListInfo();
+            createInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+            if (!VkImageResource::SelectExportDrmModifier(m_vkDevCtx, createInfo,
+                                                          VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
+                                                          spec.exportDrmModifier)) {
+                FAIL_WITH_RESULT(VK_ERROR_FORMAT_NOT_SUPPORTED,
+                                 "no DRM format modifier supports exporting the decoded images");
+            }
+        }
+    }
 
     int32_t ret = m_videoFrameBuffer->InitImagePool(videoProfile.GetProfile(),
                                                     numDecodeSurfaces,

@@ -244,6 +244,90 @@ VkResult VkImageResource::Create(const VulkanDeviceContext* vkDevCtx,
     return result;
 }
 
+// View formats for VkImageFormatListCreateInfo, required with MUTABLE_FORMAT_BIT on
+// DRM format modifier images (VUID-VkImageCreateInfo-tiling-02353).
+static uint32_t GetDrmModifierViewFormats(VkFormat format, VkFormat (&viewFormats)[4])
+{
+    uint32_t viewFormatCount = 0;
+    viewFormats[viewFormatCount++] = format;
+    const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(format);
+    if (mpInfo && mpInfo->planesLayout.numberOfExtraPlanes > 0) {
+        const uint32_t numPlanes = 1 + mpInfo->planesLayout.numberOfExtraPlanes;
+        for (uint32_t p = 0; p < numPlanes && p < VK_MAX_NUM_IMAGE_PLANES_EXT; ++p) {
+            if (mpInfo->vkPlaneFormat[p] != VK_FORMAT_UNDEFINED && mpInfo->vkPlaneFormat[p] != format) {
+                viewFormats[viewFormatCount++] = mpInfo->vkPlaneFormat[p];
+            }
+        }
+    }
+    return viewFormatCount;
+}
+
+bool VkImageResource::SelectExportDrmModifier(const VulkanDeviceContext* vkDevCtx,
+                                              const VkImageCreateInfo& createInfo,
+                                              VkExternalMemoryHandleTypeFlagBits handleType,
+                                              uint64_t& drmFormatModifier)
+{
+    static constexpr uint64_t drmFormatModLinear = 0; // DRM_FORMAT_MOD_LINEAR
+
+    VkDrmFormatModifierPropertiesListEXT modList{VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT};
+    VkFormatProperties2 fmtProps{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2, &modList};
+    vkDevCtx->GetPhysicalDeviceFormatProperties2(vkDevCtx->getPhysicalDevice(), createInfo.format, &fmtProps);
+    std::vector<VkDrmFormatModifierPropertiesEXT> mods(modList.drmFormatModifierCount);
+    modList.pDrmFormatModifierProperties = mods.data();
+    vkDevCtx->GetPhysicalDeviceFormatProperties2(vkDevCtx->getPhysicalDevice(), createInfo.format, &fmtProps);
+
+    VkFormat viewFormats[4] = {};
+    VkImageFormatListCreateInfo formatList{VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO};
+    formatList.pNext = createInfo.pNext;
+    formatList.viewFormatCount = GetDrmModifierViewFormats(createInfo.format, viewFormats);
+    formatList.pViewFormats = viewFormats;
+    const bool mutableFormat = (createInfo.flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) != 0;
+
+    // Non-linear modifiers first, LINEAR as the fallback.
+    for (const bool wantLinear : { false, true }) {
+        for (const auto& m : mods) {
+            if ((m.drmFormatModifier == drmFormatModLinear) != wantLinear) {
+                continue;
+            }
+            VkPhysicalDeviceImageDrmFormatModifierInfoEXT modInfo{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_DRM_FORMAT_MODIFIER_INFO_EXT};
+            modInfo.pNext = mutableFormat ? static_cast<const void*>(&formatList) : createInfo.pNext;
+            modInfo.drmFormatModifier = m.drmFormatModifier;
+            modInfo.sharingMode = createInfo.sharingMode;
+            if (createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
+                modInfo.queueFamilyIndexCount = createInfo.queueFamilyIndexCount;
+                modInfo.pQueueFamilyIndices = createInfo.pQueueFamilyIndices;
+            }
+            VkPhysicalDeviceExternalImageFormatInfo extInfo{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO, &modInfo, handleType};
+            VkPhysicalDeviceImageFormatInfo2 info{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2, &extInfo};
+            info.format = createInfo.format;
+            info.type = createInfo.imageType;
+            info.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
+            info.usage = createInfo.usage;
+            info.flags = createInfo.flags;
+
+            VkExternalImageFormatProperties extProps{VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES};
+            VkImageFormatProperties2 props{VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2, &extProps};
+            if (vkDevCtx->GetPhysicalDeviceImageFormatProperties2(vkDevCtx->getPhysicalDevice(),
+                                                                  &info, &props) != VK_SUCCESS) {
+                continue;
+            }
+            const VkImageFormatProperties& limits = props.imageFormatProperties;
+            if (((extProps.externalMemoryProperties.externalMemoryFeatures &
+                  VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) == 0) ||
+                (createInfo.extent.width > limits.maxExtent.width) ||
+                (createInfo.extent.height > limits.maxExtent.height) ||
+                (createInfo.arrayLayers > limits.maxArrayLayers)) {
+                continue;
+            }
+            drmFormatModifier = m.drmFormatModifier;
+            return true;
+        }
+    }
+    return false;
+}
+
 VkResult VkImageResource::CreateExportable(const VulkanDeviceContext* vkDevCtx,
                                            const VkImageCreateInfo* pImageCreateInfo,
                                            VkMemoryPropertyFlags memoryPropertyFlags,
@@ -289,23 +373,7 @@ VkResult VkImageResource::CreateExportable(const VulkanDeviceContext* vkDevCtx,
             // If MUTABLE_FORMAT_BIT is set, we need VkImageFormatListCreateInfo
             // per VUID-VkImageCreateInfo-tiling-02353
             if (pImageCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
-                // Include the main format
-                viewFormats[viewFormatCount++] = pImageCreateInfo->format;
-
-                // For multi-planar YCbCr, also include plane formats from vkPlaneFormat[]
-                const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(pImageCreateInfo->format);
-                if (mpInfo && mpInfo->planesLayout.numberOfExtraPlanes > 0) {
-                    // Add plane formats for NV12/NV21 (R8, RG8) or planar (R8, R8, R8) etc.
-                    // Plane formats are in vkPlaneFormat[0..numberOfPlanes-1]
-                    const uint32_t numPlanes = 1 + mpInfo->planesLayout.numberOfExtraPlanes;
-                    for (uint32_t p = 0; p < numPlanes && p < VK_MAX_NUM_IMAGE_PLANES_EXT; ++p) {
-                        if (mpInfo->vkPlaneFormat[p] != VK_FORMAT_UNDEFINED &&
-                            mpInfo->vkPlaneFormat[p] != pImageCreateInfo->format) {
-                            viewFormats[viewFormatCount++] = mpInfo->vkPlaneFormat[p];
-                        }
-                    }
-                }
-
+                viewFormatCount = GetDrmModifierViewFormats(pImageCreateInfo->format, viewFormats);
                 formatList.viewFormatCount = viewFormatCount;
                 formatList.pViewFormats = viewFormats;
 
