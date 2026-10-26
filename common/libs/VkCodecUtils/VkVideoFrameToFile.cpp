@@ -234,18 +234,6 @@ public:
             writeResult = WriteDataToFile(0, usedBufferSize, bytesWritten);
         }
 
-        // Signal consumer-done timeline semaphore so the decoder knows
-        // this frame slot can be safely reused.
-        if (pFrame->consumerCompleteSemaphore != VK_NULL_HANDLE &&
-            pFrame->frameConsumerDoneSemValue > 0) {
-            VkSemaphoreSignalInfo signalInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
-                                                  nullptr,
-                                                  pFrame->consumerCompleteSemaphore,
-                                                  pFrame->frameConsumerDoneSemValue };
-            vkDevCtx->SignalSemaphore(*vkDevCtx, &signalInfo);
-            pFrame->hasConsummerSignalSemaphore = true;
-        }
-
         return writeResult;
     }
 
