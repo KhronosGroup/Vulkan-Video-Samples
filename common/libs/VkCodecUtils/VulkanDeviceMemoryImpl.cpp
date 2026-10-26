@@ -78,8 +78,18 @@ VkResult VulkanDeviceMemoryImpl::CreateDeviceMemory(const VulkanDeviceContext* v
     // Align the allocation size to the required alignment.
     // Vulkan's vkGetImageMemoryRequirements/vkGetBufferMemoryRequirements may return
     // a size that is not a multiple of alignment, but memory allocations should be aligned.
-    VkDeviceSize alignedSize = (memoryRequirements.size + (memoryRequirements.alignment - 1)) &
-                               ~(memoryRequirements.alignment - 1);
+    // A dedicated allocation must be exactly memoryRequirements.size
+    // (VUID-VkMemoryDedicatedAllocateInfo-image-02964).
+    bool isDedicated = false;
+    for (auto p = static_cast<const VkBaseInStructure*>(pAllocateInfoPNext); p != nullptr; p = p->pNext) {
+        if (p->sType == VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO) {
+            isDedicated = true;
+            break;
+        }
+    }
+    VkDeviceSize alignedSize = isDedicated ? memoryRequirements.size :
+                               ((memoryRequirements.size + (memoryRequirements.alignment - 1)) &
+                                ~(memoryRequirements.alignment - 1));
 
     VkMemoryAllocateInfo allocInfo = VkMemoryAllocateInfo();
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;

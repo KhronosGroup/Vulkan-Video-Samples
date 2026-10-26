@@ -37,11 +37,6 @@ VkImageResource::VkImageResource(const VulkanDeviceContext* vkDevCtx,
     // Query memory plane layouts for DRM format modifier images
     // Per Vulkan spec: For VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT, must use
     // VK_IMAGE_ASPECT_MEMORY_PLANE_*_BIT_EXT aspect flags
-    //
-    // NVIDIA WORKAROUND: For non-disjoint multi-planar images with DRM modifiers,
-    // the driver may return all zeros for MEMORY_PLANE_1 and higher because internally
-    // it treats the image as having a single memory plane. In this case, we must
-    // calculate the plane offsets manually based on the image format and dimensions.
     if (m_usesDrmFormatModifier && m_memoryPlaneCount > 0) {
         static const VkImageAspectFlagBits memoryPlaneAspects[] = {
             VK_IMAGE_ASPECT_MEMORY_PLANE_0_BIT_EXT,
@@ -55,62 +50,6 @@ VkImageResource::VkImageResource(const VulkanDeviceContext* vkDevCtx,
             subRes.mipLevel = 0;
             subRes.arrayLayer = 0;
             m_vkDevCtx->GetImageSubresourceLayout(*vkDevCtx, image, &subRes, &m_memoryPlaneLayouts[p]);
-        }
-
-        // NVIDIA WORKAROUND: If MEMORY_PLANE_1+ returned zeros, calculate offsets manually
-        // This happens with non-disjoint multi-planar YCbCr images on NVIDIA
-        const VkMpFormatInfo* ycbcrInfo = YcbcrVkFormatInfo(pImageCreateInfo->format);
-        if (ycbcrInfo && m_memoryPlaneCount >= 2) {
-            uint32_t width = pImageCreateInfo->extent.width;
-            uint32_t height = pImageCreateInfo->extent.height;
-
-            // Check if plane 1 layout is invalid (all zeros or size=0)
-            if (m_memoryPlaneLayouts[1].size == 0 && m_memoryPlaneLayouts[1].rowPitch == 0) {
-                // Calculate based on YCbCr format layout
-                uint32_t bytesPerPixel = (ycbcrInfo->planesLayout.bpp == YCBCRA_8BPP) ? 1 : 2;
-
-                // Plane 0 (Y): Full resolution
-                if (m_memoryPlaneLayouts[0].rowPitch == 0) {
-                    m_memoryPlaneLayouts[0].rowPitch = width * bytesPerPixel;
-                }
-                if (m_memoryPlaneLayouts[0].size == 0) {
-                    m_memoryPlaneLayouts[0].size = m_memoryPlaneLayouts[0].rowPitch * height;
-                }
-                m_memoryPlaneLayouts[0].offset = 0;
-
-                // Plane 1 (UV/CbCr): Subsampled based on format
-                uint32_t chromaWidth = width;
-                uint32_t chromaHeight = height;
-                if (ycbcrInfo->planesLayout.secondaryPlaneSubsampledX) {
-                    chromaWidth = (width + 1) / 2;
-                }
-                if (ycbcrInfo->planesLayout.secondaryPlaneSubsampledY) {
-                    chromaHeight = (height + 1) / 2;
-                }
-
-                // For semi-planar (NV12, P010, etc.), UV plane has 2 components interleaved
-                uint32_t uvBytesPerPixel = bytesPerPixel * 2;  // CbCr interleaved
-
-                m_memoryPlaneLayouts[1].offset = m_memoryPlaneLayouts[0].size;
-                m_memoryPlaneLayouts[1].rowPitch = chromaWidth * uvBytesPerPixel;
-                m_memoryPlaneLayouts[1].size = m_memoryPlaneLayouts[1].rowPitch * chromaHeight;
-                m_memoryPlaneLayouts[1].arrayPitch = 0;
-                m_memoryPlaneLayouts[1].depthPitch = 0;
-
-                // For 3-plane formats (I420, etc.)
-                if (m_memoryPlaneCount >= 3 &&
-                    m_memoryPlaneLayouts[2].size == 0 && m_memoryPlaneLayouts[2].rowPitch == 0) {
-                    // Cb and Cr are separate planes, each single component
-                    m_memoryPlaneLayouts[1].rowPitch = chromaWidth * bytesPerPixel;
-                    m_memoryPlaneLayouts[1].size = m_memoryPlaneLayouts[1].rowPitch * chromaHeight;
-
-                    m_memoryPlaneLayouts[2].offset = m_memoryPlaneLayouts[1].offset + m_memoryPlaneLayouts[1].size;
-                    m_memoryPlaneLayouts[2].rowPitch = chromaWidth * bytesPerPixel;
-                    m_memoryPlaneLayouts[2].size = m_memoryPlaneLayouts[2].rowPitch * chromaHeight;
-                    m_memoryPlaneLayouts[2].arrayPitch = 0;
-                    m_memoryPlaneLayouts[2].depthPitch = 0;
-                }
-            }
         }
     }
 
@@ -244,6 +183,19 @@ VkResult VkImageResource::Create(const VulkanDeviceContext* vkDevCtx,
     return result;
 }
 
+// DRM format modifiers the driver supports for this format.
+static std::vector<VkDrmFormatModifierPropertiesEXT> QueryDrmFormatModifiers(const VulkanDeviceContext* vkDevCtx,
+                                                                             VkFormat format)
+{
+    VkDrmFormatModifierPropertiesListEXT modList{VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT};
+    VkFormatProperties2 fmtProps{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2, &modList};
+    vkDevCtx->GetPhysicalDeviceFormatProperties2(vkDevCtx->getPhysicalDevice(), format, &fmtProps);
+    std::vector<VkDrmFormatModifierPropertiesEXT> mods(modList.drmFormatModifierCount);
+    modList.pDrmFormatModifierProperties = mods.data();
+    vkDevCtx->GetPhysicalDeviceFormatProperties2(vkDevCtx->getPhysicalDevice(), format, &fmtProps);
+    return mods;
+}
+
 // View formats for VkImageFormatListCreateInfo, required with MUTABLE_FORMAT_BIT on
 // DRM format modifier images (VUID-VkImageCreateInfo-tiling-02353).
 static uint32_t GetDrmModifierViewFormats(VkFormat format, VkFormat (&viewFormats)[4])
@@ -262,6 +214,54 @@ static uint32_t GetDrmModifierViewFormats(VkFormat format, VkFormat (&viewFormat
     return viewFormatCount;
 }
 
+// vkGetPhysicalDeviceImageFormatProperties2 for exporting createInfo's image with handleType.
+// createInfo.pNext must only hold structs valid there (e.g. the video profile list).
+static VkResult GetExportImageFormatProperties(const VulkanDeviceContext* vkDevCtx,
+                                               const VkImageCreateInfo& createInfo,
+                                               VkImageTiling tiling, uint64_t drmFormatModifier,
+                                               VkExternalMemoryHandleTypeFlagBits handleType,
+                                               VkImageFormatProperties& limits,
+                                               VkExternalMemoryFeatureFlags& externalMemoryFeatures)
+{
+    VkFormat viewFormats[4] = {};
+    VkImageFormatListCreateInfo formatList{VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO};
+    VkPhysicalDeviceImageDrmFormatModifierInfoEXT modInfo{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_DRM_FORMAT_MODIFIER_INFO_EXT};
+    const void* pNext = createInfo.pNext;
+    if (tiling == VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT) {
+        if (createInfo.flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
+            formatList.pNext = pNext;
+            formatList.viewFormatCount = GetDrmModifierViewFormats(createInfo.format, viewFormats);
+            formatList.pViewFormats = viewFormats;
+            pNext = &formatList;
+        }
+        modInfo.pNext = pNext;
+        modInfo.drmFormatModifier = drmFormatModifier;
+        modInfo.sharingMode = createInfo.sharingMode;
+        if (createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
+            modInfo.queueFamilyIndexCount = createInfo.queueFamilyIndexCount;
+            modInfo.pQueueFamilyIndices = createInfo.pQueueFamilyIndices;
+        }
+        pNext = &modInfo;
+    }
+    VkPhysicalDeviceExternalImageFormatInfo extInfo{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO, pNext, handleType};
+    VkPhysicalDeviceImageFormatInfo2 info{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2, &extInfo};
+    info.format = createInfo.format;
+    info.type = createInfo.imageType;
+    info.tiling = tiling;
+    info.usage = createInfo.usage;
+    info.flags = createInfo.flags;
+
+    VkExternalImageFormatProperties extProps{VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES};
+    VkImageFormatProperties2 props{VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2, &extProps};
+    const VkResult result = vkDevCtx->GetPhysicalDeviceImageFormatProperties2(
+        vkDevCtx->getPhysicalDevice(), &info, &props);
+    limits = props.imageFormatProperties;
+    externalMemoryFeatures = extProps.externalMemoryProperties.externalMemoryFeatures;
+    return result;
+}
+
 bool VkImageResource::SelectExportDrmModifier(const VulkanDeviceContext* vkDevCtx,
                                               const VkImageCreateInfo& createInfo,
                                               VkExternalMemoryHandleTypeFlagBits handleType,
@@ -269,19 +269,7 @@ bool VkImageResource::SelectExportDrmModifier(const VulkanDeviceContext* vkDevCt
 {
     static constexpr uint64_t drmFormatModLinear = 0; // DRM_FORMAT_MOD_LINEAR
 
-    VkDrmFormatModifierPropertiesListEXT modList{VK_STRUCTURE_TYPE_DRM_FORMAT_MODIFIER_PROPERTIES_LIST_EXT};
-    VkFormatProperties2 fmtProps{VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2, &modList};
-    vkDevCtx->GetPhysicalDeviceFormatProperties2(vkDevCtx->getPhysicalDevice(), createInfo.format, &fmtProps);
-    std::vector<VkDrmFormatModifierPropertiesEXT> mods(modList.drmFormatModifierCount);
-    modList.pDrmFormatModifierProperties = mods.data();
-    vkDevCtx->GetPhysicalDeviceFormatProperties2(vkDevCtx->getPhysicalDevice(), createInfo.format, &fmtProps);
-
-    VkFormat viewFormats[4] = {};
-    VkImageFormatListCreateInfo formatList{VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO};
-    formatList.pNext = createInfo.pNext;
-    formatList.viewFormatCount = GetDrmModifierViewFormats(createInfo.format, viewFormats);
-    formatList.pViewFormats = viewFormats;
-    const bool mutableFormat = (createInfo.flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) != 0;
+    const std::vector<VkDrmFormatModifierPropertiesEXT> mods = QueryDrmFormatModifiers(vkDevCtx, createInfo.format);
 
     // Non-linear modifiers first, LINEAR as the fallback.
     for (const bool wantLinear : { false, true }) {
@@ -289,33 +277,14 @@ bool VkImageResource::SelectExportDrmModifier(const VulkanDeviceContext* vkDevCt
             if ((m.drmFormatModifier == drmFormatModLinear) != wantLinear) {
                 continue;
             }
-            VkPhysicalDeviceImageDrmFormatModifierInfoEXT modInfo{
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_DRM_FORMAT_MODIFIER_INFO_EXT};
-            modInfo.pNext = mutableFormat ? static_cast<const void*>(&formatList) : createInfo.pNext;
-            modInfo.drmFormatModifier = m.drmFormatModifier;
-            modInfo.sharingMode = createInfo.sharingMode;
-            if (createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT) {
-                modInfo.queueFamilyIndexCount = createInfo.queueFamilyIndexCount;
-                modInfo.pQueueFamilyIndices = createInfo.pQueueFamilyIndices;
-            }
-            VkPhysicalDeviceExternalImageFormatInfo extInfo{
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO, &modInfo, handleType};
-            VkPhysicalDeviceImageFormatInfo2 info{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2, &extInfo};
-            info.format = createInfo.format;
-            info.type = createInfo.imageType;
-            info.tiling = VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT;
-            info.usage = createInfo.usage;
-            info.flags = createInfo.flags;
-
-            VkExternalImageFormatProperties extProps{VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES};
-            VkImageFormatProperties2 props{VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2, &extProps};
-            if (vkDevCtx->GetPhysicalDeviceImageFormatProperties2(vkDevCtx->getPhysicalDevice(),
-                                                                  &info, &props) != VK_SUCCESS) {
+            VkImageFormatProperties limits{};
+            VkExternalMemoryFeatureFlags externalMemoryFeatures = 0;
+            if (GetExportImageFormatProperties(vkDevCtx, createInfo, VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT,
+                                               m.drmFormatModifier, handleType,
+                                               limits, externalMemoryFeatures) != VK_SUCCESS) {
                 continue;
             }
-            const VkImageFormatProperties& limits = props.imageFormatProperties;
-            if (((extProps.externalMemoryProperties.externalMemoryFeatures &
-                  VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) == 0) ||
+            if (((externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT) == 0) ||
                 (createInfo.extent.width > limits.maxExtent.width) ||
                 (createInfo.extent.height > limits.maxExtent.height) ||
                 (createInfo.arrayLayers > limits.maxArrayLayers)) {
@@ -418,11 +387,19 @@ VkResult VkImageResource::CreateExportable(const VulkanDeviceContext* vkDevCtx,
                 actualDrmModifier = drmFormatModifier; // Fallback to requested value
             }
 
-            // Query plane count from format modifier properties
-            // For now, assume same as color plane count (YCbCr formats typically pack in 1-3 memory planes)
-            const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(pImageCreateInfo->format);
-            if (mpInfo) {
-                memoryPlaneCount = 1 + mpInfo->planesLayout.numberOfExtraPlanes;
+            // The memory plane count belongs to the modifier and may differ from the format's
+            // plane count; MEMORY_PLANE_i may only be queried below it.
+            memoryPlaneCount = 0;
+            for (const auto& m : QueryDrmFormatModifiers(vkDevCtx, modifiedImageInfo.format)) {
+                if (m.drmFormatModifier == actualDrmModifier) {
+                    memoryPlaneCount = m.drmFormatModifierPlaneCount;
+                    break;
+                }
+            }
+            if (memoryPlaneCount == 0) {
+                assert(!"Image DRM format modifier not listed for its format");
+                result = VK_ERROR_FORMAT_NOT_SUPPORTED;
+                break;
             }
         }
 
@@ -432,6 +409,25 @@ VkResult VkImageResource::CreateExportable(const VulkanDeviceContext* vkDevCtx,
         // Build export memory allocate info
         VkExportMemoryAllocateInfo exportMemInfo{VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO};
         exportMemInfo.handleTypes = exportHandleTypes;
+
+        // A handle type may require a dedicated allocation (VUID-VkMemoryAllocateInfo-pNext-00639);
+        // NVIDIA reports it for DMA-BUF with block-linear modifiers.
+        VkMemoryDedicatedAllocateInfo dedicatedInfo{VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO};
+        dedicatedInfo.image = image;
+        for (uint32_t bit = 0; bit < 32; bit++) {
+            const auto handleType = static_cast<VkExternalMemoryHandleTypeFlagBits>(1u << bit);
+            if ((exportHandleTypes & handleType) == 0) {
+                continue;
+            }
+            VkImageFormatProperties limits{};
+            VkExternalMemoryFeatureFlags features = 0;
+            if ((GetExportImageFormatProperties(vkDevCtx, *pImageCreateInfo, modifiedImageInfo.tiling,
+                                                actualDrmModifier, handleType, limits, features) == VK_SUCCESS) &&
+                (features & VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT)) {
+                exportMemInfo.pNext = &dedicatedInfo;
+                break;
+            }
+        }
 
         // Allocate memory with export capabilities
         VkSharedBaseObj<VulkanDeviceMemoryImpl> vkDeviceMemory;
