@@ -1533,7 +1533,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
         assert(filterCmdBuffer != nullptr);
 
-        if (m_decodePicCount == 1) {
+        if (m_verbose && (m_decodePicCount == 1)) {
             fprintf(stderr, "[FILTER] Compute filter ACTIVE, "
                     "decode signals filterCmdBuffer fence=%p, "
                     "filter signals frameCompleteFence=%p, "
