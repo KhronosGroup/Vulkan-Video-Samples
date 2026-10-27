@@ -185,6 +185,7 @@ public:
         : m_vkDevCtx()
         , m_queueFamilyIndex((uint32_t)-1)
         , m_frameCompleteSemaphore()
+        , m_decodeCompleteSemaphore()
         , m_consumerCompleteSemaphore()
         , m_numImages(0)
         , m_maxNumImageTypeIdx(0)
@@ -269,6 +270,9 @@ private:
     VkVideoCoreProfile                     m_videoProfile;
 public:
     VkSemaphore                            m_frameCompleteSemaphore;
+    // Decode -> filter timeline, used instead of m_frameCompleteSemaphore by the decode
+    // queue when the compute filter runs, so that each timeline has a single producer.
+    VkSemaphore                            m_decodeCompleteSemaphore;
     VkSemaphore                            m_consumerCompleteSemaphore;
     // External consumer semaphores (imported release semaphores from external processes)
     VkSemaphore                            m_externalConsumerSemaphores[NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS]{};
@@ -514,6 +518,14 @@ public:
                 pFrameSynchronizationInfo->decodeCompleteTimelineValue = DecodeFrameBufferIf::GetSemaphoreValue(
                                                                             DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_DECODE,
                                                                             m_perFrameDecodeImageSet[picId].m_decodeOrder);
+
+                // The decode and filter queues run independently, so they cannot signal the
+                // same timeline: decode N+1 may complete before filter N, and the filter would
+                // then have to move the counter backwards. With the filter, decode signals its
+                // own timeline and only the filter signals frameCompleteSemaphore.
+                pFrameSynchronizationInfo->decodeCompleteSemaphore = pFrameSynchronizationInfo->hasFilterSignalSemaphore ?
+                                                                         m_perFrameDecodeImageSet.m_decodeCompleteSemaphore :
+                                                                         m_perFrameDecodeImageSet.m_frameCompleteSemaphore;
 
                 if (pFrameSynchronizationInfo->hasFilterSignalSemaphore) {
                     pFrameSynchronizationInfo->filterCompleteTimelineValue = DecodeFrameBufferIf::GetSemaphoreValue(
@@ -1090,6 +1102,18 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
         }
     }
 
+    if (m_decodeCompleteSemaphore == VK_NULL_HANDLE) {
+        // Internal to the decoder (decode -> filter), never exported.
+        VkSemaphoreTypeCreateInfo timelineCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, nullptr,
+                                                         VK_SEMAPHORE_TYPE_TIMELINE, 0ULL };
+        VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
+        result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_decodeCompleteSemaphore);
+        assert(result == VK_SUCCESS);
+        if (result != VK_SUCCESS) {
+            return -1;
+        }
+    }
+
     m_videoProfile.InitFromProfile(pDecodeProfile);
 
     m_queueFamilyIndex = queueFamilyIndex;
@@ -1217,6 +1241,11 @@ void NvPerFrameDecodeImageSet::Deinit(const VulkanDeviceContext* vkDevCtx)
     if (m_frameCompleteSemaphore != VK_NULL_HANDLE) {
         m_vkDevCtx->DestroySemaphore(*vkDevCtx, m_frameCompleteSemaphore, nullptr);
         m_frameCompleteSemaphore = VK_NULL_HANDLE;
+    }
+
+    if (m_decodeCompleteSemaphore != VK_NULL_HANDLE) {
+        m_vkDevCtx->DestroySemaphore(*vkDevCtx, m_decodeCompleteSemaphore, nullptr);
+        m_decodeCompleteSemaphore = VK_NULL_HANDLE;
     }
 
     if (m_consumerCompleteSemaphore != VK_NULL_HANDLE) {

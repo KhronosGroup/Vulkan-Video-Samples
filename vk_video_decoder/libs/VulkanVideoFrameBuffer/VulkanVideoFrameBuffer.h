@@ -66,6 +66,7 @@ public:
     struct FrameSynchronizationInfo {
         VkFence frameCompleteFence;
         VkSemaphore frameCompleteSemaphore;
+        VkSemaphore decodeCompleteSemaphore; // signaled by decode: frameCompleteSemaphore, or a separate one with the filter
         VkSemaphore consumerCompleteSemaphore;
         VkFence frameConsumerDoneFence;
         uint64_t frameConsumerDoneTimelineValue;

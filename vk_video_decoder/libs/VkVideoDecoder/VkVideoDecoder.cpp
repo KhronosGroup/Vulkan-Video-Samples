@@ -1254,7 +1254,10 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     assert(VK_NOT_READY == m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, frameSynchronizationInfo.frameCompleteFence));
 
     VkFence frameCompleteFence = frameSynchronizationInfo.frameCompleteFence;
-    VkSemaphore videoDecodeCompleteSemaphore = frameSynchronizationInfo.frameCompleteSemaphore;
+    // Equal unless the compute filter runs: then decode signals its own timeline
+    // and the filter signals frameCompleteSemaphore.
+    VkSemaphore videoDecodeCompleteSemaphore = frameSynchronizationInfo.decodeCompleteSemaphore;
+    VkSemaphore frameCompleteSemaphore = frameSynchronizationInfo.frameCompleteSemaphore;
     VkSemaphore  consumerCompleteSemaphore = frameSynchronizationInfo.consumerCompleteSemaphore;
     VkFence videoDecodeCompleteFence = frameCompleteFence;
 
@@ -1607,7 +1610,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                   &frameSynchronizationInfo.decodeCompleteTimelineValue,
                                                   &waitDecoderStageMasks,
                                                   1, // signalSemaphoreCount
-                                                  &videoDecodeCompleteSemaphore,
+                                                  &frameCompleteSemaphore,
                                                   &computeCompleteTimelineValue,
                                                   &signalComputeStageMasks,
                                                   frameCompleteFence);
@@ -1623,15 +1626,15 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                         currPicIdx, (void*)frameCompleteFence);
             }
             // Also wait on the filter TL semaphore value
-            if (videoDecodeCompleteSemaphore != VkSemaphore()) {
+            if (frameCompleteSemaphore != VkSemaphore()) {
                 VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
                                                   nullptr, 0, 1,
-                                                  &videoDecodeCompleteSemaphore,
+                                                  &frameCompleteSemaphore,
                                                   &computeCompleteTimelineValue };
                 result = m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, gFenceTimeout);
                 assert(result == VK_SUCCESS);
                 uint64_t currentValue = 0;
-                m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, videoDecodeCompleteSemaphore, &currentValue);
+                m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, frameCompleteSemaphore, &currentValue);
                 fprintf(stderr, "[SYNC] Filter TL semaphore OK (pic=%d, expected=%llu, current=%llu)\n",
                         currPicIdx, (unsigned long long)computeCompleteTimelineValue,
                         (unsigned long long)currentValue);
