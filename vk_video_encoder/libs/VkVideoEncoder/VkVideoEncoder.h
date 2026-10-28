@@ -20,6 +20,8 @@
 #include <assert.h>
 #include <thread>
 #include <atomic>
+#include <string>
+#include <vector>
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 #include "VkVideoEncoderDef.h"
 #include "VkVideoEncoder/VkEncoderConfig.h"
@@ -623,8 +625,96 @@ protected:
                                 uint32_t frameIdx, uint32_t ofTotalFrames) = 0;
 
     virtual ~VkVideoEncoder() {
+        m_feedback2Output.Close();
         DeinitEncoder();
     }
+
+    struct Feedback2PartitionInfo {
+        uint32_t index;
+        bool hasStatus;
+        VkQueryResultStatusKHR status;
+        uint32_t offset;
+        uint32_t size;
+    };
+
+    struct Feedback2FrameOutput {
+        uint64_t frameIndex;
+        bool hasStatus;
+        VkQueryResultStatusKHR status;
+        bool hasBitstreamBufferOffset;
+        bool hasBitstreamBytesWritten;
+        uint32_t bitstreamBufferOffset;
+        uint32_t bitstreamBytesWritten;
+        bool hasAvgQp;
+        bool hasMinQp;
+        bool hasMaxQp;
+        int32_t avgQp;
+        int32_t minQp;
+        int32_t maxQp;
+        bool hasIntraPixels;
+        bool hasInterPixels;
+        bool hasSkippedPixels;
+        uint32_t intraPixels;
+        uint32_t interPixels;
+        uint32_t skippedPixels;
+        bool hasPicturePartitionCount;
+        uint32_t picturePartitionCount;
+        std::vector<Feedback2PartitionInfo> partitions;
+    };
+
+    struct EncodeFeedbackResults {
+        uint32_t bitstreamStartOffset;
+        uint32_t bitstreamSize;
+        bool hasStatus;
+        VkQueryResultStatusKHR status;
+        bool hasBitstreamStartOffset;
+        bool hasBitstreamSize;
+        VkBool32 hasOverrides;
+        bool hasAverageQuantization;
+        bool hasMinQuantization;
+        bool hasMaxQuantization;
+        int32_t averageQuantization;
+        int32_t minQuantization;
+        int32_t maxQuantization;
+        bool hasIntraPixels;
+        bool hasInterPixels;
+        bool hasSkippedPixels;
+        uint32_t intraPixels;
+        uint32_t interPixels;
+        uint32_t skippedPixels;
+        bool hasPicturePartitionCount;
+        uint32_t picturePartitionCount;
+        std::vector<Feedback2PartitionInfo> partitions;
+    };
+
+    class Feedback2TextOutput {
+    public:
+        Feedback2TextOutput()
+            : m_pictureEnabled(false)
+            , m_partitionEnabled(false)
+            , m_path()
+            , m_file()
+        {
+        }
+
+        VkResult Init(const EncoderConfig& config);
+        void Close();
+        bool Enabled() const { return m_pictureEnabled || m_partitionEnabled; }
+        bool PictureEnabled() const { return m_pictureEnabled; }
+        bool PartitionEnabled() const { return m_partitionEnabled; }
+        const std::string& GetPath() const { return m_path; }
+        void WriteFrame(const Feedback2FrameOutput& output);
+
+    private:
+        bool m_pictureEnabled;
+        bool m_partitionEnabled;
+        std::string m_path;
+        EncoderOutputFileHandler m_file;
+    };
+
+    VkResult GetEncodeFeedbackResults(VkQueryPool queryPool, uint32_t querySlotId, EncodeFeedbackResults& results);
+    size_t GetEncodeFeedbackResultsSize() const;
+    void WriteFeedback2Output(uint64_t frameInputOrderNum, const EncodeFeedbackResults* results);
 
     int32_t DeinitEncoder();
 
@@ -714,6 +804,7 @@ protected:
     VkVideoEncodeFeedbackFlagsKHR         m_encodeFeedbackFlags;
     VkVideoEncodePerPartitionFeedbackFlagsKHR m_perPartitionFeedbackFlags;
     uint32_t                              m_maxPerPartitionFeedbackEntries;
+    Feedback2TextOutput                   m_feedback2Output;
     VkVideoEncodeQualityLevelInfoKHR      m_qualityLevelInfo;
     VkVideoEncodeRateControlInfoKHR       m_rateControlInfo;
     VkVideoEncodeRateControlInfoKHR       m_beginRateControlInfo;

@@ -736,6 +736,314 @@ VkResult VkVideoEncoder::SubmitStagedInputFrame(VkSharedBaseObj<VkVideoEncodeFra
     return result;
 }
 
+size_t VkVideoEncoder::GetEncodeFeedbackResultsSize() const
+{
+    size_t dataSize = 0;
+    const VkVideoEncodeFeedbackFlagsKHR flags = m_encodeFeedbackFlags;
+
+    auto addU32 = [&dataSize]() { dataSize += sizeof(uint32_t); };
+    auto addI32 = [&dataSize]() { dataSize += sizeof(int32_t); };
+    auto addStatus = [&dataSize]() { dataSize += sizeof(VkQueryResultStatusKHR); };
+
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_HAS_OVERRIDES_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR) {
+        addI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR) {
+        addI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR) {
+        addI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR) {
+        addU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR) {
+        addU32();
+    }
+
+    // Status is appended when VK_QUERY_RESULT_WITH_STATUS_BIT_KHR is used.
+    addStatus();
+
+    if (m_perPartitionFeedbackFlags != 0 && m_maxPerPartitionFeedbackEntries > 0) {
+        size_t perPartitionSize = 0;
+        if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR) {
+            perPartitionSize += sizeof(VkQueryResultStatusKHR);
+        }
+        if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+            perPartitionSize += sizeof(uint32_t);
+        }
+        if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+            perPartitionSize += sizeof(uint32_t);
+        }
+
+        dataSize += perPartitionSize * m_maxPerPartitionFeedbackEntries;
+    }
+
+    return dataSize;
+}
+
+VkResult VkVideoEncoder::GetEncodeFeedbackResults(VkQueryPool queryPool, uint32_t querySlotId,
+                                                  EncodeFeedbackResults& results)
+{
+    const size_t dataSize = GetEncodeFeedbackResultsSize();
+    std::vector<uint8_t> buffer(dataSize);
+
+    VkResult result = m_vkDevCtx->GetQueryPoolResults(*m_vkDevCtx, queryPool, querySlotId,
+                                                      1, dataSize, buffer.data(), dataSize,
+                                                      VK_QUERY_RESULT_WITH_STATUS_BIT_KHR |
+                                                      VK_QUERY_RESULT_WAIT_BIT);
+    if (result != VK_SUCCESS) {
+        return result;
+    }
+
+    results = EncodeFeedbackResults{};
+
+    const VkVideoEncodeFeedbackFlagsKHR flags = m_encodeFeedbackFlags;
+    const uint8_t* cursor = buffer.data();
+
+    auto readU32 = [&cursor]() -> uint32_t {
+        uint32_t value = 0;
+        memcpy(&value, cursor, sizeof(value));
+        cursor += sizeof(value);
+        return value;
+    };
+    auto readI32 = [&cursor]() -> int32_t {
+        int32_t value = 0;
+        memcpy(&value, cursor, sizeof(value));
+        cursor += sizeof(value);
+        return value;
+    };
+    auto readStatus = [&cursor]() -> VkQueryResultStatusKHR {
+        VkQueryResultStatusKHR value = VK_QUERY_RESULT_STATUS_NOT_READY_KHR;
+        memcpy(&value, cursor, sizeof(value));
+        cursor += sizeof(value);
+        return value;
+    };
+
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+        results.hasBitstreamStartOffset = true;
+        results.bitstreamStartOffset = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+        results.hasBitstreamSize = true;
+        results.bitstreamSize = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_HAS_OVERRIDES_BIT_KHR) {
+        results.hasOverrides = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR) {
+        results.hasAverageQuantization = true;
+        results.averageQuantization = readI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR) {
+        results.hasMinQuantization = true;
+        results.minQuantization = readI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR) {
+        results.hasMaxQuantization = true;
+        results.maxQuantization = readI32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR) {
+        results.hasIntraPixels = true;
+        results.intraPixels = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR) {
+        results.hasInterPixels = true;
+        results.interPixels = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR) {
+        results.hasSkippedPixels = true;
+        results.skippedPixels = readU32();
+    }
+    if (flags & VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR) {
+        results.hasPicturePartitionCount = true;
+        results.picturePartitionCount = readU32();
+    }
+
+    results.hasStatus = true;
+    results.status = readStatus();
+
+    if (m_perPartitionFeedbackFlags != 0 && m_maxPerPartitionFeedbackEntries > 0) {
+        results.partitions.reserve(m_maxPerPartitionFeedbackEntries);
+        for (uint32_t i = 0; i < m_maxPerPartitionFeedbackEntries; ++i) {
+            Feedback2PartitionInfo partition{};
+            partition.index = i;
+
+            if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR) {
+                partition.hasStatus = true;
+                partition.status = readStatus();
+            }
+            if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR) {
+                partition.offset = readU32();
+            }
+            if (m_perPartitionFeedbackFlags & VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR) {
+                partition.size = readU32();
+            }
+
+            results.partitions.push_back(partition);
+        }
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult VkVideoEncoder::Feedback2TextOutput::Init(const EncoderConfig& config)
+{
+    m_pictureEnabled = config.EncodeFeedback2Requested();
+    m_partitionEnabled = config.enablePerPartitionFeedback;
+
+    // A dry run stops before any frame is encoded, so opening the feedback
+    // file here would leave an empty one behind.
+    if (!Enabled() || config.dryRun) {
+        return VK_SUCCESS;
+    }
+
+    const char* bitstreamPath = config.outputFileHandler.GetFileName();
+    if (bitstreamPath && bitstreamPath[0] != '\0') {
+        m_path = std::string(bitstreamPath) + ".feedback.txt";
+    } else {
+        m_path = "encoder.feedback.txt";
+    }
+
+    if (m_file.SetFileName(m_path.c_str()) < 0) {
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    return VK_SUCCESS;
+}
+
+void VkVideoEncoder::Feedback2TextOutput::Close()
+{
+    if (m_file.HandleIsValid()) {
+        m_file.Destroy();
+    }
+    m_path.clear();
+}
+
+void VkVideoEncoder::Feedback2TextOutput::WriteFrame(const Feedback2FrameOutput& output)
+{
+    if (!Enabled() || !m_file.HandleIsValid()) {
+        return;
+    }
+
+    FILE* fileHandle = m_file.GetFileHandle();
+
+    if (m_pictureEnabled) {
+        fprintf(fileHandle, "frame %llu", (unsigned long long)output.frameIndex);
+        if (output.hasStatus) {
+            fprintf(fileHandle, " status=%d", (int)output.status);
+        }
+        if (output.hasBitstreamBufferOffset) {
+            fprintf(fileHandle, " bs_offset=%u", output.bitstreamBufferOffset);
+        }
+        if (output.hasBitstreamBytesWritten) {
+            fprintf(fileHandle, " bs_size=%u", output.bitstreamBytesWritten);
+        }
+        if (output.hasAvgQp) {
+            fprintf(fileHandle, " avgqp=%d", output.avgQp);
+        }
+        if (output.hasMinQp) {
+            fprintf(fileHandle, " minqp=%d", output.minQp);
+        }
+        if (output.hasMaxQp) {
+            fprintf(fileHandle, " maxqp=%d", output.maxQp);
+        }
+        if (output.hasIntraPixels) {
+            fprintf(fileHandle, " intra=%u", output.intraPixels);
+        }
+        if (output.hasInterPixels) {
+            fprintf(fileHandle, " inter=%u", output.interPixels);
+        }
+        if (output.hasSkippedPixels) {
+            fprintf(fileHandle, " skipped=%u", output.skippedPixels);
+        }
+        if (output.hasPicturePartitionCount) {
+            fprintf(fileHandle, " pic_partition_count=%u", output.picturePartitionCount);
+        }
+        fprintf(fileHandle, "\n");
+    }
+
+    if (m_partitionEnabled) {
+        for (const auto& partition : output.partitions) {
+            fprintf(fileHandle, "partition %u", partition.index);
+            if (partition.hasStatus) {
+                fprintf(fileHandle, " status=%d", (int)partition.status);
+            }
+            fprintf(fileHandle, " offset=%u size=%u\n", partition.offset, partition.size);
+        }
+    }
+
+    fflush(fileHandle);
+}
+
+void VkVideoEncoder::WriteFeedback2Output(uint64_t frameInputOrderNum,
+                                          const EncodeFeedbackResults* results)
+{
+    if (!m_feedback2Output.Enabled()) {
+        return;
+    }
+
+    Feedback2FrameOutput output{};
+    output.frameIndex = frameInputOrderNum;
+    output.hasStatus = (results != nullptr && results->hasStatus);
+    output.status = output.hasStatus ? results->status : VK_QUERY_RESULT_STATUS_NOT_READY_KHR;
+    output.hasBitstreamBufferOffset = (results && results->hasBitstreamStartOffset);
+    output.hasBitstreamBytesWritten = (results && results->hasBitstreamSize);
+    output.bitstreamBufferOffset = output.hasBitstreamBufferOffset ? results->bitstreamStartOffset : 0;
+    output.bitstreamBytesWritten = output.hasBitstreamBytesWritten ? results->bitstreamSize : 0;
+
+    if (m_feedback2Output.PictureEnabled()) {
+        output.hasAvgQp = (results && results->hasAverageQuantization);
+        output.hasMinQp = (results && results->hasMinQuantization);
+        output.hasMaxQp = (results && results->hasMaxQuantization);
+        output.avgQp = output.hasAvgQp ? results->averageQuantization : 0;
+        output.minQp = output.hasMinQp ? results->minQuantization : 0;
+        output.maxQp = output.hasMaxQp ? results->maxQuantization : 0;
+
+        output.hasIntraPixels = (results && results->hasIntraPixels);
+        output.hasInterPixels = (results && results->hasInterPixels);
+        output.hasSkippedPixels = (results && results->hasSkippedPixels);
+        output.intraPixels = output.hasIntraPixels ? results->intraPixels : 0;
+        output.interPixels = output.hasInterPixels ? results->interPixels : 0;
+        output.skippedPixels = output.hasSkippedPixels ? results->skippedPixels : 0;
+
+        output.hasPicturePartitionCount = (results && results->hasPicturePartitionCount);
+        output.picturePartitionCount = output.hasPicturePartitionCount ? results->picturePartitionCount : 0;
+    }
+
+    if (m_feedback2Output.PartitionEnabled() && results) {
+        if (results->hasPicturePartitionCount &&
+            results->picturePartitionCount > results->partitions.size()) {
+            std::cerr << "Feedback2: picturePartitionCount (" << results->picturePartitionCount
+                      << ") exceeds allocated per-partition entries ("
+                      << results->partitions.size() << ")\n";
+        }
+        uint32_t partitionCount = results->hasPicturePartitionCount ?
+                                  results->picturePartitionCount :
+                                  static_cast<uint32_t>(results->partitions.size());
+        partitionCount = std::min(partitionCount, static_cast<uint32_t>(results->partitions.size()));
+        output.partitions.assign(results->partitions.begin(),
+                                 results->partitions.begin() + partitionCount);
+    }
+
+    m_feedback2Output.WriteFrame(output);
+}
+
 VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo,
                                                uint32_t frameIdx, uint32_t ofTotalFrames)
 {
@@ -776,21 +1084,17 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
     querySlotId = (uint32_t)encodeFrameInfo->srcEncodeImageResource->GetImageIndex();
 
     // get output results
-    struct VulkanVideoEncodeStatus {
-        uint32_t bitstreamStartOffset;
-        uint32_t bitstreamSize;
-        VkQueryResultStatusKHR status;
-    } encodeResult{};
+    EncodeFeedbackResults encodeResult{};
 
-    // Fetch the coded VCL data and its information
-    result = m_vkDevCtx->GetQueryPoolResults(*m_vkDevCtx, queryPool, querySlotId,
-                                             1, sizeof(encodeResult), &encodeResult, sizeof(encodeResult),
-                                             VK_QUERY_RESULT_WITH_STATUS_BIT_KHR | VK_QUERY_RESULT_WAIT_BIT);
-
+    // Fetch the coded VCL data and its information. The query results are a packed,
+    // flag-ordered blob, so they must be decoded against the feedback flags the query
+    // pool was created with.
+    result = GetEncodeFeedbackResults(queryPool, querySlotId, encodeResult);
 
     if(result != VK_SUCCESS) {
         fprintf(stderr, "\nRetrieveData Error: Failed to get vcl query pool results.\n");
         assert(result == VK_SUCCESS);
+        WriteFeedback2Output(encodeFrameInfo->frameInputOrderNum, nullptr);
         return result;
     }
 
@@ -798,6 +1102,7 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
         fprintf(stderr, "\nencodeResult.status is (0x%x) NOT STATUS_COMPLETE! bitstreamStartOffset %u, bitstreamSize %u\n",
                 encodeResult.status, encodeResult.bitstreamStartOffset, encodeResult.bitstreamSize);
         assert(encodeResult.status == VK_QUERY_RESULT_STATUS_COMPLETE_KHR);
+        WriteFeedback2Output(encodeFrameInfo->frameInputOrderNum, &encodeResult);
         return VK_INCOMPLETE;
     }
 
@@ -822,6 +1127,9 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
                   << ", Input Order: " << encodeFrameInfo->gopPosition.inputOrder
                   << ", Encode  Order: " << encodeFrameInfo->gopPosition.encodeOrder << std::endl << std::flush;
     }
+
+    WriteFeedback2Output(encodeFrameInfo->frameInputOrderNum, &encodeResult);
+
     return result;
 }
 
@@ -1641,98 +1949,81 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     VkVideoEncodeFeedbackFlagsKHR encodeFeedbackFlags =
         VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
         VK_VIDEO_ENCODE_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR;
+    // Optional picture-level flags the user requested; masked against device support below.
+    VkVideoEncodeFeedbackFlagsKHR requestedFeedbackFlags = 0;
     const VkVideoEncodeFeedbackFlagsKHR supportedFeedbackFlags =
         encoderConfig->videoEncodeCapabilities.supportedEncodeFeedbackFlags;
     const void* feedbackPNext = encoderConfig->videoCoreProfile.GetProfile();
     bool perPartitionFeedbackEnabled = false;
 
-    const EncoderConfigAV1* av1Config = encoderConfig->GetEncoderConfigAV1();
-    if (av1Config != nullptr) {
-        if (av1Config->enablePictureFeedback) {
-            const VkVideoEncodeFeedbackFlagsKHR qpFeedbackFlags =
-                VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR |
-                VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR;
-            const VkVideoEncodeFeedbackFlagsKHR unsupportedQpFlags =
-                qpFeedbackFlags & ~supportedFeedbackFlags;
-            if (unsupportedQpFlags != 0) {
-                std::cout << "Warning: dropping unsupported picture feedback flags: 0x"
-                          << std::hex << unsupportedQpFlags << std::dec << std::endl;
-            }
-            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR;
-            encodeFeedbackFlags |= (supportedFeedbackFlags & qpFeedbackFlags);
-        }
-        if (av1Config->enablePixelCountFeedback) {
-            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR |
-                                   VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR;
-        }
-        if (av1Config->enableSkippedPixelCountFeedback) {
-            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR;
-        }
-
-        if (av1Config->enablePerPartitionFeedback) {
-            const VkVideoEncodeFeedback2CapabilitiesKHR& feedback2Caps =
-                encoderConfig->videoEncodeFeedback2Capabilities;
-            if (feedback2Caps.maxPerPartitionFeedbackEntries == 0) {
-                std::cerr << "Per-partition encode feedback is not supported "
-                             "by the implementation for this video profile." << std::endl;
-                return VK_ERROR_FEATURE_NOT_PRESENT;
-            }
-
-            uint32_t maxEntries = std::max(1u, av1Config->maxPerPartitionFeedbackEntries);
-            if (maxEntries > feedback2Caps.maxPerPartitionFeedbackEntries) {
-                std::cout << "Warning: clamping maxPerPartitionFeedbackEntries from " << maxEntries
-                          << " to the supported maximum of "
-                          << feedback2Caps.maxPerPartitionFeedbackEntries << std::endl;
-                maxEntries = feedback2Caps.maxPerPartitionFeedbackEntries;
-            }
-
-            const VkVideoEncodePerPartitionFeedbackFlagsKHR requestedPartitionFlags =
-                VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR |
-                VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
-                VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR;
-            const VkVideoEncodePerPartitionFeedbackFlagsKHR partitionFlags =
-                requestedPartitionFlags & feedback2Caps.supportedPerPartitionEncodeFeedbackFlags;
-            if (partitionFlags != requestedPartitionFlags) {
-                std::cout << "Warning: dropping unsupported per-partition feedback flags: 0x"
-                          << std::hex << (requestedPartitionFlags & ~partitionFlags)
-                          << std::dec << std::endl;
-            }
-            if (partitionFlags == 0) {
-                std::cerr << "None of the requested per-partition feedback flags "
-                             "are supported by the implementation." << std::endl;
-                return VK_ERROR_FEATURE_NOT_PRESENT;
-            }
-
-            encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR;
-
-            perPartitionFeedbackCreateInfo.pNext = feedbackPNext;
-            perPartitionFeedbackCreateInfo.maxPerPartitionFeedbackEntries = maxEntries;
-            perPartitionFeedbackCreateInfo.perPartitionEncodeFeedbackFlags = partitionFlags;
-            feedbackPNext = &perPartitionFeedbackCreateInfo;
-            perPartitionFeedbackEnabled = true;
-        }
+    if (encoderConfig->enablePictureFeedback) {
+        requestedFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_AVERAGE_QUANTIZATION_BIT_KHR |
+                                  VK_VIDEO_ENCODE_FEEDBACK_MIN_QUANTIZATION_BIT_KHR |
+                                  VK_VIDEO_ENCODE_FEEDBACK_MAX_QUANTIZATION_BIT_KHR;
     }
+    if (encoderConfig->enablePixelFeedback) {
+        requestedFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_INTRA_PIXELS_BIT_KHR |
+                                  VK_VIDEO_ENCODE_FEEDBACK_INTER_PIXELS_BIT_KHR;
+    }
+    if (encoderConfig->enableSkippedPixelFeedback) {
+        requestedFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_SKIPPED_PIXELS_BIT_KHR;
+    }
+
+    if (encoderConfig->enablePerPartitionFeedback) {
+        const VkVideoEncodeFeedback2CapabilitiesKHR& feedback2Caps =
+            encoderConfig->videoEncodeFeedback2Capabilities;
+        const VkVideoEncodePerPartitionFeedbackFlagsKHR requestedPerPartitionFlags =
+            VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_STATUS_BIT_KHR |
+            VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BUFFER_OFFSET_BIT_KHR |
+            VK_VIDEO_ENCODE_PER_PARTITION_FEEDBACK_BITSTREAM_BYTES_WRITTEN_BIT_KHR;
+        const VkVideoEncodePerPartitionFeedbackFlagsKHR unsupportedPerPartitionFlags =
+            requestedPerPartitionFlags & ~feedback2Caps.supportedPerPartitionEncodeFeedbackFlags;
+
+        if ((feedback2Caps.maxPerPartitionFeedbackEntries == 0) || (unsupportedPerPartitionFlags != 0)) {
+            std::cerr << "Per-partition encode feedback is not supported: maxPerPartitionFeedbackEntries "
+                      << feedback2Caps.maxPerPartitionFeedbackEntries
+                      << ", unsupported per-partition flags 0x" << std::hex << unsupportedPerPartitionFlags
+                      << std::dec << std::endl;
+            return VK_ERROR_FEATURE_NOT_PRESENT;
+        }
+
+        // The partition count is a picture-level flag, so it is governed by
+        // supportedEncodeFeedbackFlags, not the feedback2 capabilities.
+        if ((supportedFeedbackFlags &
+             VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR) == 0) {
+            std::cerr << "Per-partition encode feedback requires picture partition count "
+                         "feedback, which is not supported by the implementation." << std::endl;
+            return VK_ERROR_FEATURE_NOT_PRESENT;
+        }
+
+        encodeFeedbackFlags |= VK_VIDEO_ENCODE_FEEDBACK_PICTURE_PARTITION_COUNT_BIT_KHR;
+
+        perPartitionFeedbackCreateInfo.pNext = feedbackPNext;
+        perPartitionFeedbackCreateInfo.maxPerPartitionFeedbackEntries =
+            std::min(std::max(1u, encoderConfig->maxPerPartitionFeedbackEntries),
+                     feedback2Caps.maxPerPartitionFeedbackEntries);
+        perPartitionFeedbackCreateInfo.perPartitionEncodeFeedbackFlags =
+            requestedPerPartitionFlags & feedback2Caps.supportedPerPartitionEncodeFeedbackFlags;
+        feedbackPNext = &perPartitionFeedbackCreateInfo;
+        perPartitionFeedbackEnabled = true;
+    }
+
+    // Optional flags are dropped rather than fatal; the mandatory offset/size
+    // pair is validated by the query pool creation itself.
+    const VkVideoEncodeFeedbackFlagsKHR droppedFeedbackFlags =
+        requestedFeedbackFlags & ~supportedFeedbackFlags;
+    for (uint32_t flagBit = 1; flagBit != 0; flagBit <<= 1) {
+        if ((droppedFeedbackFlags & flagBit) == 0) {
+            continue;
+        }
+        std::cerr << "Warning: dropping unsupported encode feedback '"
+                  << getEncodeFeedbackFlagName((VkVideoEncodeFeedbackFlagBitsKHR)flagBit)
+                  << "' (0x" << std::hex << flagBit << std::dec << ")." << std::endl;
+    }
+    encodeFeedbackFlags |= (requestedFeedbackFlags & supportedFeedbackFlags);
 
     encodeFeedbackCreateInfo.pNext = feedbackPNext;
     encodeFeedbackCreateInfo.encodeFeedbackFlags = encodeFeedbackFlags;
-
-    const VkVideoEncodeFeedbackFlagsKHR unsupportedFeedbackFlags =
-        encodeFeedbackFlags & ~supportedFeedbackFlags;
-    if (unsupportedFeedbackFlags != 0) {
-        // Report each unsupported flag individually so the user can tell
-        // exactly which requested feedback the implementation lacks.
-        for (uint32_t flagBit = 1; flagBit != 0; flagBit <<= 1) {
-            if ((unsupportedFeedbackFlags & flagBit) == 0) {
-                continue;
-            }
-            std::cerr << "Requested encode feedback '"
-                      << getEncodeFeedbackFlagName(
-                             (VkVideoEncodeFeedbackFlagBitsKHR)flagBit)
-                      << "' (0x" << std::hex << flagBit << std::dec
-                      << ") is not supported by the implementation." << std::endl;
-        }
-        return VK_ERROR_FEATURE_NOT_PRESENT;
-    }
 
     m_encodeFeedbackFlags = encodeFeedbackFlags;
     if (perPartitionFeedbackEnabled) {
@@ -1741,6 +2032,12 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
     } else {
         m_perPartitionFeedbackFlags = 0;
         m_maxPerPartitionFeedbackEntries = 0;
+    }
+
+    result = m_feedback2Output.Init(*encoderConfig);
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "\nInitEncoder Error: Failed to open the encode feedback output file.\n");
+        return result;
     }
 
     result = m_encodeCommandBufferPool->Configure( m_vkDevCtx,

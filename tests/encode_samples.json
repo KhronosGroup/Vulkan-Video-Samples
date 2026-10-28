@@ -316,8 +316,8 @@
       "profile": "main",
       "extra_args": [
         "--pictureFeedback",
-        "--pixelCountFeedback",
-        "--skippedPixelCountFeedback"
+        "--pixelFeedback",
+        "--skippedPixelFeedback"
       ],
       "description": "Test AV1 picture-level encode feedback2 (qp, pixel counts)",
       "width": 1920,
@@ -549,6 +549,76 @@
       "source_url": "https://storage.googleapis.com/vulkan-video-samples/y4m/1920x1080_15_i420.y4m",
       "source_checksum": "a1366b83b3eeb71a2d4baf7ac4229d042d9fb00dade8057a73e14f71043e6e3f",
       "source_filepath": "video/y4m/1920x1080_15_i420.y4m"
+    },
+    {
+      "name": "h264_encode_feedback",
+      "codec": "h264",
+      "profile": "main",
+      "extra_args": [
+        "--pictureFeedback",
+        "--pixelFeedback",
+        "--skippedPixelFeedback"
+      ],
+      "description": "Test H.264 picture-level encode feedback2 (qp, pixel counts)",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h264_encode_feedback_per_partition",
+      "codec": "h264",
+      "profile": "main",
+      "extra_args": [
+        "--pictureFeedback",
+        "--enablePerPartitionFeedback",
+        "--maxPerPartitionFeedbackEntries",
+        "16",
+        "--slices",
+        "4"
+      ],
+      "description": "Test H.264 multi-slice per-partition encode feedback2",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h265_encode_feedback",
+      "codec": "h265",
+      "profile": "main",
+      "extra_args": [
+        "--pictureFeedback",
+        "--pixelFeedback",
+        "--skippedPixelFeedback"
+      ],
+      "description": "Test H.265 picture-level encode feedback2 (qp, pixel counts)",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
+    },
+    {
+      "name": "h265_encode_feedback_per_partition",
+      "codec": "h265",
+      "profile": "main",
+      "extra_args": [
+        "--pictureFeedback",
+        "--enablePerPartitionFeedback",
+        "--maxPerPartitionFeedbackEntries",
+        "16",
+        "--slices",
+        "4"
+      ],
+      "description": "Test H.265 multi-slice per-partition encode feedback2",
+      "width": 352,
+      "height": 288,
+      "source_url": "https://storage.googleapis.com/vulkan-video-samples/yuv/352x288_15_i420.yuv",
+      "source_checksum": "6e0e1a026717237f9546dfbd29d5e2ebbad0a993cdab38921bb43291a464ccd4",
+      "source_filepath": "video/yuv/352x288_15_i420.yuv"
     }
   ]
 }

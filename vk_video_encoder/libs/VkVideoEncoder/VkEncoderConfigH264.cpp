@@ -415,9 +415,15 @@ VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceConte
     // probe is made and failure is reported without fallback.
     VkResult result = VK_SUCCESS;
 
+    const bool feedback2Requested = EncodeFeedback2Requested();
+
     for (;;) {
         assert(profileIdc != STD_VIDEO_H264_PROFILE_IDC_INVALID);
         videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profileIdc));
+
+        // Reset per probe, so a rejected profile cannot leave stale values behind.
+        videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
+            { VK_STRUCTURE_TYPE_VIDEO_ENCODE_FEEDBACK_2_CAPABILITIES_KHR, nullptr };
 
         result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH264CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_CAPABILITIES_KHR,
                                                                      VkVideoEncodeH264QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H264_QUANTIZATION_MAP_CAPABILITIES_KHR>
@@ -427,7 +433,9 @@ VkResult EncoderConfigH264::InitVideoProfileCapabilities(const VulkanDeviceConte
                                                                  h264EncodeCapabilities,
                                                                  quantizationMapCapabilities,
                                                                  h264QuantizationMapCapabilities,
-                                                                 intraRefreshCapabilities);
+                                                                 intraRefreshCapabilities,
+                                                                 feedback2Requested ?
+                                                                     &videoEncodeFeedback2Capabilities : nullptr);
         if (result == VK_SUCCESS) {
             break;
         }
