@@ -391,7 +391,7 @@ struct DecoderConfig {
                     return true;
                 }},
             {"--debug", nullptr, 0, "Per-frame decode info",
-                [this](const char **args, const ProgramArgs &a) {
+                [](const char **args, const ProgramArgs &a) {
                     return true;
                 }},
             {"--headless", nullptr, 0, "No display window (decoder is always headless)",

@@ -685,7 +685,7 @@ public:
     }
 
     virtual int32_t AddExternalConsumer(VkSemaphore importedReleaseSemaphore,
-                                        DecodeFrameBufferIf::SemSyncTypeIdx consumerType) override
+                                        DecodeFrameBufferIf::SemSyncTypeIdx consumerType)
     {
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         uint32_t idx = m_perFrameDecodeImageSet.m_numExternalConsumers;
@@ -698,7 +698,7 @@ public:
         return static_cast<int32_t>(idx);
     }
 
-    virtual int ExportFrameCompleteSemaphoreFd() override
+    virtual int ExportFrameCompleteSemaphoreFd()
     {
         if (m_perFrameDecodeImageSet.m_frameCompleteSemaphore == VK_NULL_HANDLE) {
             return -1;
@@ -716,7 +716,7 @@ public:
         return (result == VK_SUCCESS) ? fd : -1;
     }
 
-    virtual VkSemaphore GetConsumerCompleteSemaphore() const override {
+    virtual VkSemaphore GetConsumerCompleteSemaphore() const {
         return m_perFrameDecodeImageSet.m_consumerCompleteSemaphore;
     }
 

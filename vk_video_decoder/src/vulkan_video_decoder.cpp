@@ -79,20 +79,20 @@ public:
         return m_vulkanVideoProcessor->GetDecoderLastResult();
     }
 
-    virtual VkDevice GetDevice() const override {
+    virtual VkDevice GetDevice() const {
         return m_vkDevCtxt;  // VulkanDeviceContext has operator VkDevice()
     }
 
-    virtual VkPhysicalDevice GetPhysicalDevice() const override {
+    virtual VkPhysicalDevice GetPhysicalDevice() const {
         return m_vkDevCtxt.getPhysicalDevice();
     }
 
-    virtual VkInstance GetInstance() const override {
+    virtual VkInstance GetInstance() const {
         return m_vkDevCtxt.getInstance();
     }
 
     virtual int32_t AddExternalConsumer(VkSemaphore importedReleaseSemaphore,
-                                        uint64_t consumerType) override {
+                                        uint64_t consumerType) {
         if (m_vulkanVideoProcessor) {
             return m_vulkanVideoProcessor->AddExternalConsumer(
                 importedReleaseSemaphore,
@@ -101,7 +101,7 @@ public:
         return -1;
     }
 
-    virtual int ExportFrameCompleteSemaphoreFd() override {
+    virtual int ExportFrameCompleteSemaphoreFd() {
         if (m_vulkanVideoProcessor) {
             return m_vulkanVideoProcessor->ExportFrameCompleteSemaphoreFd();
         }
