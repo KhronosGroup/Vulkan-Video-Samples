@@ -72,6 +72,9 @@ public:
         , m_firstFrame(true)
         , m_height(0)
         , m_width(0)
+        , m_frameRateNum(30)
+        , m_frameRateDen(1)
+        , m_frameRateSet(false)
         , m_outputy4m(outputy4m)
         , m_outputcrcPerFrame(outputcrcPerFrame)
         , m_crcOutputFile(nullptr)
@@ -127,6 +130,19 @@ public:
         return ret;
     }
 
+    virtual void SetFrameRate(uint32_t frameRateNum, uint32_t frameRateDen) override {
+        if (frameRateNum == 0 || frameRateDen == 0) {
+            return;
+        }
+        // Only the first valid call counts: later ones come from the decode thread while
+        // dump-pool workers may be reading these to write the Y4M header.
+        if (m_frameRateSet.exchange(true)) {
+            return;
+        }
+        m_frameRateNum = frameRateNum;
+        m_frameRateDen = frameRateDen;
+    }
+
     virtual bool OutputFrame(VulkanDecodedFrame* pFrame, const VulkanDeviceContext* vkDevCtx, size_t* bytesWritten = nullptr) override {
         if (bytesWritten) {
             *bytesWritten = 0;
@@ -150,12 +166,38 @@ public:
 
         assert((pFrame->displayWidth >= 0) && (pFrame->displayHeight >= 0));
 
-        WaitAndGetStatus(vkDevCtx,
-                        *vkDevCtx,
-                        pFrame->frameCompleteFence,
-                        pFrame->queryPool,
-                        pFrame->startQueryId,
-                        pFrame->pictureIndex, false, "frameCompleteFence");
+        // Wait for decode+filter to complete using timeline semaphore.
+        // The TL semaphore value is stable (tied to decode order, not to a
+        // reusable fence), so it cannot be reset by slot recycling.
+        if (pFrame->frameCompleteSemaphore != VK_NULL_HANDLE &&
+            pFrame->frameCompleteDoneSemValue > 0) {
+            uint64_t preWaitValue = 0;
+            vkDevCtx->GetSemaphoreCounterValue(*vkDevCtx, pFrame->frameCompleteSemaphore, &preWaitValue);
+            VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+                                             nullptr, 0, 1,
+                                             &pFrame->frameCompleteSemaphore,
+                                             &pFrame->frameCompleteDoneSemValue };
+            VkResult semResult = vkDevCtx->WaitSemaphores(*vkDevCtx, &waitInfo,
+                                                           10ULL * 1000ULL * 1000ULL * 1000ULL /* 10s */);
+            if (semResult != VK_SUCCESS) {
+                uint64_t postWaitValue = 0;
+                vkDevCtx->GetSemaphoreCounterValue(*vkDevCtx, pFrame->frameCompleteSemaphore, &postWaitValue);
+                fprintf(stderr, "ERROR: Timeline semaphore wait for frame %d (displayOrder=%lld) "
+                        "failed with result %d (expected TL=%llu, before=%llu, after=%llu)\n",
+                        pFrame->pictureIndex, (long long)pFrame->displayOrder,
+                        semResult, (unsigned long long)pFrame->frameCompleteDoneSemValue,
+                        (unsigned long long)preWaitValue, (unsigned long long)postWaitValue);
+            }
+        } else if (pFrame->frameCompleteFence != VK_NULL_HANDLE) {
+            // Fallback to fence if no TL semaphore available
+            WaitAndGetStatus(vkDevCtx,
+                            *vkDevCtx,
+                            pFrame->frameCompleteFence,
+                            pFrame->queryPool,
+                            pFrame->startQueryId,
+                            pFrame->pictureIndex, false, "frameCompleteFence");
+        }
+        // else: both semaphore and fence are null — caller (dump pool) already handled sync
 
         VkFormat format = imageResource->GetImageCreateInfo().format;
         const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(format);
@@ -185,11 +227,14 @@ public:
             }
         }
 
+        int64_t writeResult;
         if (m_outputy4m) {
-            return WriteFrameToFileY4M(0, usedBufferSize, pFrame->displayWidth, pFrame->displayHeight, mpInfo, bytesWritten);
+            writeResult = WriteFrameToFileY4M(0, usedBufferSize, pFrame->displayWidth, pFrame->displayHeight, mpInfo, bytesWritten);
         } else {
-            return WriteDataToFile(0, usedBufferSize, bytesWritten);
+            writeResult = WriteDataToFile(0, usedBufferSize, bytesWritten);
         }
+
+        return writeResult;
     }
 
     bool hasExtension(const char* fileName, const char* extension) {
@@ -296,8 +341,9 @@ public:
             const char* chromaFormat = mpInfo->planesLayout.secondaryPlaneSubsampledX ? "C420" : "C444";
             const char* bitDepth = (mpInfo->planesLayout.bpp != YCBCRA_8BPP) ? "p16" : "";
 
-            if (fprintf(m_outputFile, "YUV4MPEG2 W%i H%i F24:1 Ip A1:1 %s%s\n",
-                        (int)width, (int)height, chromaFormat, bitDepth) < 0) {
+            if (fprintf(m_outputFile, "YUV4MPEG2 W%i H%i F%u:%u Ip A1:1 %s%s\n",
+                        (int)width, (int)height, m_frameRateNum, m_frameRateDen,
+                        chromaFormat, bitDepth) < 0) {
                 fprintf(stderr, "ERROR: fprintf failed writing Y4M header\n");
                 return setErrorAndReturn();
             }
@@ -506,6 +552,9 @@ private:
     bool     m_firstFrame;
     size_t   m_height;
     size_t   m_width;
+    uint32_t m_frameRateNum;
+    uint32_t m_frameRateDen;
+    std::atomic<bool> m_frameRateSet;
     bool     m_outputy4m;
     bool     m_outputcrcPerFrame;
     FILE*    m_crcOutputFile;

@@ -256,6 +256,10 @@ VkResult VulkanDeviceContext::AddOptDeviceExtensions(const char* const* optional
 bool VulkanDeviceContext::HasAllDeviceExtensions(VkPhysicalDevice physDevice, const char* printMissingDeviceExt)
 {
     assert(physDevice != VK_NULL_HANDLE);
+    // Rebuilt per candidate device, so that only the selected device's extensions
+    // are enabled at vkCreateDevice and reported by FindRequiredDeviceExtension().
+    m_reqDeviceExtensions.clear();
+
     // enumerate device extensions
     std::vector<VkExtensionProperties> exts;
     vk::enumerate(this, physDevice, nullptr, exts);
@@ -1166,12 +1170,18 @@ VkResult VulkanDeviceContext::InitVulkanDecoderDevice(const char * pAppName,
     };
 #endif // VIDEO_DISPLAY_QUEUE_SUPPORT
 
-    static const char* const optinalDeviceExtension[] = {
+    static const char* const optionalDeviceExtension[] = {
         VK_EXT_YCBCR_2PLANE_444_FORMATS_EXTENSION_NAME,
         VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME,
         VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
         VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
         VK_KHR_VIDEO_MAINTENANCE_1_EXTENSION_NAME,
+#if defined(__linux) || defined(__linux__) || defined(linux)
+        // External consumer export (DMA-BUF + DRM format modifiers)
+        VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME,
+        VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
+#endif
         nullptr
     };
 
@@ -1182,7 +1192,7 @@ VkResult VulkanDeviceContext::InitVulkanDecoderDevice(const char * pAppName,
 
     // Add the Vulkan video required device extensions
     AddReqDeviceExtensions(requiredDeviceExtension);
-    AddOptDeviceExtensions(optinalDeviceExtension);
+    AddOptDeviceExtensions(optionalDeviceExtension);
 
 #ifdef VIDEO_DISPLAY_QUEUE_SUPPORT
     /********** Start WSI instance extensions support *******************************************/

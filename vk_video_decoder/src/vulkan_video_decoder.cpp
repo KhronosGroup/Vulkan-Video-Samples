@@ -79,6 +79,35 @@ public:
         return m_vulkanVideoProcessor->GetDecoderLastResult();
     }
 
+    virtual VkDevice GetDevice() const {
+        return m_vkDevCtxt;  // VulkanDeviceContext has operator VkDevice()
+    }
+
+    virtual VkPhysicalDevice GetPhysicalDevice() const {
+        return m_vkDevCtxt.getPhysicalDevice();
+    }
+
+    virtual VkInstance GetInstance() const {
+        return m_vkDevCtxt.getInstance();
+    }
+
+    virtual int32_t AddExternalConsumer(VkSemaphore importedReleaseSemaphore,
+                                        uint64_t consumerType) {
+        if (m_vulkanVideoProcessor) {
+            return m_vulkanVideoProcessor->AddExternalConsumer(
+                importedReleaseSemaphore,
+                static_cast<DecodeFrameBufferIf::SemSyncTypeIdx>(consumerType));
+        }
+        return -1;
+    }
+
+    virtual int ExportFrameCompleteSemaphoreFd() {
+        if (m_vulkanVideoProcessor) {
+            return m_vulkanVideoProcessor->ExportFrameCompleteSemaphoreFd();
+        }
+        return -1;
+    }
+
     VulkanVideoDecoderImpl(const char* programName)
     : m_refCount(0)
     , m_vkDevCtxt()
