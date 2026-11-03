@@ -15,9 +15,11 @@
 */
 
 #include <atomic>
+#include <memory>
 #include "VkCodecUtils/HelpersDispatchTable.h"
 #include "VkCodecUtils/Helpers.h"
 #include "VkCodecUtils/VulkanDeviceContext.h"
+#include "VkCodecUtils/VulkanSamplerYcbcrConversion.h"
 #include "nvidia_utils/vulkan/ycbcrvkinfo.h"
 #include "VkImageResource.h"
 
@@ -190,16 +192,50 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
                             VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
     viewInfo.subresourceRange = imageSubresourceRange;
     viewInfo.flags = 0;
+
+    const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(viewInfo.format);
+    VkSamplerYcbcrConversionInfo ycbcrInfo = {};
+    ycbcrInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO;
+
+    // Owned locally until handed off to VkImageResourceView at the end.
+    // The conversion handle must outlive the image view that references it in pNext.
+    std::unique_ptr<VulkanSamplerYcbcrConversion> samplerYcbcrConversion;
+
+    if (mpInfo && (imageResource->GetImageCreateInfo().usage & VK_IMAGE_USAGE_SAMPLED_BIT)) {
+        const VkSamplerYcbcrConversionCreateInfo defaultSamplerYcbcrConversionCreateInfo = {
+            VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO,
+            NULL,
+            imageResource->GetImageCreateInfo().format,
+            VK_SAMPLER_YCBCR_MODEL_CONVERSION_YCBCR_709,
+            VK_SAMPLER_YCBCR_RANGE_ITU_NARROW,
+            { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                VK_COMPONENT_SWIZZLE_IDENTITY },
+            VK_CHROMA_LOCATION_MIDPOINT,
+            VK_CHROMA_LOCATION_MIDPOINT,
+            VK_FILTER_LINEAR,
+            false
+        };
+
+        samplerYcbcrConversion = std::make_unique<VulkanSamplerYcbcrConversion>();
+        VkResult result = samplerYcbcrConversion->CreateVulkanSampler(vkDevCtx, NULL, &defaultSamplerYcbcrConversionCreateInfo);
+        if (result != VK_SUCCESS) {
+            return result;
+        }
+
+        ycbcrInfo.conversion = samplerYcbcrConversion->GetSamplerYcbcrConversion();
+        viewInfo.pNext = &ycbcrInfo;
+    }
+
     VkResult result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
     if (result != VK_SUCCESS) {
         return result;
     }
     numViews++;
 
-    const VkMpFormatInfo* mpInfo = YcbcrVkFormatInfo(viewInfo.format);
     if (mpInfo) {
         uint32_t numPlanes = 0;
         // Create separate image views for Y and CbCr planes
+        viewInfo.pNext = NULL;
         viewInfo.format = mpInfo->vkPlaneFormat[numPlanes];  // For the Y plane
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_PLANE_0_BIT << numPlanes;
         result = vkDevCtx->CreateImageView(device, &viewInfo, nullptr, &imageViews[numViews]);
@@ -234,7 +270,8 @@ VkResult VkImageResourceView::Create(const VulkanDeviceContext* vkDevCtx,
 
     imageResourceView = new VkImageResourceView(vkDevCtx, imageResource,
                                                 numViews, numViews - 1,
-                                                imageViews, imageSubresourceRange);
+                                                imageViews, imageSubresourceRange,
+                                                samplerYcbcrConversion.release());
 
     return result;
 }
@@ -247,6 +284,10 @@ VkImageResourceView::~VkImageResourceView()
             m_imageViews[imageViewIndx] = VK_NULL_HANDLE;
         }
     }
+
+    // Destroy ycbcr conversion after all image views referencing it have been destroyed.
+    delete m_samplerYcbcrConversion;
+    m_samplerYcbcrConversion = nullptr;
 
     m_imageResource = nullptr;
     m_vkDevCtx = nullptr;
