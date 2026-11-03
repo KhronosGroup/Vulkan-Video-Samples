@@ -2335,7 +2335,7 @@ VkResult VkVideoEncoder::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeFram
         waitSemaphoreInfos[waitSemaphoreCount].pNext = nullptr;
         waitSemaphoreInfos[waitSemaphoreCount].semaphore = m_hwLoadBalancingTimelineSemaphore;
         waitSemaphoreInfos[waitSemaphoreCount].value = encodeFrameInfo->frameEncodeEncodeOrderNum; // wait for the current value to be signaled
-        waitSemaphoreInfos[waitSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+        waitSemaphoreInfos[waitSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR;
         waitSemaphoreInfos[waitSemaphoreCount].deviceIndex = 0;
         waitSemaphoreCount++;
 
@@ -2343,7 +2343,7 @@ VkResult VkVideoEncoder::SubmitVideoCodingCmds(VkSharedBaseObj<VkVideoEncodeFram
         signalSemaphoreInfos[signalSemaphoreCount].pNext = nullptr;
         signalSemaphoreInfos[signalSemaphoreCount].semaphore = m_hwLoadBalancingTimelineSemaphore;
         signalSemaphoreInfos[signalSemaphoreCount].value = encodeFrameInfo->frameEncodeEncodeOrderNum + 1; // signal the future m_decodePicCount value
-        signalSemaphoreInfos[signalSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+        signalSemaphoreInfos[signalSemaphoreCount].stageMask = VK_PIPELINE_STAGE_2_VIDEO_ENCODE_BIT_KHR;
         signalSemaphoreInfos[signalSemaphoreCount].deviceIndex = 0;
         signalSemaphoreCount++;
     }
