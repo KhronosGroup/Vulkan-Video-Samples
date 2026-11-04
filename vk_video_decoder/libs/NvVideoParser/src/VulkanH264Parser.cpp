@@ -1316,6 +1316,12 @@ int32_t VulkanH264Decoder::ParseNalUnit()
     case NAL_UNIT_ACCESS_UNIT_DELIMITER:
         m_last_primary_pic_type = u(3);
         break;
+    case NAL_UNIT_END_OF_SEQUENCE:
+    case NAL_UNIT_END_OF_STREAM:
+    case NAL_UNIT_FILLER_DATA:
+        // Valid NAL units that carry no data the decoder needs
+        // (filler data is commonly inserted by encoders to sustain a constant bitrate).
+        break;
     case NAL_UNIT_CODED_SLICE_PREFIX:
         if (m_bUseSVC)
         {
