@@ -52,6 +52,7 @@ public:
     int32_t  submittedVideoQueueIndex;
     uint32_t hasConsummerSignalFence : 1;
     uint32_t hasConsummerSignalSemaphore : 1;
+    VkImageLayout outputImageLayout; // Layout of the decoded output image (DPB in coincide mode, DST in distinct)
 
     void Reset()
     {
@@ -79,6 +80,7 @@ public:
         timestamp = 0;
         hasConsummerSignalFence = false;
         hasConsummerSignalSemaphore = false;
+        outputImageLayout = VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR;
         // For debugging
         decodeOrder = 0;
         displayOrder = 0;
@@ -105,6 +107,7 @@ public:
     , submittedVideoQueueIndex()
     , hasConsummerSignalFence()
     , hasConsummerSignalSemaphore()
+    , outputImageLayout(VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR)
     {}
 
     virtual ~VulkanDisplayFrame() {
