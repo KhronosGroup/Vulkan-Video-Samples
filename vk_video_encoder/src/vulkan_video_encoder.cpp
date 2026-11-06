@@ -100,6 +100,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
     if (VK_SUCCESS != result) {
         return result;
     }
+    videoCodecOperation = m_encoderConfig->codec;
 
     static const char* const requiredInstanceLayers[] = {
         "VK_LAYER_KHRONOS_validation",
