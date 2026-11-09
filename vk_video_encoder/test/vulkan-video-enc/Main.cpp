@@ -22,8 +22,8 @@ int main(int argc, const char** argv)
 {
     std::cout << "Enter encoder test" << std::endl;
     VkSharedBaseObj<VulkanVideoEncoder> vulkanVideoEncoder;
-    VkResult result = CreateVulkanVideoEncoder(VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR,
-                                  argc, argv, vulkanVideoEncoder);
+    VkResult result = CreateVulkanVideoEncoder(VK_VIDEO_CODEC_OPERATION_NONE_KHR,
+                                               argc, argv, vulkanVideoEncoder);
 
     if (result != VK_SUCCESS) {
         std::cerr << "Error creating the encoder instance: " << result << std::endl;
