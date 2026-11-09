@@ -101,6 +101,14 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
         return result;
     }
 
+    if ((videoCodecOperation != VK_VIDEO_CODEC_OPERATION_NONE_KHR) &&
+        (videoCodecOperation != m_encoderConfig->codec)) {
+        LOG_ERROR("The requested codec operation (%s) does not match --codec (%s)\n",
+                  VkVideoCoreProfile::CodecToName(videoCodecOperation),
+                  VkVideoCoreProfile::CodecToName(m_encoderConfig->codec));
+        return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
     static const char* const requiredInstanceLayers[] = {
         "VK_LAYER_KHRONOS_validation",
         nullptr
@@ -182,7 +190,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
                                             0,
                                             VK_VIDEO_CODEC_OPERATION_NONE_KHR,
                                             requestVideoEncodeQueueMask,
-                                            videoCodecOperation,
+                                            m_encoderConfig->codec,
                                             VK_NULL_HANDLE,
                                             m_encoderConfig->verbose);
     if (result != VK_SUCCESS) {
@@ -198,7 +206,7 @@ VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR vid
 
     result = m_vkDevCtxt.CreateVulkanDevice(0, // num decode queues
                                             numEncodeQueues,     // num encode queues
-                                            videoCodecOperation,
+                                            m_encoderConfig->codec,
                                             // If no graphics or compute queue is requested, only video queues
                                             // will be created. Not all implementations support transfer on video queues,
                                             // so request a separate transfer queue for such implementations.
@@ -260,21 +268,6 @@ VkResult CreateVulkanVideoEncoder(VkVideoCodecOperationFlagBitsKHR videoCodecOpe
                                   int argc, const char** argv,
                                   VkSharedBaseObj<VulkanVideoEncoder>& vulkanVideoEncoder)
 {
-    switch((uint32_t)videoCodecOperation)
-    {
-        case VK_VIDEO_CODEC_OPERATION_ENCODE_H264_BIT_KHR:
-        case VK_VIDEO_CODEC_OPERATION_ENCODE_H265_BIT_KHR:
-        case VK_VIDEO_CODEC_OPERATION_ENCODE_AV1_BIT_KHR:
-        {
-
-        }
-        break;
-
-    default:
-        assert(!"Unsupported codec type!!!\n");
-        return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
-    }
-
     VkSharedBaseObj<VulkanVideoEncoder> vulkanVideoEncoderObj( new VulkanVideoEncoderImpl());
     if (!vulkanVideoEncoderObj) {
         return VK_ERROR_OUT_OF_HOST_MEMORY;
