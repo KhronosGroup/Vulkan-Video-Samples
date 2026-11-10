@@ -1039,11 +1039,14 @@ VulkanDeviceContext::~VulkanDeviceContext() {
 
     m_importedDeviceHandle = false;
 
+    if(m_libHandle != VulkanLibraryHandleType()) {
 #ifndef _WIN32
-    dlclose(m_libHandle);
+        dlclose(m_libHandle);
 #else // defined(VK_USE_PLATFORM_WIN32_KHR)
-    FreeLibrary(m_libHandle);
+        FreeLibrary(m_libHandle);
 #endif // defined(VK_USE_PLATFORM_WIN32_KHR)
+        m_libHandle = VulkanLibraryHandleType();
+    }
 }
 
 const VkExtensionProperties* VulkanDeviceContext::FindExtension(const std::vector<VkExtensionProperties>& extensions,
