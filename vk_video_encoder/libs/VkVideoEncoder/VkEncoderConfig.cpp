@@ -854,8 +854,7 @@ VkResult EncoderConfig::CreateCodecConfig(int argc, const char *argv[],
         return VK_SUCCESS;
 
     } else {
-        fprintf(stderr, "Codec type is not selected\n. Please select it with --codec <avc or hevc or av1> parameters\n");
-        printHelp(codec);
+        fprintf(stderr, "Codec type is not selected.\nPlease select it with --codec <avc or hevc or av1> parameters\n");
         return VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR;
     }
 
