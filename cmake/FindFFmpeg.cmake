@@ -158,13 +158,12 @@ FFMPEG_FIND(LIBAVFORMAT avformat avformat.h)
 FFMPEG_FIND(LIBAVDEVICE avdevice avdevice.h)
 FFMPEG_FIND(LIBAVCODEC  avcodec  avcodec.h)
 FFMPEG_FIND(LIBAVUTIL   avutil   avutil.h)
-FFMPEG_FIND(LIBSWSCALE  swscale  swscale.h)  # not sure about the header to look for here.
 FFMPEG_FIND(LIBX264  x264 x264.h)
 FFMPEG_FIND(LIBX265  x265 x265.h)
 
 SET(FFMPEG_FOUND "NO")
 
-# Note we don't check FFMPEG_LIBSWSCALE_FOUND, FFMPEG_LIBAVDEVICE_FOUND,
+# Note we don't check FFMPEG_LIBAVDEVICE_FOUND,
 # and FFMPEG_LIBAVUTIL_FOUND as they are optional.
 IF (FFMPEG_LIBAVFORMAT_FOUND AND FFMPEG_LIBAVCODEC_FOUND AND STDINT_OK)
 
@@ -174,14 +173,11 @@ IF (FFMPEG_LIBAVFORMAT_FOUND AND FFMPEG_LIBAVCODEC_FOUND AND STDINT_OK)
 
     SET(FFMPEG_LIBRARY_DIRS ${FFMPEG_LIBAVFORMAT_LIBRARY_DIRS})
 
-    # Note we don't add FFMPEG_LIBSWSCALE_LIBRARIES here,
-    # it will be added if found later.
     SET(FFMPEG_LIBRARIES
         ${FFMPEG_LIBAVFORMAT_LIBRARIES}
         ${FFMPEG_LIBAVDEVICE_LIBRARIES}
         ${FFMPEG_LIBAVCODEC_LIBRARIES}
         ${FFMPEG_LIBAVUTIL_LIBRARIES}
-        ${FFMPEG_LIBSWSCALE_LIBRARIES}
         ${FFMPEG_LIBX264_LIBRARIES}
         ${FFMPEG_LIBX265_LIBRARIES})
 ENDIF()
@@ -193,13 +189,12 @@ if(PKG_CONFIG_FOUND)
         libavcodec
         libavformat
         libavutil
-        libswscale
     )
 endif()
 
 # Find individual components
 find_path(FFMPEG_INCLUDE_DIR
-    NAMES libavcodec/avcodec.h libavformat/avformat.h libavutil/avutil.h libswscale/swscale.h
+    NAMES libavcodec/avcodec.h libavformat/avformat.h libavutil/avutil.h
     PATHS
         ${FFMPEG_INCLUDE_DIRS}
         /usr/include
@@ -236,21 +231,11 @@ find_library(AVUTIL_LIBRARY
         $ENV{FFMPEG_ROOT}/lib
 )
 
-find_library(SWSCALE_LIBRARY
-    NAMES swscale
-    PATHS
-        ${FFMPEG_LIBRARY_DIRS}
-        /usr/lib
-        /usr/local/lib
-        $ENV{FFMPEG_ROOT}/lib
-)
-
 # Set FFmpeg libraries
 set(FFMPEG_LIBRARIES
     ${AVCODEC_LIBRARY}
     ${AVFORMAT_LIBRARY}
     ${AVUTIL_LIBRARY}
-    ${SWSCALE_LIBRARY}
 )
 
 # Handle the QUIETLY and REQUIRED arguments
@@ -261,7 +246,6 @@ find_package_handle_standard_args(FFmpeg
         AVCODEC_LIBRARY
         AVFORMAT_LIBRARY
         AVUTIL_LIBRARY
-        SWSCALE_LIBRARY
 )
 
 # Mark as advanced
@@ -270,7 +254,6 @@ mark_as_advanced(
     AVCODEC_LIBRARY
     AVFORMAT_LIBRARY
     AVUTIL_LIBRARY
-    SWSCALE_LIBRARY
 )
 
 # Set variables for use in the project
