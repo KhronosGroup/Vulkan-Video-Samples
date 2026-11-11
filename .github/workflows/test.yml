@@ -58,6 +58,7 @@ jobs:
             libx11-dev \
             libwayland-dev \
             libavformat-dev \
+            libswscale-dev \
             libxrandr-dev \
             libvulkan-dev
 
