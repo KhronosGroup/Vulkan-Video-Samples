@@ -50,6 +50,7 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     const bool enableHwLoadBalancing = programConfig.enableHwLoadBalancing;
     const bool enablePostProcessFilter = (programConfig.enablePostProcessFilter >= 0);
     const bool enableDisplayPresent = (programConfig.noPresent == false);
+    const bool enableExternalConsumerExport = (programConfig.enableExternalConsumerExport != 0);
     const  VulkanFilterYuvCompute::FilterType postProcessFilterType = enablePostProcessFilter ?
             (VulkanFilterYuvCompute::FilterType)programConfig.enablePostProcessFilter :
                                                       VulkanFilterYuvCompute::YCBCRCOPY;
@@ -62,6 +63,7 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     }
 
     Deinit();
+    m_outputResult = VK_SUCCESS;
 
     assert(vkDevCtx);
     m_vkDevCtx = vkDevCtx;
@@ -101,6 +103,21 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
         enableDecoderFeatures |= VkVideoDecoder::ENABLE_GRAPHICS_TEXTURE_SAMPLING;
     }
 
+    if (enableExternalConsumerExport) {
+        static const char* const exportDeviceExtensions[] = {
+            VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME,
+            VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME,
+            VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
+        };
+        for (const char* ext : exportDeviceExtensions) {
+            if (vkDevCtx->FindRequiredDeviceExtension(ext) == nullptr) {
+                fprintf(stderr, "ERROR: external consumer export requires %s\n", ext);
+                return VK_ERROR_EXTENSION_NOT_PRESENT;
+            }
+        }
+        enableDecoderFeatures |= VkVideoDecoder::ENABLE_EXTERNAL_CONSUMER_EXPORT;
+    }
+
     result = VkVideoDecoder::Create(vkDevCtx,
                                     m_vkVideoFrameBuffer,
                                     videoQueueIndx,
@@ -129,6 +146,22 @@ VkResult VulkanVideoProcessor::Initialize(const VulkanDeviceContext* vkDevCtx,
     m_startFrame = 0;
     m_maxFrameCount = maxFrameCount;
     m_dryRun = programConfig.dryRun;
+
+    // Initialize threaded dump pool if file output is enabled
+    if (!!m_frameToFile && m_vkVideoFrameBuffer) {
+        result = m_dumpPool.init(m_vkDevCtx, *m_vkDevCtx, 4 /* writerThreads */);
+        if (result == VK_SUCCESS) {
+            // Register the dump pool's own TL semaphore as an external consumer
+            // so QueuePictureForDecode waits for the dump to release each frame
+            // before reusing the slot. This is the same pattern used by
+            // cross-process presenters in TRV.
+            VkSemaphore dumpReleaseSem = m_dumpPool.getReleaseSemaphore();
+            if (dumpReleaseSem != VK_NULL_HANDLE) {
+                m_vkVideoFrameBuffer->AddExternalConsumer(
+                    dumpReleaseSem, DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_DISPLAY);
+            }
+        }
+    }
 
     return VK_SUCCESS;
 }
@@ -205,6 +238,12 @@ int32_t VulkanVideoProcessor::GetBitDepth()  const
 
 void VulkanVideoProcessor::Deinit()
 {
+    // Flush and shutdown the dump pool before destroying the decoder
+    if (m_dumpPool.isInitialized()) {
+        m_dumpPool.flush();
+        m_dumpPool.shutdown();
+    }
+
     m_vkParser = nullptr;
     m_vkVideoFrameBuffer = nullptr;
     m_vkVideoDecoder = nullptr;
@@ -378,6 +417,65 @@ bool VulkanVideoProcessor::OutputFrameToFile(VulkanDecodedFrame* pFrame, size_t*
         return false;
     }
 
+    const VkParserDetectedVideoFormat* pVideoFormat = m_vkVideoDecoder->GetVideoFormatInfo();
+    if (pVideoFormat && pVideoFormat->frame_rate.numerator != 0 && pVideoFormat->frame_rate.denominator != 0) {
+        m_frameToFile->SetFrameRate(pVideoFormat->frame_rate.numerator, pVideoFormat->frame_rate.denominator);
+    }
+
+    // If the dump pool is initialized, queue async — return immediately
+    if (m_dumpPool.isInitialized()) {
+        if (m_dumpPool.hasWriteError()) {
+            return false;
+        }
+
+        VkVideoDumpFrame dumpFrame;
+        dumpFrame.pictureIndex = pFrame->pictureIndex;
+        dumpFrame.displayOrder = pFrame->displayOrder;
+        dumpFrame.decodeOrder = pFrame->decodeOrder;
+        dumpFrame.displayWidth = pFrame->displayWidth;
+        dumpFrame.displayHeight = pFrame->displayHeight;
+        dumpFrame.forwardSemaphore = pFrame->frameCompleteSemaphore;
+        dumpFrame.forwardWaitValue = pFrame->frameCompleteDoneSemValue;
+        dumpFrame.releaseSemaphore = m_dumpPool.getReleaseSemaphore();
+        dumpFrame.releaseSignalValue = DecodeFrameBufferIf::GetSemaphoreValue(
+            DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_DISPLAY, pFrame->displayOrder);
+        dumpFrame.frameCompleteFence = pFrame->frameCompleteFence;
+        dumpFrame.queryPool = pFrame->queryPool;
+        dumpFrame.startQueryId = pFrame->startQueryId;
+
+        // NOTE: Do NOT set pFrame->hasConsummerSignalSemaphore here.
+        // The dump pool uses its own dedicated release TL semaphore registered
+        // via AddExternalConsumer(), which is waited on in QueuePictureForDecode's
+        // external consumer loop (lines 444-456). Setting hasConsummerSignalSemaphore
+        // would make the decode submit also wait on the shared consumerCompleteSemaphore,
+        // which nobody signals in the dump-only (--noPresent) path, causing deadlock.
+
+        // Capture what the worker thread needs for writing
+        // Use shared_ptr to VkVideoFrameOutput + VulkanDeviceContext
+        VkSharedBaseObj<VkVideoFrameOutput> frameToFile = m_frameToFile;
+        const VulkanDeviceContext* vkDevCtx = m_vkDevCtx;
+
+        // The write callback captures the frame data needed by OutputFrame.
+        // We make a copy of the VulkanDecodedFrame so the worker thread has
+        // its own data independent of the main thread's frame slot.
+        VulkanDecodedFrame frameCopy = *pFrame;
+        // Clear sync primitives on the copy — the pool worker already waited
+        // on the forward TL semaphore and will signal the release semaphore.
+        frameCopy.frameCompleteSemaphore = VK_NULL_HANDLE;
+        frameCopy.frameCompleteDoneSemValue = 0;
+        frameCopy.consumerCompleteSemaphore = VK_NULL_HANDLE;
+        frameCopy.frameConsumerDoneSemValue = 0;
+        frameCopy.frameCompleteFence = VK_NULL_HANDLE;
+
+        dumpFrame.writeCallback = [frameToFile, vkDevCtx, frameCopy, bytesWritten](const VkVideoDumpFrame&) mutable -> int64_t {
+            return (int64_t)frameToFile->OutputFrame(&frameCopy, vkDevCtx, bytesWritten);
+        };
+
+        m_dumpPool.queueFrame(std::move(dumpFrame));
+        return true; // Non-blocking, return immediately
+    }
+
+    // Fallback: synchronous output (no dump pool)
     return m_frameToFile->OutputFrame(pFrame, m_vkDevCtx, bytesWritten);
 }
 
@@ -497,6 +595,7 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
         if (m_frameToFile) {
             if (!OutputFrameToFile(pFrame)) {
                 fprintf(stderr, "ERROR: Failed to output frame %u to file\n", m_videoFrameNum);
+                m_outputResult = VK_ERROR_UNKNOWN;
                 return VkVideoQueueResult::Error;
             }
         }
@@ -509,18 +608,32 @@ VkVideoQueueResult VulkanVideoProcessor::GetNextFrame(VulkanDecodedFrame* pFrame
         std::cout << "Number of video frames " << m_videoFrameNum
                   << " of max frame number " << m_maxFrameCount << std::endl;
         m_videoStreamsCompleted = StreamCompleted();
-        return VkVideoQueueResult::EndOfStream;
+        return FinishStream();
     }
 
     if (framesInQueue == 0) {
         if (m_videoStreamsCompleted) {
-            return VkVideoQueueResult::EndOfStream;
+            return FinishStream();
         } else {
             return VkVideoQueueResult::NoFrame;
         }
     }
 
     return VkVideoQueueResult::NewFrame;
+}
+
+VkVideoQueueResult VulkanVideoProcessor::FinishStream()
+{
+    // Writes are asynchronous: their failures are only known once the pool drains.
+    if (m_dumpPool.isInitialized()) {
+        m_dumpPool.flush();
+        if (m_dumpPool.hasWriteError()) {
+            fprintf(stderr, "ERROR: Failed to write decoded frames to file\n");
+            m_outputResult = VK_ERROR_UNKNOWN;
+            return VkVideoQueueResult::Error;
+        }
+    }
+    return VkVideoQueueResult::EndOfStream;
 }
 
 int32_t VulkanVideoProcessor::ReleaseFrame(VulkanDecodedFrame* pDisplayedFrame)
@@ -583,7 +696,9 @@ VkResult VulkanVideoProcessor::CreateParser(const char*,
 VkResult VulkanVideoProcessor::GetDecoderLastResult() const
 {
     if (m_vkVideoDecoder) {
-        return m_vkVideoDecoder->GetLastResult();
+        const VkResult decoderResult = m_vkVideoDecoder->GetLastResult();
+        // Decode errors take precedence; otherwise report a failed file write.
+        return (decoderResult != VK_SUCCESS) ? decoderResult : m_outputResult;
     }
     return VK_ERROR_INITIALIZATION_FAILED;
 }

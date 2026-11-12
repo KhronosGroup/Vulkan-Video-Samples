@@ -506,6 +506,16 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         extraImageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
 
+    if (m_enableExternalConsumerExport == VK_TRUE) {
+        // External consumers (presenters, encoders) need SAMPLED_BIT for rendering
+        // and TRANSFER_SRC_BIT for DMA-BUF export
+        extraImageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
+
+    // The DRM format modifier is picked per exported image once its create info is final.
+    const VkExternalMemoryHandleTypeFlags exportHandleTypes =
+        (m_enableExternalConsumerExport == VK_TRUE) ? VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT : 0;
+
     if (m_dpbAndOutputCoincide == VK_TRUE) {
 
         if (!bitstreamHasFilmGrain) {
@@ -556,6 +566,10 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     imageSpecDpb.usesImageViewArray = m_useImageViewArray;
 
     imageSpecDpb.memoryProperty = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    // External consumer export: set on DPB in coincide mode (DPB IS the output)
+    if (m_enableExternalConsumerExport == VK_TRUE && m_dpbAndOutputCoincide == VK_TRUE) {
+        imageSpecDpb.exportHandleTypes = exportHandleTypes;
+    }
     assert(imageSpecDpb.imageTypeIdx == m_imageSpecsIndex.decodeDpb);
 
     if ((m_imageSpecsIndex.decodeOut != InvalidImageTypeIdx) && (m_imageSpecsIndex.decodeOut != m_imageSpecsIndex.decodeDpb)) {
@@ -577,6 +591,10 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
         }
 
         imageSpecOut.createInfo.usage = outImageUsage;
+        // External consumer export: set on output image (distinct mode + film grain)
+        if (m_enableExternalConsumerExport == VK_TRUE) {
+            imageSpecOut.exportHandleTypes = exportHandleTypes;
+        }
         if (m_useSeparateOutputImages == VK_TRUE) {
             // Add one more image for the separate output image used for platforms
             // requiring a separate output image or the output needs to be linear
@@ -632,6 +650,35 @@ int32_t VkVideoDecoder::StartVideoSequence(VkParserDetectedVideoFormat* pVideoFo
     }
 
     assert(imageSpecsIndex < DecodeFrameBufferIf::MAX_PER_FRAME_IMAGE_TYPES);
+
+    if (m_enableExternalConsumerExport == VK_TRUE) {
+        // Pick a modifier per exported image with the create info the frame buffer will use,
+        // so the driver confirms it for this video profile, usage and format.
+        for (uint8_t idx = 0; idx < imageSpecsIndex; idx++) {
+            VulkanVideoFrameBuffer::ImageSpec& spec = imageSpecs[idx];
+            if (spec.exportHandleTypes == 0) {
+                continue;
+            }
+            if (spec.usesImageArray) {
+                FAIL_WITH_RESULT(VK_ERROR_FEATURE_NOT_PRESENT,
+                                 "external consumer export of DPB image arrays is not supported");
+            }
+            if (spec.createInfo.tiling == VK_IMAGE_TILING_LINEAR) {
+                FAIL_WITH_RESULT(VK_ERROR_FEATURE_NOT_PRESENT,
+                                 "external consumer export of the linear output image is not supported");
+            }
+            VkImageCreateInfo createInfo = spec.createInfo;
+            // Mirrors what VulkanVideoFrameBuffer::InitImagePool sets before creating the image.
+            createInfo.pNext = videoProfile.GetProfileListInfo();
+            createInfo.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+            if (!VkImageResource::SelectExportDrmModifier(m_vkDevCtx, createInfo,
+                                                          VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
+                                                          spec.exportDrmModifier)) {
+                FAIL_WITH_RESULT(VK_ERROR_FORMAT_NOT_SUPPORTED,
+                                 "no DRM format modifier supports exporting the decoded images");
+            }
+        }
+    }
 
     int32_t ret = m_videoFrameBuffer->InitImagePool(videoProfile.GetProfile(),
                                                     numDecodeSurfaces,
@@ -818,10 +865,46 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     pCurrFrameDecParams->decodeFrameInfo.srcBuffer = pCurrFrameDecParams->bitstreamData->GetBuffer();
     //assert(pCurrFrameDecParams->bitstreamDataOffset == 0);
     assert(pCurrFrameDecParams->firstSliceIndex == 0);
-    // TODO: Assert if bitstreamDataOffset is aligned to VkVideoCapabilitiesKHR::minBitstreamBufferOffsetAlignment
-    pCurrFrameDecParams->decodeFrameInfo.srcBufferOffset = pCurrFrameDecParams->bitstreamDataOffset;
-    // TODO: Assert if bitstreamDataLen is aligned to VkVideoCapabilitiesKHR::minBitstreamBufferSizeAlignment
-    pCurrFrameDecParams->decodeFrameInfo.srcBufferRange =  pCurrFrameDecParams->bitstreamDataLen;
+
+    // Verify bitstream buffer alignment invariants.
+    // The parser's buffer management (swapBitstreamBuffer / GetBitstreamBuffer) ensures:
+    //   - Buffers are allocated with size rounded up to minBitstreamBufferSizeAlignment
+    //   - Residual data is copied to offset 0 of a new aligned buffer
+    //   - bitstreamDataOffset is 0 for H.264/H.265/AV1 (set in end_of_picture)
+    //   - VP9 aligns the offset in its parser
+    const VkDeviceSize sizeAlignment   = pCurrFrameDecParams->bitstreamData->GetSizeAlignment();
+    const VkDeviceSize bufferMaxSize   = pCurrFrameDecParams->bitstreamData->GetMaxSize();
+
+    const VkDeviceSize srcOffset = pCurrFrameDecParams->bitstreamDataOffset;
+    assert((srcOffset & (pCurrFrameDecParams->bitstreamData->GetOffsetAlignment() - 1)) == 0 &&
+           "bitstreamDataOffset must be aligned to minBitstreamBufferOffsetAlignment");
+
+    // srcBufferRange alignment to minBitstreamBufferSizeAlignment.
+    // The bytes beyond bitstreamDataLen contain the next frame's residual data
+    // (swapBitstreamBuffer copies it after decode returns), so we cannot zero-fill.
+    //
+    // H.264: NVDEC's NAL scanner uses srcBufferRange to bound its start-code scan.
+    //   Rounding up exposes the next frame's start codes in the residual area,
+    //   causing decode corruption. Pass exact bitstreamDataLen for H.264.
+    // H.265/AV1: Use slice segment offsets / tile sizes exclusively, so rounding
+    //   up is safe -- the residual data is ignored by the HW decoder.
+    // VP9: Already aligned by its parser.
+    VkDeviceSize srcRange = pCurrFrameDecParams->bitstreamDataLen;
+    bool canAlignRange = (m_videoFormat.codec != VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR);
+    VkDeviceSize alignedRange;
+    if (canAlignRange) {
+        alignedRange = (srcRange + (sizeAlignment - 1)) & ~(sizeAlignment - 1);
+        if (srcOffset + alignedRange > bufferMaxSize) {
+            alignedRange = bufferMaxSize - srcOffset;
+        }
+    } else {
+        // H.264: pass the exact range. This violates VUID-vkCmdDecodeVideoKHR-pDecodeInfo-07139
+        // until the H.264 parser aligns its buffers like VP9.
+        alignedRange = srcRange;
+    }
+
+    pCurrFrameDecParams->decodeFrameInfo.srcBufferOffset = srcOffset;
+    pCurrFrameDecParams->decodeFrameInfo.srcBufferRange  = alignedRange;
 
     VkVideoBeginCodingInfoKHR decodeBeginInfo = { VK_STRUCTURE_TYPE_VIDEO_BEGIN_CODING_INFO_KHR };
     decodeBeginInfo.pNext = pCurrFrameDecParams->beginCodingInfoPictureParametersExt;
@@ -1165,13 +1248,16 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                                &referencedObjectsInfo,
                                                                &frameSynchronizationInfo);
     if (currPicIdx != retVal) {
-        assert(!"QueuePictureForDecode has failed");
+        FAIL_WITH_RESULT(VK_TIMEOUT, "QueuePictureForDecode failed");
     }
 
     assert(VK_NOT_READY == m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, frameSynchronizationInfo.frameCompleteFence));
 
     VkFence frameCompleteFence = frameSynchronizationInfo.frameCompleteFence;
-    VkSemaphore videoDecodeCompleteSemaphore = frameSynchronizationInfo.frameCompleteSemaphore;
+    // Equal unless the compute filter runs: then decode signals its own timeline
+    // and the filter signals frameCompleteSemaphore.
+    VkSemaphore videoDecodeCompleteSemaphore = frameSynchronizationInfo.decodeCompleteSemaphore;
+    VkSemaphore frameCompleteSemaphore = frameSynchronizationInfo.frameCompleteSemaphore;
     VkSemaphore  consumerCompleteSemaphore = frameSynchronizationInfo.consumerCompleteSemaphore;
     VkFence videoDecodeCompleteFence = frameCompleteFence;
 
@@ -1367,16 +1453,28 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
 
     const bool checkDecodeIdleSync = false; // For fence/sync/idle debugging
     if (checkDecodeIdleSync) { // For fence/sync debugging
-        if (videoDecodeCompleteFence == VkFence()) {
-            result = m_vkDevCtx->MultiThreadedQueueWaitIdle(VulkanDeviceContext::DECODE, m_currentVideoQueueIndx);
+        // Wait on the decode fence (filterCmdBuffer->GetFence() when filter enabled,
+        // or frameCompleteFence when filter disabled)
+        if (videoDecodeCompleteFence != VkFence()) {
+            result = m_vkDevCtx->WaitForFences(*m_vkDevCtx, 1, &videoDecodeCompleteFence, true, gFenceTimeout);
             assert(result == VK_SUCCESS);
-        } else {
-            if (videoDecodeCompleteSemaphore == VkSemaphore()) {
-                result = m_vkDevCtx->WaitForFences(*m_vkDevCtx, 1, &videoDecodeCompleteFence, true, gFenceTimeout);
-                assert(result == VK_SUCCESS);
-                result = m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, videoDecodeCompleteFence);
-                assert(result == VK_SUCCESS);
-            }
+            result = m_vkDevCtx->GetFenceStatus(*m_vkDevCtx, videoDecodeCompleteFence);
+            assert(result == VK_SUCCESS);
+            fprintf(stderr, "[SYNC] Decode fence signaled OK (pic=%d, fence=%p)\n",
+                    currPicIdx, (void*)videoDecodeCompleteFence);
+        }
+        // Also wait on the decode TL semaphore value if available
+        if (videoDecodeCompleteSemaphore != VkSemaphore()) {
+            uint64_t waitValue = frameSynchronizationInfo.decodeCompleteTimelineValue;
+            VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+                                              nullptr, 0, 1,
+                                              &videoDecodeCompleteSemaphore, &waitValue };
+            result = m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, gFenceTimeout);
+            assert(result == VK_SUCCESS);
+            uint64_t currentValue = 0;
+            m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, videoDecodeCompleteSemaphore, &currentValue);
+            fprintf(stderr, "[SYNC] Decode TL semaphore OK (pic=%d, expected=%llu, current=%llu)\n",
+                    currPicIdx, (unsigned long long)waitValue, (unsigned long long)currentValue);
         }
     }
 
@@ -1437,6 +1535,17 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
     if (m_enableDecodeComputeFilter) {
 
         assert(filterCmdBuffer != nullptr);
+
+        if (m_verbose && (m_decodePicCount == 1)) {
+            fprintf(stderr, "[FILTER] Compute filter ACTIVE, "
+                    "decode signals filterCmdBuffer fence=%p, "
+                    "filter signals frameCompleteFence=%p, "
+                    "decodeTL=%llu, filterTL=%llu\n",
+                    (void*)filterCmdBuffer->GetFence(),
+                    (void*)frameCompleteFence,
+                    (unsigned long long)frameSynchronizationInfo.decodeCompleteTimelineValue,
+                    (unsigned long long)frameSynchronizationInfo.filterCompleteTimelineValue);
+        }
 
         VkSharedBaseObj<VkImageResourceView> inputImageView;
         VkSharedBaseObj<VkImageResourceView> outputImageView;
@@ -1501,7 +1610,7 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
                                                   &frameSynchronizationInfo.decodeCompleteTimelineValue,
                                                   &waitDecoderStageMasks,
                                                   1, // signalSemaphoreCount
-                                                  &videoDecodeCompleteSemaphore,
+                                                  &frameCompleteSemaphore,
                                                   &computeCompleteTimelineValue,
                                                   &signalComputeStageMasks,
                                                   frameCompleteFence);
@@ -1509,7 +1618,27 @@ int VkVideoDecoder::DecodePictureWithParameters(VkParserPerFrameDecodeParameters
         filterCmdBuffer->SetCommandBufferSubmitted();
         bool syncCpuAfterStaging = false;
         if (syncCpuAfterStaging) {
-            filterCmdBuffer->SyncHostOnCmdBuffComplete(false, "filterFence");
+            // Wait on frameCompleteFence (signaled by filter submit, not decode submit)
+            if (frameCompleteFence != VkFence()) {
+                result = m_vkDevCtx->WaitForFences(*m_vkDevCtx, 1, &frameCompleteFence, true, gFenceTimeout);
+                assert(result == VK_SUCCESS);
+                fprintf(stderr, "[SYNC] Filter fence (frameCompleteFence) signaled OK (pic=%d, fence=%p)\n",
+                        currPicIdx, (void*)frameCompleteFence);
+            }
+            // Also wait on the filter TL semaphore value
+            if (frameCompleteSemaphore != VkSemaphore()) {
+                VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+                                                  nullptr, 0, 1,
+                                                  &frameCompleteSemaphore,
+                                                  &computeCompleteTimelineValue };
+                result = m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, gFenceTimeout);
+                assert(result == VK_SUCCESS);
+                uint64_t currentValue = 0;
+                m_vkDevCtx->GetSemaphoreCounterValue(*m_vkDevCtx, frameCompleteSemaphore, &currentValue);
+                fprintf(stderr, "[SYNC] Filter TL semaphore OK (pic=%d, expected=%llu, current=%llu)\n",
+                        currPicIdx, (unsigned long long)computeCompleteTimelineValue,
+                        (unsigned long long)currentValue);
+            }
         }
     }
 

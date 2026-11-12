@@ -249,8 +249,11 @@ bool VulkanVP9Decoder::ParseFrameHeader(uint32_t framesize)
     }
 
     // handle bitstream start offset alignment (for super frame)
+    // Use the buffer's offset alignment: it includes the HW minBitstreamBufferOffsetAlignment,
+    // which can be larger than the parser's m_bufferOffsetAlignment.
     assert((m_nalu.start_offset >= 0) && (m_nalu.start_offset <= UINT32_MAX));
-    uint32_t addOffset = (uint32_t)(m_nalu.start_offset & (m_bufferOffsetAlignment - 1));
+    const int64_t offsetAlignment = (int64_t)m_bitstreamData.GetBitstreamBuffer()->GetOffsetAlignment();
+    uint32_t addOffset = (uint32_t)(m_nalu.start_offset & (offsetAlignment - 1));
     m_PicData.uncompressedHeaderOffset += addOffset;
     m_PicData.compressedHeaderOffset += addOffset;
     m_PicData.tilesOffset += addOffset;
@@ -260,7 +263,7 @@ bool VulkanVP9Decoder::ParseFrameHeader(uint32_t framesize)
     m_pVkPictureData->numSlices = m_PicData.numTiles;
     m_pVkPictureData->bitstreamDataLen = (framesize + addOffset + m_bufferSizeAlignment - 1) & ~(m_bufferSizeAlignment - 1); // buffer is already aligned so, no issues.
     m_pVkPictureData->bitstreamData = m_bitstreamData.GetBitstreamBuffer();
-    m_pVkPictureData->bitstreamDataOffset = (size_t)(m_nalu.start_offset & ~((int64_t)m_bufferOffsetAlignment - 1));
+    m_pVkPictureData->bitstreamDataOffset = (size_t)(m_nalu.start_offset & ~(offsetAlignment - 1));
 
     if (!BeginPicture(m_pVkPictureData)) {
         nvParserLog("BeginPicture failed\n");

@@ -22,6 +22,7 @@
 #include "VkVideoDecoder/VkVideoDecoder.h"
 #include "VkCodecUtils/VkVideoQueue.h"
 #include "VkVideoFrameOutput.h"
+#include "VkCodecUtils/VkVideoDumpPool.h"
 
 // Forward declarations
 class VulkanDeviceContext;
@@ -76,6 +77,22 @@ public:
     bool OutputFrameToFile(VulkanDecodedFrame* pFrame, size_t* bytesWritten = nullptr);
     uint32_t Restart(int64_t& bitstreamOffset);
 
+    // External consumer management (forwarded to frame buffer)
+    int32_t AddExternalConsumer(VkSemaphore importedReleaseSemaphore,
+                                DecodeFrameBufferIf::SemSyncTypeIdx consumerType) {
+        if (m_vkVideoFrameBuffer) {
+            return m_vkVideoFrameBuffer->AddExternalConsumer(importedReleaseSemaphore, consumerType);
+        }
+        return -1;
+    }
+
+    int ExportFrameCompleteSemaphoreFd() {
+        if (m_vkVideoFrameBuffer) {
+            return m_vkVideoFrameBuffer->ExportFrameCompleteSemaphoreFd();
+        }
+        return -1;
+    }
+
 private:
 
     VulkanVideoProcessor(const DecoderConfig&, const VulkanDeviceContext* vkDevCtx)
@@ -86,6 +103,7 @@ private:
         , m_vkVideoDecoder()
         , m_vkParser()
         , m_frameToFile()
+        , m_outputResult(VK_SUCCESS)
         , m_currentBitstreamOffset(0)
         , m_videoFrameNum(0)
         , m_videoStreamsCompleted(false)
@@ -111,6 +129,8 @@ private:
 
     bool StreamCompleted();
 
+    VkVideoQueueResult FinishStream();
+
 private:
     std::atomic<int32_t>       m_refCount;
     const VulkanDeviceContext* m_vkDevCtx;
@@ -119,6 +139,8 @@ private:
     VkSharedBaseObj<VkVideoDecoder> m_vkVideoDecoder;
     VkSharedBaseObj<IVulkanVideoParser> m_vkParser;
     VkSharedBaseObj<VkVideoFrameOutput> m_frameToFile;
+    VkVideoDumpPool m_dumpPool;
+    VkResult m_outputResult;
     int64_t  m_currentBitstreamOffset;
     uint32_t m_videoFrameNum;
     uint32_t m_videoStreamsCompleted : 1;

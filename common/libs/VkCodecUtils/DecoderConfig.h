@@ -79,6 +79,7 @@ struct DecoderConfig {
         outputy4m = false;
         outputcrcPerFrame = false;
         outputcrc = false;
+        enableExternalConsumerExport = false;
         crcOutputFileName.clear();
     }
 
@@ -377,6 +378,27 @@ struct DecoderConfig {
                     crcInitValue = crcInitValueTemp;
                     return true;
                 }},
+            // Decoder service extensions (used by vk-decoder-instance)
+            {"--remotePresent", nullptr, 1, "Stream decoded frames to external presenter",
+                [this](const char **args, const ProgramArgs &a) {
+                    remotePresent = args[0];
+                    enableExternalConsumerExport = true;
+                    return true;
+                }},
+            {"--presenterPath", nullptr, 1, "Path to vk-presenter-instance binary",
+                [this](const char **args, const ProgramArgs &a) {
+                    presenterPath = args[0];
+                    return true;
+                }},
+            {"--debug", nullptr, 0, "Per-frame decode info",
+                [](const char **args, const ProgramArgs &a) {
+                    return true;
+                }},
+            {"--headless", nullptr, 0, "No display window (decoder is always headless)",
+                [this](const char **args, const ProgramArgs &a) {
+                    noPresent = true;
+                    return true;
+                }},
         };
 
         for (int i = 1; i < argc; i++) {
@@ -490,6 +512,10 @@ struct DecoderConfig {
     uint32_t outputy4m : 1;
     uint32_t outputcrc : 1;
     uint32_t outputcrcPerFrame : 1;
+    uint32_t enableExternalConsumerExport : 1;
+    // Decoder service extensions
+    std::string remotePresent;
+    std::string presenterPath;
 };
 
 #endif /* _PROGRAMSETTINGS_H_ */

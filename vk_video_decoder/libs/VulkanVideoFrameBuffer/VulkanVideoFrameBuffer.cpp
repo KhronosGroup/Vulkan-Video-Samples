@@ -146,11 +146,14 @@ public:
         return true;
     }
 
+    static constexpr uint32_t MAX_EXTERNAL_CONSUMERS = 4;
+
     VkParserDecodePictureInfo m_picDispInfo;
     VkFence m_frameCompleteFence;
     VkFence m_frameConsumerDoneFence;
     uint64_t m_frameCompleteTimelineValue;
     uint64_t m_frameConsumerDoneTimelineValue;
+    uint64_t m_externalConsumerDoneValues[MAX_EXTERNAL_CONSUMERS]{};
     DecodeFrameBufferIf::ImageSpecsIndex m_imageSpecsIndex;
     uint32_t m_hasFrameCompleteSignalFence : 1;
     uint32_t m_hasFrameCompleteSignalSemaphore : 1;
@@ -182,6 +185,7 @@ public:
         : m_vkDevCtx()
         , m_queueFamilyIndex((uint32_t)-1)
         , m_frameCompleteSemaphore()
+        , m_decodeCompleteSemaphore()
         , m_consumerCompleteSemaphore()
         , m_numImages(0)
         , m_maxNumImageTypeIdx(0)
@@ -266,7 +270,14 @@ private:
     VkVideoCoreProfile                     m_videoProfile;
 public:
     VkSemaphore                            m_frameCompleteSemaphore;
+    // Decode -> filter timeline, used instead of m_frameCompleteSemaphore by the decode
+    // queue when the compute filter runs, so that each timeline has a single producer.
+    VkSemaphore                            m_decodeCompleteSemaphore;
     VkSemaphore                            m_consumerCompleteSemaphore;
+    // External consumer semaphores (imported release semaphores from external processes)
+    VkSemaphore                            m_externalConsumerSemaphores[NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS]{};
+    DecodeFrameBufferIf::SemSyncTypeIdx    m_externalConsumerTypes[NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS]{};
+    uint32_t                               m_numExternalConsumers{0};
 private:
     uint32_t                               m_numImages;
     uint32_t                               m_maxNumImageTypeIdx;
@@ -414,6 +425,39 @@ public:
     {
         assert((uint32_t)picId < m_perFrameDecodeImageSet.size());
 
+        // Wait for all external consumers (cross-process) to release this slot.
+        // Done before the fence waits below, so a timeout leaves this slot's fences untouched.
+        // Snapshot under the lock: consumers can be registered from another thread.
+        VkSemaphore consumerSemaphores[NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS] = {};
+        uint64_t consumerWaitValues[NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS] = {};
+        uint32_t numConsumers = 0;
+        {
+            std::lock_guard<std::mutex> lock(m_displayQueueMutex);
+            numConsumers = m_perFrameDecodeImageSet.m_numExternalConsumers;
+            for (uint32_t c = 0; c < numConsumers; c++) {
+                consumerSemaphores[c] = m_perFrameDecodeImageSet.m_externalConsumerSemaphores[c];
+                consumerWaitValues[c] = m_perFrameDecodeImageSet[picId].m_externalConsumerDoneValues[c];
+            }
+        }
+        // Bounded, so a consumer that died or stopped releasing frames fails the picture
+        // instead of hanging the decoder.
+        const uint64_t consumerTimeoutNs = 10ULL * 1000ULL * 1000ULL * 1000ULL; // 10s
+        for (uint32_t c = 0; c < numConsumers; c++) {
+            if ((consumerSemaphores[c] == VK_NULL_HANDLE) || (consumerWaitValues[c] == 0)) {
+                continue;
+            }
+            VkSemaphoreWaitInfo waitInfo{VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO};
+            waitInfo.semaphoreCount = 1;
+            waitInfo.pSemaphores = &consumerSemaphores[c];
+            waitInfo.pValues = &consumerWaitValues[c];
+            VkResult waitResult = m_vkDevCtx->WaitSemaphores(*m_vkDevCtx, &waitInfo, consumerTimeoutNs);
+            if (waitResult != VK_SUCCESS) {
+                fprintf(stderr, "ERROR: external consumer %u did not release picture %d (VkResult %d)\n",
+                        c, picId, waitResult);
+                return -1;
+            }
+        }
+
         if (pFrameSynchronizationInfo->syncOnFrameCompleteFence == 1) {
             // Check here that the frame for this entry (for this command buffer) has already completed decoding.
             // Otherwise we may step over a hot command buffer by starting a new recording.
@@ -433,6 +477,11 @@ public:
                                   true, "frameConsumerDoneFence");
 
         }
+
+        // NOTE: Consumer TL semaphore wait for slot reuse is not needed in the
+        // single-threaded headless path. The dump now waits on the forward TL
+        // semaphore (not the fence), so the fence reset here is harmless.
+        // For multi-threaded dump (Phase 2), add consumer TL wait here.
 
         std::lock_guard<std::mutex> lock(m_displayQueueMutex);
         m_perFrameDecodeImageSet[picId].m_picDispInfo = *pDecodePictureInfo;
@@ -469,6 +518,14 @@ public:
                 pFrameSynchronizationInfo->decodeCompleteTimelineValue = DecodeFrameBufferIf::GetSemaphoreValue(
                                                                             DecodeFrameBufferIf::SEM_SYNC_TYPE_IDX_DECODE,
                                                                             m_perFrameDecodeImageSet[picId].m_decodeOrder);
+
+                // The decode and filter queues run independently, so they cannot signal the
+                // same timeline: decode N+1 may complete before filter N, and the filter would
+                // then have to move the counter backwards. With the filter, decode signals its
+                // own timeline and only the filter signals frameCompleteSemaphore.
+                pFrameSynchronizationInfo->decodeCompleteSemaphore = pFrameSynchronizationInfo->hasFilterSignalSemaphore ?
+                                                                         m_perFrameDecodeImageSet.m_decodeCompleteSemaphore :
+                                                                         m_perFrameDecodeImageSet.m_frameCompleteSemaphore;
 
                 if (pFrameSynchronizationInfo->hasFilterSignalSemaphore) {
                     pFrameSynchronizationInfo->filterCompleteTimelineValue = DecodeFrameBufferIf::GetSemaphoreValue(
@@ -571,6 +628,17 @@ public:
 
             pDecodedFrame->frameConsumerDoneFence = m_perFrameDecodeImageSet[pictureIndex].m_frameConsumerDoneFence;
 
+            // Populate expected external consumer done values for this frame.
+            // The decoder service uses these to know what values consumers will signal.
+            pDecodedFrame->numExternalConsumers = m_perFrameDecodeImageSet.m_numExternalConsumers;
+            for (uint32_t c = 0; c < m_perFrameDecodeImageSet.m_numExternalConsumers; c++) {
+                uint64_t value = DecodeFrameBufferIf::GetSemaphoreValue(
+                    m_perFrameDecodeImageSet.m_externalConsumerTypes[c],
+                    m_perFrameDecodeImageSet[pictureIndex].m_displayOrder);
+                m_perFrameDecodeImageSet[pictureIndex].m_externalConsumerDoneValues[c] = value;
+                pDecodedFrame->externalConsumerDoneValues[c] = value;
+            }
+
             pDecodedFrame->timestamp = m_perFrameDecodeImageSet[pictureIndex].m_timestamp;
             pDecodedFrame->decodeOrder = m_perFrameDecodeImageSet[pictureIndex].m_decodeOrder;
             pDecodedFrame->displayOrder = m_perFrameDecodeImageSet[pictureIndex].m_displayOrder;
@@ -614,6 +682,42 @@ public:
             }
         }
         return 0;
+    }
+
+    virtual int32_t AddExternalConsumer(VkSemaphore importedReleaseSemaphore,
+                                        DecodeFrameBufferIf::SemSyncTypeIdx consumerType)
+    {
+        std::lock_guard<std::mutex> lock(m_displayQueueMutex);
+        uint32_t idx = m_perFrameDecodeImageSet.m_numExternalConsumers;
+        if (idx >= NvPerFrameDecodeResources::MAX_EXTERNAL_CONSUMERS) {
+            return -1;
+        }
+        m_perFrameDecodeImageSet.m_externalConsumerSemaphores[idx] = importedReleaseSemaphore;
+        m_perFrameDecodeImageSet.m_externalConsumerTypes[idx] = consumerType;
+        m_perFrameDecodeImageSet.m_numExternalConsumers = idx + 1;
+        return static_cast<int32_t>(idx);
+    }
+
+    virtual int ExportFrameCompleteSemaphoreFd()
+    {
+        if (m_perFrameDecodeImageSet.m_frameCompleteSemaphore == VK_NULL_HANDLE) {
+            return -1;
+        }
+        auto pfnGetSemaphoreFd = (PFN_vkGetSemaphoreFdKHR)
+            m_vkDevCtx->GetDeviceProcAddr(*m_vkDevCtx, "vkGetSemaphoreFdKHR");
+        if (!pfnGetSemaphoreFd) {
+            return -1;
+        }
+        VkSemaphoreGetFdInfoKHR getFdInfo{VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR};
+        getFdInfo.semaphore = m_perFrameDecodeImageSet.m_frameCompleteSemaphore;
+        getFdInfo.handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+        int fd = -1;
+        VkResult result = pfnGetSemaphoreFd(*m_vkDevCtx, &getFdInfo, &fd);
+        return (result == VK_SUCCESS) ? fd : -1;
+    }
+
+    virtual VkSemaphore GetConsumerCompleteSemaphore() const {
+        return m_perFrameDecodeImageSet.m_consumerCompleteSemaphore;
     }
 
     virtual int32_t GetImageResourcesByIndex(uint32_t numResources,
@@ -828,10 +932,20 @@ VkResult NvPerFrameDecodeResources::CreateImage( const VulkanDeviceContext* vkDe
 
         VkSharedBaseObj<VkImageResource> imageResource;
         if (!imageArrayParent) {
-            result = VkImageResource::Create(vkDevCtx,
-                                             &pImageSpec->createInfo,
-                                             pImageSpec->memoryProperty,
-                                             imageResource);
+            if (pImageSpec->exportHandleTypes != 0) {
+                // External consumer export: create with DRM modifier + export setup
+                result = VkImageResource::CreateExportable(vkDevCtx,
+                                                 &pImageSpec->createInfo,
+                                                 pImageSpec->memoryProperty,
+                                                 pImageSpec->exportHandleTypes,
+                                                 pImageSpec->exportDrmModifier,
+                                                 imageResource);
+            } else {
+                result = VkImageResource::Create(vkDevCtx,
+                                                 &pImageSpec->createInfo,
+                                                 pImageSpec->memoryProperty,
+                                                 imageResource);
+            }
             if (result != VK_SUCCESS) {
                 return result;
             }
@@ -946,24 +1060,54 @@ int32_t NvPerFrameDecodeImageSet::init(const VulkanDeviceContext* vkDevCtx,
         }
     }
 
-    // Create timeline semaphores instead of binary semaphores
-    VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
-    timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-    timelineCreateInfo.pNext = nullptr;
-    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-    timelineCreateInfo.initialValue = 0ULL;
-
-    VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
+    // Create timeline semaphores instead of binary semaphores.
+    // Only create if not already created - on reconfigure, we MUST reuse the existing
+    // semaphores to avoid corrupting in-flight synchronization.
     if (m_frameCompleteSemaphore == VK_NULL_HANDLE) {
+        // Only make the semaphores exportable when an external consumer will import them.
+        bool exportSemaphores = false;
+        for (uint32_t imageTypeIdx = 0; imageTypeIdx < maxNumImageTypeIdx; imageTypeIdx++) {
+            if (imageSpecs[imageTypeIdx].exportHandleTypes != 0) {
+                exportSemaphores = true;
+                break;
+            }
+        }
+
+        VkExportSemaphoreCreateInfo exportInfo = {};
+        exportInfo.sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO;
+        exportInfo.pNext = nullptr;
+#ifdef _WIN32
+        exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#else
+        exportInfo.handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT;
+#endif
+
+        VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
+        timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+        timelineCreateInfo.pNext = exportSemaphores ? &exportInfo : nullptr;
+        timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+        timelineCreateInfo.initialValue = 0ULL;
+
+        VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
         result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_frameCompleteSemaphore);
+        assert(result == VK_SUCCESS);
+        if (result != VK_SUCCESS) {
+            return -1;
+        }
+
+        result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_consumerCompleteSemaphore);
         assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             return -1;
         }
     }
 
-    if (m_consumerCompleteSemaphore == VK_NULL_HANDLE) {
-        result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_consumerCompleteSemaphore);
+    if (m_decodeCompleteSemaphore == VK_NULL_HANDLE) {
+        // Internal to the decoder (decode -> filter), never exported.
+        VkSemaphoreTypeCreateInfo timelineCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, nullptr,
+                                                         VK_SEMAPHORE_TYPE_TIMELINE, 0ULL };
+        VkSemaphoreCreateInfo semInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, &timelineCreateInfo };
+        result = vkDevCtx->CreateSemaphore(*vkDevCtx, &semInfo, nullptr, &m_decodeCompleteSemaphore);
         assert(result == VK_SUCCESS);
         if (result != VK_SUCCESS) {
             return -1;
@@ -1097,6 +1241,11 @@ void NvPerFrameDecodeImageSet::Deinit(const VulkanDeviceContext* vkDevCtx)
     if (m_frameCompleteSemaphore != VK_NULL_HANDLE) {
         m_vkDevCtx->DestroySemaphore(*vkDevCtx, m_frameCompleteSemaphore, nullptr);
         m_frameCompleteSemaphore = VK_NULL_HANDLE;
+    }
+
+    if (m_decodeCompleteSemaphore != VK_NULL_HANDLE) {
+        m_vkDevCtx->DestroySemaphore(*vkDevCtx, m_decodeCompleteSemaphore, nullptr);
+        m_decodeCompleteSemaphore = VK_NULL_HANDLE;
     }
 
     if (m_consumerCompleteSemaphore != VK_NULL_HANDLE) {
