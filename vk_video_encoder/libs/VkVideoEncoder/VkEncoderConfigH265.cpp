@@ -133,6 +133,11 @@ VkResult EncoderConfigH265::InitVideoProfileCapabilities(const VulkanDeviceConte
     assert(profile != STD_VIDEO_H265_PROFILE_IDC_INVALID);
     videoCoreProfile = MakeVideoProfile(static_cast<uint32_t>(profile));
 
+    videoEncodeFeedback2Capabilities = VkVideoEncodeFeedback2CapabilitiesKHR
+        { VK_STRUCTURE_TYPE_VIDEO_ENCODE_FEEDBACK_2_CAPABILITIES_KHR, nullptr };
+    const bool feedback2Requested = EncodeFeedback2Requested();
+    void* pExtCapabilities = feedback2Requested ? &videoEncodeFeedback2Capabilities : nullptr;
+
     VkResult result = VulkanVideoCapabilities::GetVideoEncodeCapabilities<VkVideoEncodeH265CapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_CAPABILITIES_KHR,
                                                                           VkVideoEncodeH265QuantizationMapCapabilitiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_QUANTIZATION_MAP_CAPABILITIES_KHR>
                                                                 (vkDevCtx, videoCoreProfile,
@@ -141,7 +146,8 @@ VkResult EncoderConfigH265::InitVideoProfileCapabilities(const VulkanDeviceConte
                                                                  h265EncodeCapabilities,
                                                                  quantizationMapCapabilities,
                                                                  h265QuantizationMapCapabilities,
-                                                                 intraRefreshCapabilities);
+                                                                 intraRefreshCapabilities,
+                                                                 pExtCapabilities);
     if (result != VK_SUCCESS) {
         // Distinguish between "not supported" and "actual error"
         if (IsVideoUnsupportedResult(result)) {
@@ -176,6 +182,10 @@ VkResult EncoderConfigH265::InitVideoProfileCapabilities(const VulkanDeviceConte
         std::cout << "  " << std::left << std::setw(48) << "prefersGopRemainingFrames" << ": " << h265EncodeCapabilities.prefersGopRemainingFrames << std::endl;
         std::cout << "  " << std::left << std::setw(48) << "requiresGopRemainingFrames" << ": " << h265EncodeCapabilities.requiresGopRemainingFrames << std::endl;
         std::cout << "  " << std::left << std::setw(48) << "stdSyntaxFlags" << ": 0x" << std::hex << h265EncodeCapabilities.stdSyntaxFlags << std::dec << std::endl;
+        if (feedback2Requested) {
+            std::cout << "  " << std::left << std::setw(48) << "maxPerPartitionFeedbackEntries" << ": " << videoEncodeFeedback2Capabilities.maxPerPartitionFeedbackEntries << std::endl;
+            std::cout << "  " << std::left << std::setw(48) << "supportedPerPartitionEncodeFeedbackFlags" << ": 0x" << std::hex << videoEncodeFeedback2Capabilities.supportedPerPartitionEncodeFeedbackFlags << std::dec << std::endl;
+        }
     }
 
     result = VulkanVideoCapabilities::GetPhysicalDeviceVideoEncodeQualityLevelProperties<VkVideoEncodeH265QualityLevelPropertiesKHR, VK_STRUCTURE_TYPE_VIDEO_ENCODE_H265_QUALITY_LEVEL_PROPERTIES_KHR>
