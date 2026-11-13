@@ -881,7 +881,7 @@ bool VulkanAV1Decoder::ParseObuSequenceHeader()
 
     VkSharedBaseObj<StdVideoPictureParametersSet> picParamObj(m_sps);
     m_PicData.pStdSps = picParamObj.Get();
-    if (m_pClient) { // @review need to make sure this has really changed!
+    if (m_outOfBandPictureParameters && m_pClient) { // @review need to make sure this has really changed!
         bool success = m_pClient->UpdatePictureParameters(picParamObj, m_sps->client);
         assert(success);
         if (!success) {
