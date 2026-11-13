@@ -1224,7 +1224,7 @@ VkResult VkVideoEncoder::InitEncoder(VkSharedBaseObj<EncoderConfig>& encoderConf
                                              m_imageInFormat,
                                              m_maxCodedExtent,
                                              m_imageDpbFormat,
-                                             m_maxDpbPicturesCount,
+                                             m_maxDpbPicturesCount + 1, // + the setup slot of the reconstructed picture
                                              maxActiveReferencePicturesCount,
                                              sessionCreateInfoChain,
                                              m_videoSession);
