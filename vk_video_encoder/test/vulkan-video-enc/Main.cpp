@@ -40,7 +40,8 @@ int main(int argc, const char** argv)
         int64_t frameNumEncoded = -1;
         result = vulkanVideoEncoder->EncodeNextFrame(frameNumEncoded);
         if (result != VK_SUCCESS) {
-            std::cerr << "Error encoding frame: "  << frameNum  << ", error: " << result << std::endl;
+            std::cerr << "Error encoding at input frame: "  << frameNum  << ", error: " << result << std::endl;
+            return ExitCodeFromVkResult(result);
         }
     }
 
@@ -48,6 +49,11 @@ int main(int argc, const char** argv)
     if (result != VK_SUCCESS) {
         std::cerr << "Error obtaining the encoded bitstream file: " << result << std::endl;
         return EXIT_FAILURE;
+    }
+
+    int exitCode = ExitCodeFromVkResult(vulkanVideoEncoder->GetLastResult());
+    if (exitCode != EXIT_SUCCESS) {
+        return exitCode;
     }
 
     std::cout << "Exit encoder test" << std::endl;

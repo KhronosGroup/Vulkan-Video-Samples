@@ -1095,7 +1095,6 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
     if(result != VK_SUCCESS) {
         fprintf(stderr, "\nRetrieveData Error: Failed to get vcl query pool results.\n");
         WriteFeedback2Output(encodeFrameInfo->frameInputOrderNum, nullptr);
-        assert(result == VK_SUCCESS);
         return result;
     }
 
@@ -1103,7 +1102,6 @@ VkResult VkVideoEncoder::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeFram
         fprintf(stderr, "\nencodeResult.status is (0x%x) NOT STATUS_COMPLETE! bitstreamStartOffset %u, bitstreamSize %u\n",
                 encodeResult.status, encodeResult.bitstreamStartOffset, encodeResult.bitstreamSize);
         WriteFeedback2Output(encodeFrameInfo->frameInputOrderNum, &encodeResult);
-        assert(encodeResult.status == VK_QUERY_RESULT_STATUS_COMPLETE_KHR);
         return VK_INCOMPLETE;
     }
 
@@ -2743,6 +2741,9 @@ VkResult VkVideoEncoder::PushOrderedFrames()
         m_numDeferredFrames = 0;
         m_numDeferredRefFrames = 0;
     }
+    if (result != VK_SUCCESS) {
+        LatchFrameProcessingError(result);
+    }
     return result;
 }
 
@@ -2824,7 +2825,7 @@ void VkVideoEncoder::DumpStateInfo(const char* stageName, uint32_t ident,
               << std::endl << std::flush;
 }
 
-bool VkVideoEncoder::WaitForThreadsToComplete()
+VkResult VkVideoEncoder::WaitForThreadsToComplete()
 {
     PushOrderedFrames();
 
@@ -2835,7 +2836,7 @@ bool VkVideoEncoder::WaitForThreadsToComplete()
         }
     }
 
-    return true;
+    return m_frameProcessingResult;
 }
 
 int32_t VkVideoEncoder::DeinitEncoder()
@@ -2889,6 +2890,7 @@ void VkVideoEncoder::ConsumerThread()
            assert(encodeFrameInfo == nullptr);
            if (result != VK_SUCCESS) {
                std::cout << "Error processing frames from the frame thread!" << std::endl;
+               LatchFrameProcessingError(result);
                m_encoderThreadQueue.SetFlushAndExit();
            }
 

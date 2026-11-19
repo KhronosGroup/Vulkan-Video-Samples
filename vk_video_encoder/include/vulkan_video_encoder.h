@@ -47,6 +47,8 @@ public:
     virtual int64_t  GetNumberOfFrames() = 0;
     virtual VkResult EncodeNextFrame(int64_t& frameNumEncoded) = 0;
     virtual VkResult GetBitstream() = 0;
+    // First error hit while encoding, VK_SUCCESS otherwise.
+    virtual VkResult GetLastResult() const = 0;
 };
 
 
