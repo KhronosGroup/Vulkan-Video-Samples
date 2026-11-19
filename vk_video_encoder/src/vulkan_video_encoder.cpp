@@ -34,6 +34,10 @@ public:
     }
     virtual VkResult EncodeNextFrame(int64_t& frameNumEncoded);
     virtual VkResult GetBitstream() { return VK_SUCCESS; }
+    virtual VkResult GetLastResult() const
+    {
+        return m_lastResult;
+    }
 
     VulkanVideoEncoderImpl()
     : m_refCount(0)
@@ -41,6 +45,7 @@ public:
     , m_encoderConfig()
     , m_encoder()
     , m_lastFrameIndex(0)
+    , m_lastResult(VK_SUCCESS)
     { }
 
     virtual ~VulkanVideoEncoderImpl() { }
@@ -48,7 +53,11 @@ public:
     void Deinitialize()
     {
         if (m_encoder) {
-            m_encoder->WaitForThreadsToComplete();
+            const VkResult result = m_encoder->WaitForThreadsToComplete();
+            // An earlier failure was already returned by EncodeNextFrame().
+            if ((result != VK_SUCCESS) && (m_lastResult == VK_SUCCESS)) {
+                fprintf(stderr, "Encoder finished with a frame processing error: %d\n", result);
+            }
         }
 
         // Teardown also runs after a failed Initialize(), where neither the
@@ -91,6 +100,7 @@ private:
     VkSharedBaseObj<EncoderConfig>   m_encoderConfig;
     VkSharedBaseObj<VkVideoEncoder>  m_encoder;
     uint32_t                         m_lastFrameIndex;
+    VkResult                         m_lastResult;
 };
 
 VkResult VulkanVideoEncoderImpl::Initialize(VkVideoCodecOperationFlagBitsKHR videoCodecOperation,
@@ -248,6 +258,9 @@ VkResult VulkanVideoEncoderImpl::EncodeNextFrame(int64_t& frameNumEncoded)
     // load frame data from the file
     VkResult result = m_encoder->LoadNextFrame(encodeFrameInfo);
     if (result != VK_SUCCESS) {
+        if (m_lastResult == VK_SUCCESS) {
+            m_lastResult = result;
+        }
         std::cout << "ERROR processing input frame index: " << m_lastFrameIndex << std::endl;
         return result;
     }

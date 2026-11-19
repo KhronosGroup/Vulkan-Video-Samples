@@ -585,7 +585,8 @@ public:
         VkFormat format,
         uint32_t shiftBits = 0);
 
-    bool WaitForThreadsToComplete();
+    // Returns the first error hit while processing the queued frames, if any.
+    VkResult WaitForThreadsToComplete();
 
 protected:
 
@@ -628,12 +629,16 @@ protected:
 
     int32_t DeinitEncoder();
 
-    bool EnqueueFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo,
-                      bool isIdrFrame, bool isReferenceFrame) {
+    VkResult EnqueueFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo,
+                          bool isIdrFrame, bool isReferenceFrame) {
+
+        if (m_frameProcessingResult != VK_SUCCESS) {
+            return m_frameProcessingResult;
+        }
 
         const bool preFlushQueue = isIdrFrame;
-        if (preFlushQueue) {
-            PushOrderedFrames();
+        if (preFlushQueue && (PushOrderedFrames() != VK_SUCCESS)) {
+            return m_frameProcessingResult;
         }
 
         InsertOrdered(encodeFrameInfo, isReferenceFrame);
@@ -643,7 +648,7 @@ protected:
         if (postFlushQueue) {
             PushOrderedFrames();
         }
-        return true;
+        return m_frameProcessingResult;
     }
 
     void ConsumerThread();
@@ -688,6 +693,10 @@ protected:
     }
 
     VkResult PushOrderedFrames();
+    void LatchFrameProcessingError(VkResult result) {
+        VkResult expected = VK_SUCCESS;
+        m_frameProcessingResult.compare_exchange_strong(expected, result);
+    }
     VkResult ProcessOrderedFrames(VkSharedBaseObj<VkVideoEncodeFrameInfo>& frames, uint32_t numFrames);
     VkResult ProcessOutOfOrderFrames(VkSharedBaseObj<VkVideoEncodeFrameInfo>& frames, uint32_t numFrames);
 
@@ -752,6 +761,8 @@ protected:
 #endif // VIDEO_DISPLAY_QUEUE_SUPPORT
     EncoderFrameQueue                        m_encoderThreadQueue;
     std::thread                              m_encoderQueueConsumerThread;
+    // Sticky: also written by the consumer thread.
+    std::atomic<VkResult>                    m_frameProcessingResult{VK_SUCCESS};
     VkSharedBaseObj<VkVideoEncodeFrameInfo>  m_lastDeferredFrame;
     VkSemaphore                              m_hwLoadBalancingTimelineSemaphore;
     int32_t                                  m_currentVideoQueueIndx;

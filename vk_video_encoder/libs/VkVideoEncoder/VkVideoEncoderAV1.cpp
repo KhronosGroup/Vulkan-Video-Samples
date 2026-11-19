@@ -584,9 +584,7 @@ VkResult VkVideoEncoderAV1::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>&
         FillIntraRefreshInfo(encodeFrameInfo);
     }
 
-    EnqueueFrame(encodeFrameInfo, pFrameInfo->bIsKeyFrame, pFrameInfo->bIsReference);
-
-    return VK_SUCCESS;
+    return EnqueueFrame(encodeFrameInfo, pFrameInfo->bIsKeyFrame, pFrameInfo->bIsReference);
 }
 
 VkResult VkVideoEncoderAV1::HandleCtrlCmd(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo)
@@ -1042,7 +1040,6 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
 
     if (result != VK_SUCCESS) {
         fprintf(stderr, "\nRetrieveData Error: Failed to get vcl query pool results.\n");
-        assert(result == VK_SUCCESS);
         return result;
     }
 

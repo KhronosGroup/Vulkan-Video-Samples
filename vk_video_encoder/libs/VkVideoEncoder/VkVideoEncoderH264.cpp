@@ -692,9 +692,7 @@ VkResult VkVideoEncoderH264::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
         HandleCtrlCmd(encodeFrameInfo);
     }
 
-    EnqueueFrame(encodeFrameInfo, isIdr, isReference);
-
-    return VK_SUCCESS;
+    return EnqueueFrame(encodeFrameInfo, isIdr, isReference);
 }
 
 VkResult VkVideoEncoderH264::HandleCtrlCmd(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo)
