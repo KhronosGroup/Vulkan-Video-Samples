@@ -575,8 +575,7 @@ VkResult VkVideoEncoderH265::EncodeFrame(VkSharedBaseObj<VkVideoEncodeFrameInfo>
         FillIntraRefreshInfo(encodeFrameInfo);
     }
 
-    EnqueueFrame(encodeFrameInfo, isIdr, isReference);
-    return result;
+    return EnqueueFrame(encodeFrameInfo, isIdr, isReference);
 }
 
 VkResult VkVideoEncoderH265::HandleCtrlCmd(VkSharedBaseObj<VkVideoEncodeFrameInfo>& encodeFrameInfo)

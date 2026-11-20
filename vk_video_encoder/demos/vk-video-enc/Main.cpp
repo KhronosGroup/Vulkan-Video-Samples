@@ -330,7 +330,14 @@ int main(int argc, const char* argv[])
         }
     }
 
-    encoder->WaitForThreadsToComplete();
+    const VkResult flushResult = encoder->WaitForThreadsToComplete();
+    if (result == VK_SUCCESS) {
+        result = flushResult;
+    }
+    if (result != VK_SUCCESS) {
+        fprintf(stderr, "Encoding failed after %u input frames with result %d\n", curFrameIndex, result);
+        return ExitCodeFromVkResult(result);
+    }
 
     std::cout << "Done processing " << curFrameIndex << " input frames!" << std::endl
               << "Encoded file's location is at " << encoderConfig->outputFileHandler.GetFileName()
