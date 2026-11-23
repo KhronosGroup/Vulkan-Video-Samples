@@ -37,6 +37,13 @@ from tests.libs.video_test_framework_base import (
 from tests.libs.video_test_fetch_sample import (
     FetchableResource,
 )
+from tests.libs.video_test_feedback_validation import (
+    FEEDBACK_FILE_SUFFIX,
+    FeedbackExpectations,
+    validate_feedback_text,
+)
+
+MAX_REPORTED_FEEDBACK_ERRORS = 3
 
 
 @dataclass
@@ -307,6 +314,10 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
         )
         cmd.extend(["-o", str(output_file)])
 
+        # A file left by an earlier run must not stand in for a missing one.
+        feedback_file = Path(str(output_file) + FEEDBACK_FILE_SUFFIX)
+        feedback_file.unlink(missing_ok=True)
+
         # Use base class to execute (handles subprocess details)
         run_cwd = self._default_run_cwd()
         result = self.execute_test_command(
@@ -338,13 +349,39 @@ class VulkanVideoEncodeTestFramework(VulkanVideoTestFrameworkBase):
                 # Store validation output for display after test result
                 result.meta["decoder_validation_output"] = validation_output
 
-        # Clean up output file only if test succeeded and keep_files is False
-        if (output_file.exists() and
-                result.status == VideoTestStatus.SUCCESS and
+        if result.status == VideoTestStatus.SUCCESS:
+            feedback_errors = self._validate_feedback(feedback_file, config)
+            if feedback_errors:
+                result.status = VideoTestStatus.ERROR
+                result.error_message = (
+                    "Encode feedback validation failed: "
+                    + "; ".join(feedback_errors[:MAX_REPORTED_FEEDBACK_ERRORS])
+                )
+
+        # Clean up output files only if test succeeded and keep_files is False
+        if (result.status == VideoTestStatus.SUCCESS and
                 not self.keep_files):
-            output_file.unlink()
+            for path in (output_file, feedback_file):
+                if path.exists():
+                    path.unlink()
 
         return result
+
+    def _validate_feedback(self, feedback_file: Path,
+                           config: EncodeTestSample) -> List[str]:
+        """Check the feedback file of a test that requested encode feedback"""
+        expected = FeedbackExpectations(
+            codec=config.codec.value,
+            extra_args=config.extra_args or [],
+            width=config.width,
+            height=config.height,
+        )
+        if not expected.enabled:
+            return []
+        if not feedback_file.exists():
+            return [f"{feedback_file.name} was not written"]
+        return validate_feedback_text(
+            feedback_file.read_text(encoding="utf-8"), expected)
 
     def _analyze_encoder_output(self, stderr: str,
                                 _config: EncodeTestSample) -> bool:
