@@ -85,27 +85,27 @@ VkResult VulkanVideoSession::Create(const VulkanDeviceContext* vkDevCtx,
     }
 
     uint32_t videoSessionMemoryRequirementsCount = 0;
-    VkVideoSessionMemoryRequirementsKHR decodeSessionMemoryRequirements[MAX_BOUND_MEMORY];
     // Get the count first
     result = vkDevCtx->GetVideoSessionMemoryRequirementsKHR(*vkDevCtx, pNewVideoSession->m_videoSession,
         &videoSessionMemoryRequirementsCount, NULL);
-    assert(result == VK_SUCCESS);
-    assert(videoSessionMemoryRequirementsCount <= MAX_BOUND_MEMORY);
-
-    memset(decodeSessionMemoryRequirements, 0x00, sizeof(decodeSessionMemoryRequirements));
-    for (uint32_t i = 0; i < videoSessionMemoryRequirementsCount; i++) {
-        decodeSessionMemoryRequirements[i].sType = VK_STRUCTURE_TYPE_VIDEO_SESSION_MEMORY_REQUIREMENTS_KHR;
+    if (result != VK_SUCCESS) {
+        return result;
     }
+
+    std::vector<VkVideoSessionMemoryRequirementsKHR> decodeSessionMemoryRequirements(
+        videoSessionMemoryRequirementsCount,
+        VkVideoSessionMemoryRequirementsKHR{ VK_STRUCTURE_TYPE_VIDEO_SESSION_MEMORY_REQUIREMENTS_KHR });
 
     result = vkDevCtx->GetVideoSessionMemoryRequirementsKHR(*vkDevCtx, pNewVideoSession->m_videoSession,
                                                             &videoSessionMemoryRequirementsCount,
-                                                            decodeSessionMemoryRequirements);
+                                                            decodeSessionMemoryRequirements.data());
     if (result != VK_SUCCESS) {
         return result;
     }
 
     uint32_t decodeSessionBindMemoryCount = videoSessionMemoryRequirementsCount;
-    VkBindVideoSessionMemoryInfoKHR decodeSessionBindMemory[MAX_BOUND_MEMORY];
+    std::vector<VkBindVideoSessionMemoryInfoKHR> decodeSessionBindMemory(decodeSessionBindMemoryCount);
+    pNewVideoSession->m_memoryBound.assign(decodeSessionBindMemoryCount, VK_NULL_HANDLE);
 
     for (uint32_t memIdx = 0; memIdx < decodeSessionBindMemoryCount; memIdx++) {
 
@@ -144,7 +144,7 @@ VkResult VulkanVideoSession::Create(const VulkanDeviceContext* vkDevCtx,
     }
 
     result = vkDevCtx->BindVideoSessionMemoryKHR(*vkDevCtx, pNewVideoSession->m_videoSession, decodeSessionBindMemoryCount,
-                                                 decodeSessionBindMemory);
+                                                 decodeSessionBindMemory.data());
     assert(result == VK_SUCCESS);
 
     videoSession = pNewVideoSession;
