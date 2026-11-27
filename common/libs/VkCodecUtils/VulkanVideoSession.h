@@ -17,13 +17,13 @@
 #pragma once
 
 #include <atomic>
+#include <vector>
 #include "VkCodecUtils/VkVideoRefCountBase.h"
 #include "VkCodecUtils/VulkanDeviceContext.h"
 #include "VkVideoCore/VkVideoCoreProfile.h"
 
 class VulkanVideoSession : public VkVideoRefCountBase
 {
-    enum { MAX_BOUND_MEMORY = 40 };
 public:
     static VkResult Create(const VulkanDeviceContext* vkDevCtx,
                            VkVideoSessionCreateFlagsKHR sessionCreateFlags,
@@ -120,7 +120,7 @@ private:
                        const void* sessionCreateInfoChain)
        : m_refCount(0), m_flags(), m_profile(*pVideoProfile), m_vkDevCtx(vkDevCtx),
          m_createInfo{ VK_STRUCTURE_TYPE_VIDEO_SESSION_CREATE_INFO_KHR, sessionCreateInfoChain },
-         m_videoSession(VkVideoSessionKHR()), m_memoryBound{}
+         m_videoSession(VkVideoSessionKHR()), m_memoryBound()
     {
 
     }
@@ -133,12 +133,13 @@ private:
             m_videoSession = VkVideoSessionKHR();
         }
 
-        for (uint32_t memIdx = 0; memIdx < MAX_BOUND_MEMORY; memIdx++) {
-            if (m_memoryBound[memIdx] != VK_NULL_HANDLE) {
-                m_vkDevCtx->FreeMemory(*m_vkDevCtx, m_memoryBound[memIdx], 0);
-                m_memoryBound[memIdx] = VK_NULL_HANDLE;
+        for (VkDeviceMemory& memory : m_memoryBound) {
+            if (memory != VK_NULL_HANDLE) {
+                m_vkDevCtx->FreeMemory(*m_vkDevCtx, memory, 0);
+                memory = VK_NULL_HANDLE;
             }
         }
+        m_memoryBound.clear();
         m_vkDevCtx = nullptr;
     }
 
@@ -149,5 +150,5 @@ private:
     const VulkanDeviceContext*             m_vkDevCtx;
     VkVideoSessionCreateInfoKHR            m_createInfo;
     VkVideoSessionKHR                      m_videoSession;
-    VkDeviceMemory                         m_memoryBound[MAX_BOUND_MEMORY];
+    std::vector<VkDeviceMemory>            m_memoryBound;
 };
