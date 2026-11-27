@@ -502,6 +502,14 @@ public:
         return "UNKNOWN";
     }
 
+    // VK_KHR_video_maintenance2 only defines inline session parameters for these decode codecs.
+    static bool CodecSupportsInlineSessionParameters(VkVideoCodecOperationFlagBitsKHR codec)
+    {
+        return (codec == VK_VIDEO_CODEC_OPERATION_DECODE_H264_BIT_KHR) ||
+               (codec == VK_VIDEO_CODEC_OPERATION_DECODE_H265_BIT_KHR) ||
+               (codec == VK_VIDEO_CODEC_OPERATION_DECODE_AV1_BIT_KHR);
+    }
+
     static const char* VkFormatToName(VkFormat format)
     {
         switch (format) {
