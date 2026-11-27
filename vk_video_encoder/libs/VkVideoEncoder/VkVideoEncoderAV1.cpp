@@ -840,7 +840,6 @@ VkResult VkVideoEncoderAV1::AssembleBitstreamData(VkSharedBaseObj<VkVideoEncodeF
     VkVideoEncodeFrameInfoAV1* pFrameInfo = GetEncodeFrameInfoAV1(encodeFrameInfo);
 
     if (pFrameInfo->bShowExistingFrame) {
-        WriteFeedback2Output(pFrameInfo->frameInputOrderNum, nullptr);
         WriteShowExistingFrameHeader(encodeFrameInfo);
         return VK_SUCCESS;
     }
